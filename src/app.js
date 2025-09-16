@@ -384,6 +384,23 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
   `;
 
   container.innerHTML = tableHTML;
+  // Add scroll hint element and toggle based on overflow
+  const tc = container.querySelector('.table-container');
+  if (tc) {
+    const hint = document.createElement('div');
+    hint.className = 'scroll-hint';
+    hint.textContent = 'Scroll →';
+    tc.appendChild(hint);
+    const updateHint = () => {
+      if (tc.scrollWidth > tc.clientWidth + 4) tc.classList.add('is-clipped'); else tc.classList.remove('is-clipped');
+    };
+    updateHint();
+    const ro = new ResizeObserver(updateHint);
+    ro.observe(tc);
+    tc.addEventListener('scroll', () => {
+      if (tc.scrollLeft > 10) tc.classList.remove('is-clipped'); else updateHint();
+    });
+  }
 }
 
 /**

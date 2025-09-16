@@ -93,6 +93,11 @@
         
         .sidebar {
             flex: 0 0 320px;
+            position: sticky;
+            top: 20px;
+            align-self: flex-start;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
         }
         
         .main {
@@ -189,6 +194,7 @@
             max-width: 100%;
             -webkit-overflow-scrolling: touch;
             padding-right: 24px;
+            position: relative;
         }
         
         table {
@@ -198,6 +204,21 @@
             font-size: 0.85rem;
             min-width: 1200px;
         }
+
+        .scroll-hint {
+            position: absolute;
+            right: 6px;
+            top: 6px;
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .table-container.is-clipped .scroll-hint { opacity: 1; }
         
         th {
             background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
