@@ -119,6 +119,33 @@
             font-size: 1rem;
         }
         
+        .control-item input:disabled {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .run-forecast-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-top: 20px;
+        }
+        
+        .run-forecast-btn:hover {
+            background: #2980b9;
+        }
+        
+        .run-forecast-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
         .statements-container {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
@@ -288,6 +315,7 @@
                             <input type="file" id="actualsFile" accept=".csv">
                         </div>
                     </div>
+                    <button class="run-forecast-btn" id="runForecastBtn">Run Forecasts</button>
                 </div>
                 
                 <div class="forecast-info">
