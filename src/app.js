@@ -603,7 +603,7 @@ function parseCsvLine(line, delimiter) {
     }
   }
   fields.push(current);
-  return fields.map(v => v.trim()).map(v => (v === '' ? '0' : v));
+  return fields.map(v => v.trim());
 }
 
 function applyActualsFromObject(data) {
