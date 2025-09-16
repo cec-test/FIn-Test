@@ -12,6 +12,7 @@ let uploadedLineItems = {
 };
 let hasUploadedData = false;
 let dateColumns = [];
+let forecastCache = { pnl: {}, balance: {}, cashflow: {} };
 
 /**
  * Default data + helpers
