@@ -367,7 +367,7 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     const forecastPeriods = periods;
     const safeName = item.name.toLowerCase().replace(/\s+/g, '');
     for (let i = 0; i < forecastPeriods; i++) {
-      const forecastKey = `${statementKey}-${safeName}-${i}`;
+      const forecastKey = `${periodType}-${statementKey}-${safeName}-${i}`;
       const scopedId = `${scope}-${forecastKey}`;
       const defaultVal = isSubheader ? '' : '$0';
       tableHTML += `<td class="number forecast" id="${scopedId}" data-forecast-key="${forecastKey}">${defaultVal}</td>`;
@@ -439,14 +439,25 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
       // Update forecast columns
       const safeName = item.name.toLowerCase().replace(/\s+/g, '');
       for (let i = 0; i < periods; i++) {
-        const forecastKey = `${statementType}-${safeName}-${i}`;
+        // separate keys per periodType to avoid cross-period contamination
+        const forecastKeyMonthly = `monthly-${statementType}-${safeName}-${i}`;
+        const forecastKeyQuarterly = `quarterly-${statementType}-${safeName}-${i}`;
+        const forecastKeyYearly = `yearly-${statementType}-${safeName}-${i}`;
         // Non-negative constraints: totals/expenses shouldn't flip sign unintentionally
         let forecast = baseValue * Math.pow(1 + itemGrowth, i + 1);
         if (/total/i.test(item.name)) {
           forecast = Math.max(forecast, 0);
         }
-        // Update all cells sharing this forecast key across tabs
-        document.querySelectorAll(`[data-forecast-key="${forecastKey}"]`).forEach(cell => {
+        // Update monthly
+        document.querySelectorAll(`[data-forecast-key="${forecastKeyMonthly}"]`).forEach(cell => {
+          updateElement(cell.id, formatCurrency(forecast, !hasUploadedData));
+        });
+        // Update quarterly based on base of rolled-up last quarter
+        document.querySelectorAll(`[data-forecast-key="${forecastKeyQuarterly}"]`).forEach(cell => {
+          updateElement(cell.id, formatCurrency(forecast, !hasUploadedData));
+        });
+        // Update yearly based on base of rolled-up last year
+        document.querySelectorAll(`[data-forecast-key="${forecastKeyYearly}"]`).forEach(cell => {
           updateElement(cell.id, formatCurrency(forecast, !hasUploadedData));
         });
       }
