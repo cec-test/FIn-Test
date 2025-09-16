@@ -13,6 +13,8 @@ let sampleData = {
   equity: 478179
 };
 
+let hasUploadedData = false;
+
 /**
  * Formatting
  */
@@ -22,8 +24,9 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0
 });
 
-function formatCurrency(amount) {
-  return currencyFormatter.format(Math.round(amount));
+function formatCurrency(amount, isPlaceholder = false) {
+  const formatted = currencyFormatter.format(Math.round(amount));
+  return isPlaceholder ? formatted + ' *' : formatted;
 }
 
 /**
@@ -69,71 +72,144 @@ function updateForecast() {
     expGrowth = 0.015;
   }
 
-  updatePnLForecasts(revGrowth, expGrowth);
-  updateBalanceForecasts(revGrowth);
-  updateCashFlowForecasts(revGrowth, expGrowth);
+  // Update all forecast views
+  updateCombinedForecasts(revGrowth, expGrowth);
+  updateMonthlyForecasts(revGrowth, expGrowth);
+  updateQuarterlyForecasts(revGrowth, expGrowth);
+  updateYearlyForecasts(revGrowth, expGrowth);
 }
 
 /**
- * Forecast calculators
+ * Forecast calculators for different periods
  */
-function updatePnLForecasts(revGrowth, expGrowth) {
+function updateCombinedForecasts(revGrowth, expGrowth) {
   for (let i = 1; i <= 3; i++) {
     const revForecast = sampleData.revenue * Math.pow(1 + revGrowth, i);
     const expForecast = sampleData.expenses * Math.pow(1 + expGrowth, i);
     const niForecast = revForecast - expForecast;
 
-    const revEl = document.getElementById(`rev${i}`);
-    const expEl = document.getElementById(`exp${i}`);
-    const niEl = document.getElementById(`ni${i}`);
+    updateElement(`crev${i}`, formatCurrency(revForecast, !hasUploadedData));
+    updateElement(`cexp${i}`, formatCurrency(expForecast, !hasUploadedData));
+    updateElement(`cni${i}`, formatCurrency(niForecast, !hasUploadedData), niForecast);
 
-    if (revEl) revEl.textContent = formatCurrency(revForecast);
-    if (expEl) expEl.textContent = formatCurrency(expForecast);
-    if (niEl) {
-      niEl.textContent = formatCurrency(niForecast);
-      niEl.classList.toggle('positive', niForecast >= 0);
-      niEl.classList.toggle('negative', niForecast < 0);
-    }
-  }
-}
-
-function updateBalanceForecasts(growth) {
-  let cashBalance = sampleData.cash;
-
-  for (let i = 1; i <= 3; i++) {
-    const netIncomeForPeriod = sampleData.netIncome * Math.pow(1 + growth, i);
-    cashBalance += netIncomeForPeriod;
-
-    const assetsForecast =
-      sampleData.assets * Math.pow(1 + growth * 0.6, i) + (cashBalance - sampleData.cash);
+    // Balance Sheet
+    const cashBalance = sampleData.cash + (sampleData.netIncome * Math.pow(1 + revGrowth, i));
+    const assetsForecast = sampleData.assets * Math.pow(1 + revGrowth * 0.6, i) + (cashBalance - sampleData.cash);
     const equityForecast = sampleData.equity + (cashBalance - sampleData.cash);
 
-    const cashEl = document.getElementById(`cash${i}`);
-    const assetsEl = document.getElementById(`assets${i}`);
-    const equityEl = document.getElementById(`equity${i}`);
+    updateElement(`ccash${i}`, formatCurrency(cashBalance, !hasUploadedData));
+    updateElement(`cassets${i}`, formatCurrency(assetsForecast, !hasUploadedData));
+    updateElement(`cequity${i}`, formatCurrency(equityForecast, !hasUploadedData));
 
-    if (cashEl) cashEl.textContent = formatCurrency(cashBalance);
-    if (assetsEl) assetsEl.textContent = formatCurrency(assetsForecast);
-    if (equityEl) equityEl.textContent = formatCurrency(equityForecast);
+    // Cash Flow
+    const ocfForecast = niForecast * 1.1;
+    updateElement(`ccfni${i}`, formatCurrency(niForecast, !hasUploadedData));
+    updateElement(`cocf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
+    updateElement(`cfcf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
+    updateElement(`cncc${i}`, formatCurrency(niForecast, !hasUploadedData));
   }
 }
 
-function updateCashFlowForecasts(revGrowth, expGrowth) {
-  for (let i = 1; i <= 3; i++) {
+function updateMonthlyForecasts(revGrowth, expGrowth) {
+  for (let i = 1; i <= 5; i++) {
     const revForecast = sampleData.revenue * Math.pow(1 + revGrowth, i);
     const expForecast = sampleData.expenses * Math.pow(1 + expGrowth, i);
     const niForecast = revForecast - expForecast;
-    const ocfForecast = niForecast * 1.1; // simple uplift
 
-    const cfniEl = document.getElementById(`cfni${i}`);
-    const ocfEl = document.getElementById(`ocf${i}`);
-    const fcfEl = document.getElementById(`fcf${i}`);
-    const nccEl = document.getElementById(`ncc${i}`);
+    updateElement(`mrev${i}`, formatCurrency(revForecast, !hasUploadedData));
+    updateElement(`mexp${i}`, formatCurrency(expForecast, !hasUploadedData));
+    updateElement(`mni${i}`, formatCurrency(niForecast, !hasUploadedData), niForecast);
 
-    if (cfniEl) cfniEl.textContent = formatCurrency(niForecast);
-    if (ocfEl) ocfEl.textContent = formatCurrency(ocfForecast);
-    if (fcfEl) fcfEl.textContent = formatCurrency(ocfForecast);
-    if (nccEl) nccEl.textContent = formatCurrency(niForecast);
+    // Balance Sheet
+    const cashBalance = sampleData.cash + (sampleData.netIncome * Math.pow(1 + revGrowth, i));
+    const assetsForecast = sampleData.assets * Math.pow(1 + revGrowth * 0.6, i) + (cashBalance - sampleData.cash);
+    const equityForecast = sampleData.equity + (cashBalance - sampleData.cash);
+
+    updateElement(`mcash${i}`, formatCurrency(cashBalance, !hasUploadedData));
+    updateElement(`massets${i}`, formatCurrency(assetsForecast, !hasUploadedData));
+    updateElement(`mequity${i}`, formatCurrency(equityForecast, !hasUploadedData));
+
+    // Cash Flow
+    const ocfForecast = niForecast * 1.1;
+    updateElement(`mcfni${i}`, formatCurrency(niForecast, !hasUploadedData));
+    updateElement(`mocf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
+    updateElement(`mfcf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
+    updateElement(`mncc${i}`, formatCurrency(niForecast, !hasUploadedData));
+  }
+}
+
+function updateQuarterlyForecasts(revGrowth, expGrowth) {
+  for (let i = 1; i <= 3; i++) {
+    // Quarterly = 3x monthly growth
+    const quarterlyRevGrowth = revGrowth * 3;
+    const quarterlyExpGrowth = expGrowth * 3;
+    
+    const revForecast = sampleData.revenue * Math.pow(1 + quarterlyRevGrowth, i);
+    const expForecast = sampleData.expenses * Math.pow(1 + quarterlyExpGrowth, i);
+    const niForecast = revForecast - expForecast;
+
+    updateElement(`qrev${i}`, formatCurrency(revForecast, !hasUploadedData));
+    updateElement(`qexp${i}`, formatCurrency(expForecast, !hasUploadedData));
+    updateElement(`qni${i}`, formatCurrency(niForecast, !hasUploadedData), niForecast);
+
+    // Balance Sheet
+    const cashBalance = sampleData.cash + (sampleData.netIncome * Math.pow(1 + quarterlyRevGrowth, i));
+    const assetsForecast = sampleData.assets * Math.pow(1 + quarterlyRevGrowth * 0.6, i) + (cashBalance - sampleData.cash);
+    const equityForecast = sampleData.equity + (cashBalance - sampleData.cash);
+
+    updateElement(`qcash${i}`, formatCurrency(cashBalance, !hasUploadedData));
+    updateElement(`qassets${i}`, formatCurrency(assetsForecast, !hasUploadedData));
+    updateElement(`qequity${i}`, formatCurrency(equityForecast, !hasUploadedData));
+
+    // Cash Flow
+    const ocfForecast = niForecast * 1.1;
+    updateElement(`qcfni${i}`, formatCurrency(niForecast, !hasUploadedData));
+    updateElement(`qocf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
+    updateElement(`qfcf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
+    updateElement(`qncc${i}`, formatCurrency(niForecast, !hasUploadedData));
+  }
+}
+
+function updateYearlyForecasts(revGrowth, expGrowth) {
+  for (let i = 1; i <= 3; i++) {
+    // Yearly = 12x monthly growth
+    const yearlyRevGrowth = revGrowth * 12;
+    const yearlyExpGrowth = expGrowth * 12;
+    
+    const revForecast = sampleData.revenue * Math.pow(1 + yearlyRevGrowth, i);
+    const expForecast = sampleData.expenses * Math.pow(1 + yearlyExpGrowth, i);
+    const niForecast = revForecast - expForecast;
+
+    updateElement(`yrev${i}`, formatCurrency(revForecast, !hasUploadedData));
+    updateElement(`yexp${i}`, formatCurrency(expForecast, !hasUploadedData));
+    updateElement(`yni${i}`, formatCurrency(niForecast, !hasUploadedData), niForecast);
+
+    // Balance Sheet
+    const cashBalance = sampleData.cash + (sampleData.netIncome * Math.pow(1 + yearlyRevGrowth, i));
+    const assetsForecast = sampleData.assets * Math.pow(1 + yearlyRevGrowth * 0.6, i) + (cashBalance - sampleData.cash);
+    const equityForecast = sampleData.equity + (cashBalance - sampleData.cash);
+
+    updateElement(`ycash${i}`, formatCurrency(cashBalance, !hasUploadedData));
+    updateElement(`yassets${i}`, formatCurrency(assetsForecast, !hasUploadedData));
+    updateElement(`yequity${i}`, formatCurrency(equityForecast, !hasUploadedData));
+
+    // Cash Flow
+    const ocfForecast = niForecast * 1.1;
+    updateElement(`ycfni${i}`, formatCurrency(niForecast, !hasUploadedData));
+    updateElement(`yocf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
+    updateElement(`yfcf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
+    updateElement(`yncc${i}`, formatCurrency(niForecast, !hasUploadedData));
+  }
+}
+
+function updateElement(id, text, value = null) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.textContent = text;
+    if (value !== null) {
+      el.classList.toggle('positive', value >= 0);
+      el.classList.toggle('negative', value < 0);
+    }
   }
 }
 
@@ -146,7 +222,6 @@ function parseCSVToObject(text) {
   const headers = headerLine.split(',').map(h => h.trim().toLowerCase());
   if (!rows.length) throw new Error('No data rows found');
 
-  // Take first data row
   const first = rows[0].split(',').map(x => x.trim());
   const obj = {};
   headers.forEach((h, i) => { obj[h] = first[i]; });
@@ -178,46 +253,38 @@ function applyActualsFromObject(o) {
     equity: next.equity || sampleData.equity
   };
 
-  // Update Actual cells in the visible tables to reflect uploaded values
-  const fmt = formatCurrency;
+  hasUploadedData = true;
 
-  // P&L actuals
-  const pnlTbody = document.querySelector('#pnlTable tbody');
-  if (pnlTbody) {
-    const revActual = pnlTbody.querySelector('tr:nth-child(1) td.actual');
-    const expActual = pnlTbody.querySelector('tr:nth-child(2) td.actual');
-    const niActual = pnlTbody.querySelector('tr:nth-child(3) td.actual');
-
-    if (revActual) revActual.textContent = fmt(sampleData.revenue);
-    if (expActual) expActual.textContent = fmt(sampleData.expenses);
-    if (niActual) {
-      niActual.textContent = fmt(sampleData.netIncome);
-      niActual.classList.toggle('positive', sampleData.netIncome >= 0);
-      niActual.classList.toggle('negative', sampleData.netIncome < 0);
-    }
-  }
-
-  // Balance actuals
-  const balTbody = document.querySelector('#balanceTable tbody');
-  if (balTbody) {
-    const cashActual = balTbody.querySelector('tr:nth-child(1) td.actual');
-    const assetsActual = balTbody.querySelector('tr:nth-child(2) td.actual');
-    const equityActual = balTbody.querySelector('tr:nth-child(3) td.actual');
-
-    if (cashActual) cashActual.textContent = fmt(sampleData.cash);
-    if (assetsActual) assetsActual.textContent = fmt(sampleData.assets);
-    if (equityActual) equityActual.textContent = fmt(sampleData.equity);
-  }
-
-  // Cash Flow actuals (Net Income)
-  const cfTbody = document.querySelector('#cashflowTable tbody');
-  if (cfTbody) {
-    const cfniActual = cfTbody.querySelector('tr:nth-child(1) td.actual');
-    if (cfniActual) cfniActual.textContent = fmt(sampleData.netIncome);
-  }
+  // Update Actual cells in all tables
+  updateActualCells();
 
   // Recompute forecasts from new base
   updateForecast();
+}
+
+function updateActualCells() {
+  const fmt = amount => formatCurrency(amount, false);
+
+  // Update all actual cells across all tables
+  const actualCells = document.querySelectorAll('td.actual');
+  actualCells.forEach(cell => {
+    const text = cell.textContent;
+    if (text.includes('Revenue') || text.includes('$385')) {
+      cell.textContent = fmt(sampleData.revenue);
+    } else if (text.includes('Expenses') || text.includes('$285')) {
+      cell.textContent = fmt(sampleData.expenses);
+    } else if (text.includes('Net Income') || text.includes('$99')) {
+      cell.textContent = fmt(sampleData.netIncome);
+      cell.classList.toggle('positive', sampleData.netIncome >= 0);
+      cell.classList.toggle('negative', sampleData.netIncome < 0);
+    } else if (text.includes('Cash') || text.includes('$2,010')) {
+      cell.textContent = fmt(sampleData.cash);
+    } else if (text.includes('Assets') || text.includes('$22,700')) {
+      cell.textContent = fmt(sampleData.assets);
+    } else if (text.includes('Equity') || text.includes('$478')) {
+      cell.textContent = fmt(sampleData.equity);
+    }
+  });
 }
 
 function handleActualsUpload(file) {
@@ -234,35 +301,50 @@ function handleActualsUpload(file) {
 }
 
 /**
- * CSV Export (used by existing buttons with onclick or can be wired below)
+ * Export functions
  */
-function exportData(statementType) {
-  const tableId = statementType + 'Table';
-  const table = document.getElementById(tableId);
-  if (!table) {
-    alert('No data to export');
-    return;
-  }
-  const rows = Array.from(table.rows);
-  const csvContent = rows.map(row => {
-    return Array.from(row.cells)
-      .map(cell => '"' + cell.textContent.replace(/"/g, '""') + '"')
-      .join(',');
-  }).join('\n');
+function exportCombinedData() {
+  const tables = ['combinedPnlTable', 'combinedBalanceTable', 'combinedCashflowTable'];
+  exportMultipleTables(tables, 'combined_3_statement_model');
+}
+
+function exportPeriodData(period) {
+  const tables = [`${period}PnlTable`, `${period}BalanceTable`, `${period}CashflowTable`];
+  exportMultipleTables(tables, `${period}_3_statement_forecast`);
+}
+
+function exportMultipleTables(tableIds, filename) {
+  let csvContent = '';
+  
+  tableIds.forEach((tableId, index) => {
+    const table = document.getElementById(tableId);
+    if (table) {
+      if (index > 0) csvContent += '\n\n';
+      csvContent += `Statement ${index + 1}\n`;
+      
+      const rows = Array.from(table.rows);
+      csvContent += rows.map(row => {
+        return Array.from(row.cells)
+          .map(cell => '"' + cell.textContent.replace(/"/g, '""') + '"')
+          .join(',');
+      }).join('\n');
+    }
+  });
 
   const blob = new Blob([csvContent], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${statementType}_forecast.csv`;
+  a.download = `${filename}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
-// Expose exportData globally if buttons use inline onclick
-window.exportData = exportData;
+// Expose functions globally
+window.exportCombinedData = exportCombinedData;
+window.exportPeriodData = exportPeriodData;
 
 /**
  * Boot
