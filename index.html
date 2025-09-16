@@ -96,8 +96,6 @@
             position: sticky;
             top: 20px;
             align-self: flex-start;
-            max-height: calc(100vh - 40px);
-            overflow-y: auto;
         }
         
         .main {
@@ -191,14 +189,19 @@
         }
         
         .table-container {
-            overflow-x: auto;
+            overflow-x: scroll;
             overflow-y: hidden;
             max-width: 100%;
             -webkit-overflow-scrolling: touch;
             padding-right: 24px;
+            padding-bottom: 8px;
             position: relative;
             overscroll-behavior-x: contain;
         }
+        .table-container::-webkit-scrollbar { height: 10px; }
+        .table-container::-webkit-scrollbar-thumb { background: #c1c7d0; border-radius: 8px; }
+        .table-container::-webkit-scrollbar-track { background: #f1f3f5; }
+        .table-container { scrollbar-width: thin; }
         
         table {
             width: 100%;
