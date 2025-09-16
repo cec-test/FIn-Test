@@ -65,6 +65,14 @@ function toggleGrowthRateInput() {
 function generateTableHeaders(periods, periodType) {
   const headers = ['Item'];
   
+  // Add all historical date columns first
+  if (dateColumns && dateColumns.length > 0) {
+    dateColumns.forEach(date => {
+      headers.push(date);
+    });
+  }
+  
+  // Then add forecast periods
   if (periodType === 'monthly') {
     for (let i = 0; i < periods; i++) {
       const date = new Date();
@@ -107,8 +115,15 @@ function createDynamicTable(containerId, statementType, periodType) {
             <tr>
   `;
   
-  headers.forEach(header => {
-    const className = header === 'Item' ? '' : 'forecast';
+  headers.forEach((header, index) => {
+    let className = '';
+    if (index === 0) {
+      className = ''; // Item column
+    } else if (dateColumns && index <= dateColumns.length) {
+      className = 'actual'; // Historical data columns
+    } else {
+      className = 'forecast'; // Forecast columns
+    }
     tableHTML += `<th class="${className}">${header}</th>`;
   });
   
@@ -126,13 +141,16 @@ function createDynamicTable(containerId, statementType, periodType) {
         <td class="metric-name">${item.name}</td>
     `;
     
-    // Add actual value (first column after Item) - use the most recent actual value
-    const actualValue = item.actualValues && item.actualValues.length > 0 ? 
-      item.actualValues[item.actualValues.length - 1] : item.actual;
-    tableHTML += `<td class="number actual">${formatCurrency(actualValue)}</td>`;
+    // Add historical actual values
+    if (item.actualValues && item.actualValues.length > 0) {
+      item.actualValues.forEach(value => {
+        tableHTML += `<td class="number actual">${formatCurrency(value)}</td>`;
+      });
+    }
     
     // Add forecast columns
-    for (let i = 1; i < headers.length - 1; i++) {
+    const forecastPeriods = periods;
+    for (let i = 0; i < forecastPeriods; i++) {
       const cellId = `${statementType.toLowerCase().replace(/\s+/g, '')}${item.name.toLowerCase().replace(/\s+/g, '')}${i}`;
       tableHTML += `<td class="number forecast" id="${cellId}">$0</td>`;
     }
@@ -204,9 +222,9 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
         item.actualValues[item.actualValues.length - 1] : item.actual;
       
       // Update forecast columns
-      for (let i = 1; i < periods; i++) {
+      for (let i = 0; i < periods; i++) {
         const cellId = `${statementType}${item.name.toLowerCase().replace(/\s+/g, '')}${i}`;
-        const forecast = baseValue * Math.pow(1 + itemGrowth, i);
+        const forecast = baseValue * Math.pow(1 + itemGrowth, i + 1);
         updateElement(cellId, formatCurrency(forecast, !hasUploadedData));
       }
     });
