@@ -92,7 +92,7 @@
         }
         
         .sidebar {
-            flex: 0 0 260px;
+            flex: 0 0 220px;
             position: sticky;
             top: 20px;
             align-self: flex-start;
@@ -105,9 +105,9 @@
         
         .controls {
             background: #ffffff;
-            padding: 16px;
-            margin-bottom: 20px;
-            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+            border-radius: 10px;
             border: 1px solid #e9ecef;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
@@ -128,15 +128,15 @@
         .control-item label {
             font-weight: 600;
             color: #495057;
-            min-width: 100px;
-            font-size: 0.9rem;
+            min-width: 92px;
+            font-size: 0.85rem;
         }
         
         .control-item input, .control-item select {
-            padding: 8px 12px;
+            padding: 6px 10px;
             border: 2px solid #dee2e6;
             border-radius: 8px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
         
         .control-item input:disabled {
@@ -193,8 +193,8 @@
             overflow-y: hidden;
             max-width: 100%;
             -webkit-overflow-scrolling: touch;
-            padding-right: 24px;
-            padding-bottom: 8px;
+            padding-right: 16px;
+            padding-bottom: 10px;
             position: relative;
             overscroll-behavior-x: contain;
         }
@@ -204,11 +204,11 @@
         .table-container { scrollbar-width: thin; }
         
         table {
-            width: 100%;
+            width: max-content;
             border-collapse: collapse;
             background: white;
             font-size: 0.85rem;
-            min-width: 1200px;
+            min-width: 1000px;
         }
 
         .scroll-hint {
