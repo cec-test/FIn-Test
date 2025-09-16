@@ -19,7 +19,7 @@
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 1800px;
             margin: 0 auto;
             background: white;
             border-radius: 15px;
@@ -119,40 +119,60 @@
             font-size: 1rem;
         }
         
-        .table-container {
-            overflow-x: auto;
+        .statements-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
             margin-bottom: 30px;
+        }
+        
+        .statement-section {
+            background: white;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        
+        .statement-header {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .table-container {
+            overflow-x: auto;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
             background: white;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
         
         th {
             background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
             color: white;
-            padding: 15px 10px;
+            padding: 12px 8px;
             text-align: left;
             font-weight: 600;
             position: sticky;
             top: 0;
             z-index: 10;
+            font-size: 0.8rem;
         }
         
         td {
-            padding: 12px 10px;
+            padding: 10px 8px;
             border-bottom: 1px solid #e9ecef;
         }
         
         .metric-name {
             font-weight: 600;
             color: #2c3e50;
-            min-width: 200px;
+            min-width: 120px;
         }
         
         .actual {
@@ -210,6 +230,22 @@
         .export-btn:hover {
             background: #219a52;
         }
+        
+        .placeholder {
+            color: #6c757d;
+        }
+        
+        .placeholder::after {
+            content: ' *';
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 1200px) {
+            .statements-container {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -220,14 +256,14 @@
         </div>
         
         <div class="tabs">
-            <button class="tab active" data-tab="controls">Controls</button>
-            <button class="tab" data-tab="pnl">P&L</button>
-            <button class="tab" data-tab="balance">Balance Sheet</button>
-            <button class="tab" data-tab="cashflow">Cash Flow</button>
+            <button class="tab active" data-tab="combined">Combined View</button>
+            <button class="tab" data-tab="monthly">Monthly Forecast</button>
+            <button class="tab" data-tab="quarterly">Quarterly Forecast</button>
+            <button class="tab" data-tab="yearly">Yearly Forecast</button>
         </div>
         
         <div class="content">
-            <div id="controls" class="tab-content active">
+            <div id="combined" class="tab-content active">
                 <div class="controls">
                     <h3>Forecast Configuration</h3>
                     <div class="control-group">
@@ -258,172 +294,140 @@
                     <strong>Settings:</strong> <span id="currentSettings">Custom Growth at 5.0% for 12 periods</span>
                 </div>
                 
-                <h3>Sample Data Overview</h3>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Metric</th>
-                                <th>Latest (Jul 2025)</th>
-                                <th>Avg Monthly</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="metric-name">Total Revenue</td>
-                                <td class="number actual">$385K</td>
-                                <td class="number">$442K</td>
-                            </tr>
-                            <tr>
-                                <td class="metric-name">Net Income</td>
-                                <td class="number actual positive">$99K</td>
-                                <td class="number">$58K</td>
-                            </tr>
-                            <tr>
-                                <td class="metric-name">Cash Balance</td>
-                                <td class="number actual positive">$2K</td>
-                                <td class="number">$203K</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <button class="export-btn" onclick="exportCombinedData()">Export Complete 3-Statement Model</button>
+                
+                <div class="statements-container">
+                    <div class="statement-section">
+                        <div class="statement-header">Profit & Loss Statement</div>
+                        <div class="table-container">
+                            <table id="combinedPnlTable">
+                                <thead>
+                                    <tr>
+                                        <th>P&L Item</th>
+                                        <th class="actual">Jul 2025</th>
+                                        <th class="forecast">Aug 2025</th>
+                                        <th class="forecast">Sep 2025</th>
+                                        <th class="forecast">Oct 2025</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="metric-name">Total Revenue</td>
+                                        <td class="number actual">$385,007</td>
+                                        <td class="number forecast" id="crev1">$404,257</td>
+                                        <td class="number forecast" id="crev2">$424,470</td>
+                                        <td class="number forecast" id="crev3">$445,694</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="metric-name">Operating Expenses</td>
+                                        <td class="number actual">$285,669</td>
+                                        <td class="number forecast" id="cexp1">$299,952</td>
+                                        <td class="number forecast" id="cexp2">$314,950</td>
+                                        <td class="number forecast" id="cexp3">$330,698</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="metric-name">Net Income</td>
+                                        <td class="number actual positive">$99,338</td>
+                                        <td class="number forecast positive" id="cni1">$104,305</td>
+                                        <td class="number forecast positive" id="cni2">$109,520</td>
+                                        <td class="number forecast positive" id="cni3">$114,996</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="statement-section">
+                        <div class="statement-header">Balance Sheet</div>
+                        <div class="table-container">
+                            <table id="combinedBalanceTable">
+                                <thead>
+                                    <tr>
+                                        <th>Balance Sheet Item</th>
+                                        <th class="actual">Jul 2025</th>
+                                        <th class="forecast">Aug 2025</th>
+                                        <th class="forecast">Sep 2025</th>
+                                        <th class="forecast">Oct 2025</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="metric-name">Cash & Bank Accounts</td>
+                                        <td class="number actual positive">$2,010</td>
+                                        <td class="number forecast" id="ccash1">$106,315</td>
+                                        <td class="number forecast" id="ccash2">$215,835</td>
+                                        <td class="number forecast" id="ccash3">$330,831</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="metric-name">Total Assets</td>
+                                        <td class="number actual">$22,700</td>
+                                        <td class="number forecast" id="cassets1">$127,005</td>
+                                        <td class="number forecast" id="cassets2">$237,355</td>
+                                        <td class="number forecast" id="cassets3">$353,351</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="metric-name">Total Equity</td>
+                                        <td class="number actual">$478,179</td>
+                                        <td class="number forecast" id="cequity1">$582,484</td>
+                                        <td class="number forecast" id="cequity2">$692,004</td>
+                                        <td class="number forecast" id="cequity3">$807,000</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="statement-section">
+                        <div class="statement-header">Cash Flow Statement</div>
+                        <div class="table-container">
+                            <table id="combinedCashflowTable">
+                                <thead>
+                                    <tr>
+                                        <th>Cash Flow Item</th>
+                                        <th class="actual">Jul 2025</th>
+                                        <th class="forecast">Aug 2025</th>
+                                        <th class="forecast">Sep 2025</th>
+                                        <th class="forecast">Oct 2025</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="metric-name">Net Income</td>
+                                        <td class="number actual positive">$99,338</td>
+                                        <td class="number forecast positive" id="ccfni1">$104,305</td>
+                                        <td class="number forecast positive" id="ccfni2">$109,520</td>
+                                        <td class="number forecast positive" id="ccfni3">$114,996</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="metric-name">Operating Cash Flow</td>
+                                        <td class="number actual positive">$109,271</td>
+                                        <td class="number forecast positive" id="cocf1">$114,736</td>
+                                        <td class="number forecast positive" id="cocf2">$120,472</td>
+                                        <td class="number forecast positive" id="cocf3">$126,496</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="metric-name">Free Cash Flow</td>
+                                        <td class="number actual positive">$109,271</td>
+                                        <td class="number forecast positive" id="cfcf1">$114,736</td>
+                                        <td class="number forecast positive" id="cfcf2">$120,472</td>
+                                        <td class="number forecast positive" id="cfcf3">$126,496</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="metric-name">Net Change in Cash</td>
+                                        <td class="number actual">-$3,124</td>
+                                        <td class="number forecast positive" id="cncc1">$104,305</td>
+                                        <td class="number forecast positive" id="cncc2">$109,520</td>
+                                        <td class="number forecast positive" id="cncc3">$114,996</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <div id="pnl" class="tab-content">
-                <div class="forecast-info">
-                    <strong>Profit & Loss Statement</strong> - Historical and forecasted
-                </div>
-                <button class="export-btn" onclick="exportData('pnl')">Export P&L</button>
-                <div class="table-container">
-                    <table id="pnlTable">
-                        <thead>
-                            <tr>
-                                <th>P&L Item</th>
-                                <th class="actual">Jul 2025</th>
-                                <th class="forecast">Aug 2025</th>
-                                <th class="forecast">Sep 2025</th>
-                                <th class="forecast">Oct 2025</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="metric-name">Total Revenue</td>
-                                <td class="number actual">$385,007</td>
-                                <td class="number forecast" id="rev1">$404,257</td>
-                                <td class="number forecast" id="rev2">$424,470</td>
-                                <td class="number forecast" id="rev3">$445,694</td>
-                            </tr>
-                            <tr>
-                                <td class="metric-name">Operating Expenses</td>
-                                <td class="number actual">$285,669</td>
-                                <td class="number forecast" id="exp1">$299,952</td>
-                                <td class="number forecast" id="exp2">$314,950</td>
-                                <td class="number forecast" id="exp3">$330,698</td>
-                            </tr>
-                            <tr>
-                                <td class="metric-name">Net Income</td>
-                                <td class="number actual positive">$99,338</td>
-                                <td class="number forecast positive" id="ni1">$104,305</td>
-                                <td class="number forecast positive" id="ni2">$109,520</td>
-                                <td class="number forecast positive" id="ni3">$114,996</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div id="balance" class="tab-content">
-                <div class="forecast-info">
-                    <strong>Balance Sheet</strong> - Assets, Liabilities & Equity
-                </div>
-                <button class="export-btn" onclick="exportData('balance')">Export Balance Sheet</button>
-                <div class="table-container">
-                    <table id="balanceTable">
-                        <thead>
-                            <tr>
-                                <th>Balance Sheet Item</th>
-                                <th class="actual">Jul 2025</th>
-                                <th class="forecast">Aug 2025</th>
-                                <th class="forecast">Sep 2025</th>
-                                <th class="forecast">Oct 2025</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="metric-name">Cash & Bank Accounts</td>
-                                <td class="number actual positive">$2,010</td>
-                                <td class="number forecast" id="cash1">$106,315</td>
-                                <td class="number forecast" id="cash2">$215,835</td>
-                                <td class="number forecast" id="cash3">$330,831</td>
-                            </tr>
-                            <tr>
-                                <td class="metric-name">Total Assets</td>
-                                <td class="number actual">$22,700</td>
-                                <td class="number forecast" id="assets1">$127,005</td>
-                                <td class="number forecast" id="assets2">$237,355</td>
-                                <td class="number forecast" id="assets3">$353,351</td>
-                            </tr>
-                            <tr>
-                                <td class="metric-name">Total Equity</td>
-                                <td class="number actual">$478,179</td>
-                                <td class="number forecast" id="equity1">$582,484</td>
-                                <td class="number forecast" id="equity2">$692,004</td>
-                                <td class="number forecast" id="equity3">$807,000</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div id="cashflow" class="tab-content">
-                <div class="forecast-info">
-                    <strong>Cash Flow Statement</strong> - Operating, Investing & Financing
-                </div>
-                <button class="export-btn" onclick="exportData('cashflow')">Export Cash Flow</button>
-                <div class="table-container">
-                    <table id="cashflowTable">
-                        <thead>
-                            <tr>
-                                <th>Cash Flow Item</th>
-                                <th class="actual">Jul 2025</th>
-                                <th class="forecast">Aug 2025</th>
-                                <th class="forecast">Sep 2025</th>
-                                <th class="forecast">Oct 2025</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="metric-name">Net Income</td>
-                                <td class="number actual positive">$99,338</td>
-                                <td class="number forecast positive" id="cfni1">$104,305</td>
-                                <td class="number forecast positive" id="cfni2">$109,520</td>
-                                <td class="number forecast positive" id="cfni3">$114,996</td>
-                            </tr>
-                            <tr>
-                                <td class="metric-name">Operating Cash Flow</td>
-                                <td class="number actual positive">$109,271</td>
-                                <td class="number forecast positive" id="ocf1">$114,736</td>
-                                <td class="number forecast positive" id="ocf2">$120,472</td>
-                                <td class="number forecast positive" id="ocf3">$126,496</td>
-                            </tr>
-                            <tr>
-                                <td class="metric-name">Free Cash Flow</td>
-                                <td class="number actual positive">$109,271</td>
-                                <td class="number forecast positive" id="fcf1">$114,736</td>
-                                <td class="number forecast positive" id="fcf2">$120,472</td>
-                                <td class="number forecast positive" id="fcf3">$126,496</td>
-                            </tr>
-                            <tr>
-                                <td class="metric-name">Net Change in Cash</td>
-                                <td class="number actual">-$3,124</td>
-                                <td class="number forecast positive" id="ncc1">$104,305</td>
-                                <td class="number forecast positive" id="ncc2">$109,520</td>
-                                <td class="number forecast positive" id="ncc3">$114,996</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <!-- Monthly, Quarterly, and Yearly tabs would follow similar structure -->
+            <!-- I'll provide the complete JavaScript that handles all periods -->
         </div>
     </div>
 
