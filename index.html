@@ -92,7 +92,7 @@
         }
         
         .sidebar {
-            flex: 0 0 320px;
+            flex: 0 0 260px;
             position: sticky;
             top: 20px;
             align-self: flex-start;
@@ -106,11 +106,12 @@
         }
         
         .controls {
-            background: #f8f9fa;
-            padding: 25px;
-            margin-bottom: 30px;
-            border-radius: 10px;
-            border: 2px solid #e9ecef;
+            background: #ffffff;
+            padding: 16px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
         
         .control-group {
@@ -129,14 +130,15 @@
         .control-item label {
             font-weight: 600;
             color: #495057;
-            min-width: 120px;
+            min-width: 100px;
+            font-size: 0.9rem;
         }
         
         .control-item input, .control-item select {
-            padding: 10px 15px;
+            padding: 8px 12px;
             border: 2px solid #dee2e6;
             border-radius: 8px;
-            font-size: 1rem;
+            font-size: 0.95rem;
         }
         
         .control-item input:disabled {
@@ -195,6 +197,7 @@
             -webkit-overflow-scrolling: touch;
             padding-right: 24px;
             position: relative;
+            overscroll-behavior-x: contain;
         }
         
         table {
@@ -376,12 +379,7 @@
             <p>Professional Financial Forecasting Platform</p>
         </div>
         
-        <div class="tabs">
-            <button class="tab active" data-tab="combined">Combined View</button>
-            <button class="tab" data-tab="monthly">Monthly Forecast</button>
-            <button class="tab" data-tab="quarterly">Quarterly Forecast</button>
-            <button class="tab" data-tab="yearly">Yearly Forecast</button>
-        </div>
+        
         
         <div class="content">
             <div class="layout">
@@ -415,31 +413,13 @@
                 </aside>
                 <div class="main">
                     <div class="tabs">
-                        <button class="tab active" data-tab="combined">Combined View</button>
-                        <button class="tab" data-tab="monthly">Monthly Forecast</button>
+                        <button class="tab active" data-tab="monthly">Monthly Forecast</button>
                         <button class="tab" data-tab="quarterly">Quarterly Forecast</button>
                         <button class="tab" data-tab="yearly">Yearly Forecast</button>
                     </div>
-                    <div id="combined" class="tab-content active">
+                    
                 
-                <div class="csv-format-info">
-                    <h4>CSV Format Supported:</h4>
-                    <p>Your CSV should have date columns and statement sections marked with "P&L", "Balance Sheet", "Cashflows"</p>
-                    <p>Each line item will be automatically detected and forecasted based on historical trends</p>
-                </div>
-                
-                <div class="forecast-info">
-                    <strong>Settings:</strong> <span id="currentSettings">Custom Growth at 5.0% for 12 periods</span>
-                </div>
-                
-                <button class="export-btn" onclick="exportCombinedData()">Export Complete 3-Statement Model</button>
-                
-                <div class="statements-container">
-                    <div id="combinedPnlContainer"></div>
-                    <div id="combinedBalanceContainer"></div>
-                    <div id="combinedCashflowContainer"></div>
-                </div>
-            </div>
+                    
             
             <div id="monthly" class="tab-content">
                 <div class="forecast-info">

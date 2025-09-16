@@ -327,7 +327,7 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     }
     let noteHtml = '';
     if (className === 'actual' && noteByIndex[index - 1]) {
-      noteHtml = ` <span class="note-badge" title="${noteByIndex[index - 1]}">†</span>`;
+      noteHtml = ` <span class="note-badge" title="${noteByIndex[index - 1]}">•</span>`;
     }
     tableHTML += `<th class="${className}">${header}${noteHtml}</th>`;
   });
@@ -674,10 +674,6 @@ function rebuildAllTables() {
   const periods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
   
   // Rebuild each tab's tables
-  createDynamicTable('combinedPnlContainer', 'pnl', 'monthly', 'combined');
-  createDynamicTable('combinedBalanceContainer', 'balance', 'monthly', 'combined');
-  createDynamicTable('combinedCashflowContainer', 'cashflow', 'monthly', 'combined');
-  
   createDynamicTable('monthlyPnlContainer', 'pnl', 'monthly', 'monthly');
   createDynamicTable('monthlyBalanceContainer', 'balance', 'monthly', 'monthly');
   createDynamicTable('monthlyCashflowContainer', 'cashflow', 'monthly', 'monthly');
@@ -710,10 +706,7 @@ function handleActualsUpload(file) {
 /**
  * Export functions
  */
-function exportCombinedData() {
-  const tables = ['combinedpnltable', 'combinedbalancetable', 'combinedcashflowtable'];
-  exportMultipleTables(tables, 'combined_3_statement_model');
-}
+// Combined export removed
 
 function exportPeriodData(period) {
   const tables = [`${period}pnltable`, `${period}balancetable`, `${period}cashflowtable`];
@@ -762,7 +755,6 @@ function labelFromTableId(tableId) {
 }
 
 // Expose functions globally
-window.exportCombinedData = exportCombinedData;
 window.exportPeriodData = exportPeriodData;
 
 /**
