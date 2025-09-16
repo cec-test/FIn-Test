@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3-Statement Financial Forecast Model</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 3px solid #e9ecef;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .tab:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+        
+        .tab.active {
+            background: white;
+            color: #3498db;
+            transform: translateY(-3px);
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #3498db;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .controls {
+            background: #f8f9fa;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .controls h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 1.3rem;
+        }
+        
+        .control-group {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .control-item label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 120px;
+        }
+        
+        .control-item input, .control-item select {
+            padding: 10px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .control-item input:focus, .control-item select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 0.9rem;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            color: white;
+            padding: 15px 10px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.2s ease;
+        }
+        
+        tr:hover td {
+            background-color: #f8f9fa;
+        }
+        
+        .metric-name {
+            font-weight: 600;
+            color: #2c3e50;
+            min-width: 200px;
+        }
+        
+        .actual {
+            background-color: #e8f5e8;
+            color: #27ae60;
+            font-weight: 600;
+        }
+        
+        .forecast {
+            background-color: #fff3cd;
+            color: #856404;
+            font-weight: 600;
+        }
+        
+        .section-header {
+            background: #3498db !important;
+            color: white !important;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+        
+        .subsection-header {
+            background: #ecf0f1 !important;
+            color: #2c3e50 !important;
+            font-weight: 600;
+            font-style: italic;
+        }
+        
+        .number {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            font-weight: 500;
+        }
+        
+        .negative {
+            color: #e74c3c;
+        }
+        
+        .positive {
+            color: #27ae60;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .forecast-info {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(116, 185, 255, 0.3);
+        }
+        
+        .export-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            margin: 10px 10px 10px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .export-btn:hover {
+            background: #219a52;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .control-group {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .control-item {
+                width: 100%;
+            }
+            
+            .control-item label {
+                min-width: auto;
+            }
+            
+            table {
+                font-size: 0.8rem;
+            }
+            
+            th, td {
+                padding: 8px 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>3-Statement Financial Forecast Model</h1>
+            <p>Professional P&L, Balance Sheet & Cash Flow Forecasting with Multiple Methodologies</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('variables')">Variables & Controls</button>
+            <button class="tab" onclick="showTab('monthly')">Monthly Forecast</button>
+            <button class="tab" onclick="showTab('quarterly')">Quarterly Forecast</button>
+            <button class="tab" onclick="showTab('annual')">Annual Forecast</button>
+        </div>
+        
+        <div class="content">
+            <div id="variables" class="tab-content active">
+                <div class="controls">
+                    <h3>📊 Forecast Parameters</h3>
+                    <div class="control-group">
+                        <div class="control-item">
+                            <label>Forecast Method:</label>
+                            <select id="forecastMethod" onchange="updateForecast()">
+                                <option value="custom">Custom Growth Rate</option>
+                                <option value="rolling">Rolling Average (12 months)</option>
+                                <option value="threemonth">3-Month Average</option>
+                            </select>
+                        </div>
+                        <div class="control-item">
+                            <label>Custom Growth Rate (%):</label>
+                            <input type="number" id="customGrowthRate" value="5.0" step="0.1" onchange="updateForecast()">
+                        </div>
+                        <div class="control-item">
+                            <label>Forecast Periods:</label>
+                            <input type="number" id="forecastPeriods" value="12" min="1" max="36" onchange="updateForecast()">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="forecast-info">
+                    <strong>Current Settings:</strong> <span id="currentSettings">Custom Growth Rate at 5.0% for 12 periods</span>
+                </div>
+                
+                <h3>📈 Key Financial Metrics Overview</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Latest Actual (Jul 2025)</th>
+                                <th>YTD Performance</th>
+                                <th>Forecast Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody id="metricsOverview">
+                            <tr>
+                                <td class="metric-name">Total Revenue</td>
+                                <td class="number actual">$385,007</td>
+                                <td class="number">$2,738,326</td>
+                                <td class="number forecast">Growing</td>
+                            </tr>
+                            <tr>
+                                <td class="metric-name">Gross Margin</td>
+                                <td class="number actual">100%</td>
+                                <td class="number">100%</td>
+                                <td class="number forecast">Stable</td>
+                            </tr>
+                            <tr>
+                                <td class="metric-name">Net Income</td>
+                                <td class="number actual">$99,338</td>
+                                <td class="number">$776,062</td>
+                                <td class="number forecast">Growing</td>
+                            </tr>
+                            <tr>
+                                <td class="metric-name">Cash Balance</td>
+                                <td class="number actual">$2,010</td>
+                                <td class="number">-$437,062</td>
+                                <td class="number forecast">Improving</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="monthly" class="tab-content">
+                <div class="forecast-info">
+                    <strong>Monthly Forecast</strong> - Next 12 months with <span id="monthlyMethod">custom growth rate</span>
+                </div>
+                <button class="export-btn" onclick="exportToCSV('monthlyTable', 'monthly_forecast.csv')">📊 Export Monthly Forecast</button>
+                <div class="table-container">
+                    <table id="monthlyTable">
+                        <!-- Dynamic content will be inserted here -->
+                    </table>
+                </div>
+            </div>
+            
+            <div id="quarterly" class="tab-content">
+                <div class="forecast-info">
+                    <strong>Quarterly Forecast</strong> - Next 4 quarters with <span id="quarterlyMethod">custom growth rate</span>
+                </div>
+                <button class="export-btn" onclick="exportToCSV('quarterlyTable', 'quarterly_forecast.csv')">📊 Export Quarterly Forecast</button>
+                <div class="table-container">
+                    <table id="quarterlyTable">
+                        <!-- Dynamic content will be inserted here -->
+                    </table>
+                </div>
+            </div>
+            
+            <div id="annual" class="tab-content">
+                <div class="forecast-info">
+                    <strong>Annual Forecast</strong> - Next 3 years with <span id="annualMethod">custom growth rate</span>
+                </div>
+                <button class="export-btn" onclick="exportToCSV('annualTable', 'annual_forecast.csv')">📊 Export Annual Forecast</button>
+                <div class="table-container">
+                    <table id="annualTable">
+                        <!-- Dynamic content will be inserted here -->
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Historical data from the provided actuals
+        const historicalData = {
+            dates: ['Jan 31, 2024', 'Feb 29, 2024', 'Mar 31, 2024', 'Apr 30, 2024', 'May 31, 2024', 'Jun 30, 2024', 'Jul 31, 2024', 'Aug 31, 2024', 'Sep 30, 2024', 'Oct 31, 2024', 'Nov 30, 2024', 'Dec 31, 2024', 'Jan 31, 2025', 'Feb 28, 2025', 'Mar 31, 2025', 'Apr 30, 2025', 'May 31, 2025', 'Jun 30, 2025', 'Jul 31, 2025'],
+            
+            // P&L Data
+            consultingIncome: [493181.6, 511944.9, 501142.9, 476798.5, 450812.5, 404529.4, 397934.2, 400551.5, 427483.3, 426840.6, 415946.9, 413775.9, 379577.8, 474236.8, 367417.0, 392227.9, 381435.1, 376845.9, 358465.8],
+            conversionFees: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25872.2, 37613.4],
+            placementFees: [16200.0, 0, 0, 0, 15300.0, 0, 5100.0, 0, 14280.0, 15300.0, 0, 39780.0, 25500.0, 28040.0, 0, 0, 0, 0, 0],
+            reimbursementIncome: [2451.6, 0, 0, 134.0, 0, 25.0, 345.2, 0, 0, 349.2, 0, 1040.3, 452.5, 430.4, 0, 311.3, 0, 0, 0],
+            services: [0, 0, 0, 0, 0, 0, 0, 0, 0, 7749.8, 0, 0, 1432.6, 7408.3, 0, 7408.3, 26541.2, 0, 0],
+            totalRevenue: [511833.15, 511944.9, 501142.89, 476932.42, 466112.47, 404554.36, 403379.42, 400551.47, 441763.33, 442489.78, 415946.85, 462345.95, 405530.26, 502707.17, 368849.56, 425819.65, 419048.49, 384254.21, 385006.98],
+            
+            totalOperationalExpenses: [491434.82, 433188.6, 435961.27, 461133.91, 421522.76, 371710.04, 367000.05, 365534.28, 372455.89, 365102.93, 364345.26, 291671.74, 347090.56, 505470.75, 321961.82, 383225.11, 318978.73, 334667.39, 285669.2],
+            netIncome: [20398.3, 78756.3, 65181.6, 15798.5, 43369.7, 32844.3, 36379.4, 34469.7, 68649.8, 76777.9, 51601.6, 169296.2, 58439.7, -2763.6, 46887.7, 42445.9, 100086.0, 49586.8, 99337.8],
+            
+            // Balance Sheet Data
+            totalBankAccounts: [439071.9, 357569.4, 506621.7, 290966.2, 245112.2, 107207.2, 164808.7, 71107.7, 114944.9, 241386.4, 317712.6, 195702.9, 298254.4, 282210.0, 436902.7, 227061.8, 16303.7, 5134.2, 2010.1],
+            accountsReceivable: [39928.3, 162288.1, 62819.5, 106076.7, 75214.2, 141669.4, 78883.0, 177720.6, 173152.4, 95272.4, 126748.3, 92552.4, 9800.0, 10100.0, 9500.0, 145993.6, 100429.9, 76428.9, 20536.9],
+            totalCurrentAssets: [280734.4, 395951.1, 300008.3, 319467.7, 282734.5, 326331.7, 78883.0, 177720.6, 232174.2, 95272.4, 126748.3, 92552.4, 9800.0, 10100.0, 9500.0, 145993.6, 100429.9, 76428.9, 20536.9],
+            totalAssets: [719806.3, 753520.5, 806630.0, 610433.9, 527846.7, 433538.9, 243691.7, 248828.3, 347119.1, 336658.8, 444460.9, 288408.2, 308207.4, 292463.0, 446555.7, 373208.3, 116886.6, 81716.1, 22700.1],
+            
+            totalCurrentLiabilities: [156601.1, 170947.5, 168495.0, 155771.7, 140478.8, 124019.1, 118441.1, 116900.0, 192576.3, 138048.8, 241492.5, 114307.1, 110200.4, 136847.0, 266806.3, 133199.2, 277430.7, 148755.5, 269874.4],
+            totalEquity: [563205.2, 582573.0, 638135.0, 454662.2, 387367.9, 309519.8, 305198.1, 328209.6, 385852.2, 451763.0, 467120.1, 500654.1, 510362.3, 496860.8, 472506.8, 439228.1, 478172.6, 437831.3, 478178.6]
+        };
+
+        let currentForecast = {
+            monthly: {},
+            quarterly: {},
+            annual: {}
+        };
+
+        function showTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        function formatCurrency(amount) {
+            if (amount === 0) return '$0';
+            if (Math.abs(amount) < 1000) return '$' + amount.toFixed(0);
+            if (Math.abs(amount) < 1000000) return '$' + (amount / 1000).toFixed(0) + 'K';
+            return '$' + (amount / 1000000).toFixed(1) + 'M';
+        }
+
+        function calculateAverage(arr, periods) {
+            if (arr.length === 0) return 0;
+            const relevantPeriods = arr.slice(-periods);
+            return relevantPeriods.reduce((sum, val) => sum + val, 0) / relevantPeriods.length;
+        }
+
+        function calculateRollingAverage(arr) {
+            return calculateAverage(arr, Math.min(12, arr.length));
+        }
+
+        function calculateThreeMonthAverage(arr) {
+            return calculateAverage(arr, Math.min(3, arr.length));
+        }
+
+        function getForecastValue(historicalArray, method, customGrowth, periodIndex) {
+            const latestValue = historicalArray[historicalArray.length - 1];
+            
+            switch (method) {
+                case 'custom':
+                    return latestValue * Math.pow(1 + (customGrowth / 100), periodIndex + 1);
+                case 'rolling':
+                    return calculateRollingAverage(historicalArray);
+                case 'threemonth':
+                    return calculateThreeMonthAverage(historicalArray);
+                default:
+                    return latestValue;
+            }
+        }
+
+        function generateForecastDates(periods, frequency) {
+            const dates = [];
+            const baseDate = new Date(2025, 7, 31); // July 31, 2025 (last actual date)
+            
+            for (let i = 1; i <= periods; i++) {
+                const forecastDate = new Date(baseDate);
+                
+                if (frequency === 'monthly') {
+                    forecastDate.setMonth(baseDate.getMonth() + i);
+                } else if (frequency === 'quarterly') {
+                    forecastDate.setMonth(baseDate.getMonth() + (i * 3));
+                } else if (frequency === 'annual') {
+                    forecastDate.setFullYear(baseDate.getFullYear() + i);
+                }
+                
+                dates.push(forecastDate.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric' 
+                }));
+            }
+            
+            return dates;
+        }
+
+        function generateMonthlyForecast() {
+            const method = document.getElementById('forecastMethod').value;
+            const customGrowth = parseFloat(document.getElementById('customGrowthRate').value) || 0;
+            const periods = parseInt(document.getElementById('forecastPeriods').value) || 12;
+            
+            const forecastDates = generateForecastDates(periods, 'monthly');
+            const forecast = {
+                dates: forecastDates,
+                totalRevenue: [],
+                consultingIncome: [],
+                conversionFees: [],
+                netIncome: [],
+                totalOperationalExpenses: [],
+                totalAssets: [],
+                totalBankAccounts: [],
+                accountsReceivable: [],
+                totalEquity: []
+            };
+            
+            for (let i = 0; i < periods; i++) {
+                forecast.totalRevenue.push(getForecastValue(historicalData.totalRevenue, method, customGrowth, i));
+                forecast.consultingIncome.push(getForecastValue(historicalData.consultingIncome, method, customGrowth, i));
+                forecast.conversionFees.push(getForecastValue(historicalData.conversionFees, method, customGrowth, i));
+                forecast.netIncome.push(getForecastValue(historicalData.netIncome, method, customGrowth, i));
+                forecast.totalOperationalExpenses.push(getForecastValue(historicalData.totalOperationalExpenses, method, customGrowth, i));
+                forecast.totalAssets.push(getForecastValue(historicalData.totalAssets, method, customGrowth, i));
+                forecast.totalBankAccounts.push(getForecastValue(historicalData.totalBankAccounts, method, customGrowth, i));
+                forecast.accountsReceivable.push(getForecastValue(historicalData.accountsReceivable, method, customGrowth, i));
+                forecast.totalEquity.push(getForecastValue(historicalData.totalEquity, method, customGrowth, i));
+            }
+            
+            return forecast;
+        }
+
+        function generateQuarterlyForecast() {
+            const monthlyForecast = generateMonthlyForecast();
+            const forecast = {
+                dates: generateForecastDates(4, 'quarterly'),
+                totalRevenue: [],
+                consultingIncome: [],
+                conversionFees: [],
+                netIncome: [],
+                totalOperationalExpenses: [],
+                totalAssets: [],
+                totalBankAccounts: [],
+                accountsReceivable: [],
+                totalEquity: []
+            };
+            
+            // Aggregate monthly to quarterly
+            for (let i = 0; i < 4; i++) {
+                const monthIndex = Math.min((i + 1) * 3 - 1, monthlyForecast.totalRevenue.length - 1);
+                forecast.totalRevenue.push(monthlyForecast.totalRevenue[monthIndex] * 3);
+                forecast.consultingIncome.push(monthlyForecast.consultingIncome[monthIndex] * 3);
+                forecast.conversionFees.push(monthlyForecast.conversionFees[monthIndex] * 3);
+                forecast.netIncome.push(monthlyForecast.netIncome[monthIndex] * 3);
+                forecast.totalOperationalExpenses.push(monthlyForecast.totalOperationalExpenses[monthIndex] * 3);
+                forecast.totalAssets.push(monthlyForecast.totalAssets[monthIndex]);
+                forecast.totalBankAccounts.push(monthlyForecast.totalBankAccounts[monthIndex]);
+                forecast.accountsReceivable.push(monthlyForecast.accountsReceivable[monthIndex]);
+                forecast.totalEquity.push(monthlyForecast.totalEquity[monthIndex]);
+            }
+            
+            return forecast;
+        }
+
+        function generateAnnualForecast() {
+            const method = document.getElementById('forecastMethod').value;
+            const customGrowth = parseFloat(document.getElementById('customGrowthRate').value) || 0;
+            
+            const forecast = {
+                dates: generateForecastDates(3, 'annual'),
+                totalRevenue: [],
+                consultingIncome: [],
+                conversionFees: [],
+                netIncome: [],
+                totalOperationalExpenses: [],
+                totalAssets: [],
+                totalBankAccounts: [],
+                accountsReceivable: [],
+                totalEquity: []
+            };
+            
+            // Calculate annual figures
+            for (let i = 0; i < 3; i++) {
+                forecast.totalRevenue.push(getForecastValue(historicalData.totalRevenue, method, customGrowth, i) * 12);
+                forecast.consultingIncome.push(getForecastValue(historicalData.consultingIncome, method, customGrowth, i) * 12);
+                forecast.conversionFees.push(getForecastValue(historicalData.conversionFees, method, customGrowth, i) * 12);
+                forecast.netIncome.push(getForecastValue(historicalData.netIncome, method, customGrowth, i) * 12);
+                forecast.totalOperationalExpenses.push(getForecastValue(historicalData.totalOperationalExpenses, method, customGrowth, i) * 12);
+                forecast.totalAssets.push(getForecastValue(historicalData.totalAssets, method, customGrowth, i));
+                forecast.totalBankAccounts.push(getForecastValue(historicalData.totalBankAccounts, method, customGrowth, i));
+                forecast.accountsReceivable.push(getForecastValue(historicalData.accountsReceivable, method, customGrowth, i));
+                forecast.totalEquity.push(getForecastValue(historicalData.totalEquity, method, customGrowth, i));
+            }
+            
+            return forecast;
+        }
+
+        function createForecastTable(forecast, tableId, showActuals = true) {
+            const table = document.getElementById(tableId);
+            
+            // Create header
+            let headerHtml = '<thead><tr><th>Financial Statement Item</th>';
+            
+            if (showActuals) {
+                headerHtml += '<th class="actual">Latest Actual</th>';
+            }
+            
+            forecast.dates.forEach(date => {
+                headerHtml += `<th class="forecast">${date}</th>`;
+            });
+            
+            headerHtml += '</tr></thead>';
+            
+            // Create body with P&L, Balance Sheet sections
+            let bodyHtml = '<tbody>';
+            
+            // P&L Section
+            bodyHtml += '<tr><td class="section-header" colspan="' + (forecast.dates.length + (showActuals ? 2 : 1)) + '">PROFIT & LOSS</td></tr>';
+            
+            // Revenue breakdown
+            bodyHtml += '<tr><td class="subsection-header" colspan="' + (forecast.dates.length + (showActuals ? 2 : 1)) + '">Revenue</td></tr>';
+            
+            bodyHtml += '<tr><td class="metric-name">Consulting Income</td>';
+            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.consultingIncome[historicalData.consultingIncome.length - 1])}</td>`;
+            forecast.consultingIncome.forEach(value => {
+                bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
+            bodyHtml += '<tr><td class="metric-name">Conversion Fees</td>';
+            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.conversionFees[historicalData.conversionFees.length - 1])}</td>`;
+            forecast.conversionFees.forEach(value => {
+                bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
+            bodyHtml += '<tr><td class="metric-name">Total Revenue</td>';
+            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.totalRevenue[historicalData.totalRevenue.length - 1])}</td>`;
+            forecast.totalRevenue.forEach(value => {
+                bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
+            // Expenses and Net Income
+            bodyHtml += '<tr><td class="subsection-header" colspan="' + (forecast.dates.length + (showActuals ? 2 : 1)) + '">Expenses & Profitability</td></tr>';
+            
+            bodyHtml += '<tr><td class="metric-name">Total Operational Expenses</td>';
+            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.totalOperationalExpenses[historicalData.totalOperationalExpenses.length - 1])}</td>`;
+            forecast.totalOperationalExpenses.forEach(value => {
+                bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
+            bodyHtml += '<tr><td class="metric-name">Net Income</td>';
+            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.netIncome[historicalData.netIncome.length - 1])}</td>`;
+            forecast.netIncome.forEach(value => {
+                const className = value >= 0 ? 'positive' : 'negative';
+                bodyHtml += `<td class="number forecast ${className}">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
+            // Balance Sheet Section
+            bodyHtml += '<tr><td class="section-header" colspan="' + (forecast.dates.length + (showActuals ? 2 : 1)) + '">BALANCE SHEET</td></tr>';
+            
+            // Assets
+            bodyHtml += '<tr><td class="subsection-header" colspan="' + (forecast.dates.length + (showActuals ? 2 : 1)) + '">Assets</td></tr>';
+            
+            bodyHtml += '<tr><td class="metric-name">Cash & Bank Accounts</td>';
+            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.totalBankAccounts[historicalData.totalBankAccounts.length - 1])}</td>`;
+            forecast.totalBankAccounts.forEach(value => {
+                const className = value >= 0 ? 'positive' : 'negative';
+                bodyHtml += `<td class="number forecast ${className}">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
+            bodyHtml += '<tr><td class="metric-name">Accounts Receivable</td>';
+            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.accountsReceivable[historicalData.accountsReceivable.length - 1])}</td>`;
+            forecast.accountsReceivable.forEach(value => {
+                bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
+            bodyHtml += '<tr><td class="metric-name">Total Assets</td>';
+            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.totalAssets[historicalData.totalAssets.length - 1])}</td>`;
+            forecast.totalAssets.forEach(value => {
+                bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
+            // Equity
+            bodyHtml += '<tr><td class="subsection-header" colspan="' + (forecast.dates.length + (showActuals ? 2 : 1)) + '">Equity</td></tr>';
+            
+            bodyHtml += '<tr><td class="metric-name">Total Equity</td>';
+            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.totalEquity[historicalData.totalEquity.length - 1])}</td>`;
+            forecast.totalEquity.forEach(value => {
+                bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
+            bodyHtml += '</tbody>';
+            
+            table.innerHTML = headerHtml + bodyHtml;
+        }
+
+        function updateForecast() {
+            const method = document.getElementById('forecastMethod').value;
+            const customGrowth = document.getElementById('customGrowthRate').value;
+            const periods = document.getElementById('forecastPeriods').value;
+            
+            // Update settings display
+            let methodText = '';
+            switch(method) {
+                case 'custom':
+                    methodText = `Custom Growth Rate at ${customGrowth}% for ${periods} periods`;
+                    break;
+                case 'rolling':
+                    methodText = `Rolling Average (12 months) for ${periods} periods`;
+                    break;
+                case 'threemonth':
+                    methodText = `3-Month Average for ${periods} periods`;
+                    break;
+            }
+            document.getElementById('currentSettings').textContent = methodText;
+            
+            // Update method displays in other tabs
+            document.getElementById('monthlyMethod').textContent = method === 'custom' ? `custom growth rate (${customGrowth}%)` : method.replace('threemonth', '3-month average');
+            document.getElementById('quarterlyMethod').textContent = method === 'custom' ? `custom growth rate (${customGrowth}%)` : method.replace('threemonth', '3-month average');
+            document.getElementById('annualMethod').textContent = method === 'custom' ? `custom growth rate (${customGrowth}%)` : method.replace('threemonth', '3-month average');
+            
+            // Generate forecasts
+            currentForecast.monthly = generateMonthlyForecast();
+            currentForecast.quarterly = generateQuarterlyForecast();
+            currentForecast.annual = generateAnnualForecast();
+            
+            // Update tables
+            createForecastTable(currentForecast.monthly, 'monthlyTable');
+            createForecastTable(currentForecast.quarterly, 'quarterlyTable');
+            createForecastTable(currentForecast.annual, 'annualTable');
+        }
+
+        function exportToCSV(tableId, filename) {
+            const table = document.getElementById(tableId);
+            const rows = table.querySelectorAll('tr');
+            const csvContent = Array.from(rows).map(row => {
+                const cells = row.querySelectorAll('th, td');
+                return Array.from(cells).map(cell => 
+                    `"${cell.textContent.replace(/"/g, '""')}"`
+                ).join(',');
+            }).join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function initializeModel() {
+            // Enable/disable custom growth rate input based on method
+            const methodSelect = document.getElementById('forecastMethod');
+            const customGrowthInput = document.getElementById('customGrowthRate');
+            
+            methodSelect.addEventListener('change', function() {
+                customGrowthInput.disabled = this.value !== 'custom';
+                if (this.value !== 'custom') {
+                    customGrowthInput.style.opacity = '0.5';
+                } else {
+                    customGrowthInput.style.opacity = '1';
+                }
+            });
+            
+            // Initialize forecasts
+            updateForecast();
+        }
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case '1':
+                        e.preventDefault();
+                        showTab('variables');
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        showTab('monthly');
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        showTab('quarterly');
+                        break;
+                    case '4':
+                        e.preventDefault();
+                        showTab('annual');
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        updateForecast();
+                        break;
+                }
+            }
+        });
+
+        // Initialize the model when the page loads
+        window.addEventListener('load', initializeModel);
+    </script>
+</body>
+</html>
