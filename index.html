@@ -497,14 +497,20 @@
             const baseDate = new Date(2025, 7, 31); // July 31, 2025 (last actual date)
             
             for (let i = 1; i <= periods; i++) {
-                const forecastDate = new Date(baseDate);
+                let forecastDate = new Date(baseDate);
                 
                 if (frequency === 'monthly') {
                     forecastDate.setMonth(baseDate.getMonth() + i);
+                    // Set to last day of the month
+                    forecastDate = new Date(forecastDate.getFullYear(), forecastDate.getMonth() + 1, 0);
                 } else if (frequency === 'quarterly') {
                     forecastDate.setMonth(baseDate.getMonth() + (i * 3));
+                    // Set to last day of the quarter month
+                    forecastDate = new Date(forecastDate.getFullYear(), forecastDate.getMonth() + 1, 0);
                 } else if (frequency === 'annual') {
                     forecastDate.setFullYear(baseDate.getFullYear() + i);
+                    forecastDate.setMonth(11); // December
+                    forecastDate.setDate(31); // Last day of year
                 }
                 
                 dates.push(forecastDate.toLocaleDateString('en-US', { 
@@ -528,11 +534,16 @@
                 totalRevenue: [],
                 consultingIncome: [],
                 conversionFees: [],
+                placementFees: [],
+                reimbursementIncome: [],
+                services: [],
                 netIncome: [],
                 totalOperationalExpenses: [],
                 totalAssets: [],
                 totalBankAccounts: [],
                 accountsReceivable: [],
+                totalCurrentAssets: [],
+                totalCurrentLiabilities: [],
                 totalEquity: []
             };
             
@@ -540,11 +551,16 @@
                 forecast.totalRevenue.push(getForecastValue(historicalData.totalRevenue, method, customGrowth, i));
                 forecast.consultingIncome.push(getForecastValue(historicalData.consultingIncome, method, customGrowth, i));
                 forecast.conversionFees.push(getForecastValue(historicalData.conversionFees, method, customGrowth, i));
+                forecast.placementFees.push(getForecastValue(historicalData.placementFees, method, customGrowth, i));
+                forecast.reimbursementIncome.push(getForecastValue(historicalData.reimbursementIncome, method, customGrowth, i));
+                forecast.services.push(getForecastValue(historicalData.services, method, customGrowth, i));
                 forecast.netIncome.push(getForecastValue(historicalData.netIncome, method, customGrowth, i));
                 forecast.totalOperationalExpenses.push(getForecastValue(historicalData.totalOperationalExpenses, method, customGrowth, i));
                 forecast.totalAssets.push(getForecastValue(historicalData.totalAssets, method, customGrowth, i));
                 forecast.totalBankAccounts.push(getForecastValue(historicalData.totalBankAccounts, method, customGrowth, i));
                 forecast.accountsReceivable.push(getForecastValue(historicalData.accountsReceivable, method, customGrowth, i));
+                forecast.totalCurrentAssets.push(getForecastValue(historicalData.totalCurrentAssets, method, customGrowth, i));
+                forecast.totalCurrentLiabilities.push(getForecastValue(historicalData.totalCurrentLiabilities, method, customGrowth, i));
                 forecast.totalEquity.push(getForecastValue(historicalData.totalEquity, method, customGrowth, i));
             }
             
@@ -558,11 +574,16 @@
                 totalRevenue: [],
                 consultingIncome: [],
                 conversionFees: [],
+                placementFees: [],
+                reimbursementIncome: [],
+                services: [],
                 netIncome: [],
                 totalOperationalExpenses: [],
                 totalAssets: [],
                 totalBankAccounts: [],
                 accountsReceivable: [],
+                totalCurrentAssets: [],
+                totalCurrentLiabilities: [],
                 totalEquity: []
             };
             
@@ -572,11 +593,16 @@
                 forecast.totalRevenue.push(monthlyForecast.totalRevenue[monthIndex] * 3);
                 forecast.consultingIncome.push(monthlyForecast.consultingIncome[monthIndex] * 3);
                 forecast.conversionFees.push(monthlyForecast.conversionFees[monthIndex] * 3);
+                forecast.placementFees.push(monthlyForecast.placementFees[monthIndex] * 3);
+                forecast.reimbursementIncome.push(monthlyForecast.reimbursementIncome[monthIndex] * 3);
+                forecast.services.push(monthlyForecast.services[monthIndex] * 3);
                 forecast.netIncome.push(monthlyForecast.netIncome[monthIndex] * 3);
                 forecast.totalOperationalExpenses.push(monthlyForecast.totalOperationalExpenses[monthIndex] * 3);
                 forecast.totalAssets.push(monthlyForecast.totalAssets[monthIndex]);
                 forecast.totalBankAccounts.push(monthlyForecast.totalBankAccounts[monthIndex]);
                 forecast.accountsReceivable.push(monthlyForecast.accountsReceivable[monthIndex]);
+                forecast.totalCurrentAssets.push(monthlyForecast.totalCurrentAssets[monthIndex]);
+                forecast.totalCurrentLiabilities.push(monthlyForecast.totalCurrentLiabilities[monthIndex]);
                 forecast.totalEquity.push(monthlyForecast.totalEquity[monthIndex]);
             }
             
@@ -590,6 +616,41 @@
             const forecast = {
                 dates: generateForecastDates(3, 'annual'),
                 totalRevenue: [],
+                consultingIncome: [],
+                conversionFees: [],
+                placementFees: [],
+                reimbursementIncome: [],
+                services: [],
+                netIncome: [],
+                totalOperationalExpenses: [],
+                totalAssets: [],
+                totalBankAccounts: [],
+                accountsReceivable: [],
+                totalCurrentAssets: [],
+                totalCurrentLiabilities: [],
+                totalEquity: []
+            };
+            
+            // Calculate annual figures
+            for (let i = 0; i < 3; i++) {
+                forecast.totalRevenue.push(getForecastValue(historicalData.totalRevenue, method, customGrowth, i) * 12);
+                forecast.consultingIncome.push(getForecastValue(historicalData.consultingIncome, method, customGrowth, i) * 12);
+                forecast.conversionFees.push(getForecastValue(historicalData.conversionFees, method, customGrowth, i) * 12);
+                forecast.placementFees.push(getForecastValue(historicalData.placementFees, method, customGrowth, i) * 12);
+                forecast.reimbursementIncome.push(getForecastValue(historicalData.reimbursementIncome, method, customGrowth, i) * 12);
+                forecast.services.push(getForecastValue(historicalData.services, method, customGrowth, i) * 12);
+                forecast.netIncome.push(getForecastValue(historicalData.netIncome, method, customGrowth, i) * 12);
+                forecast.totalOperationalExpenses.push(getForecastValue(historicalData.totalOperationalExpenses, method, customGrowth, i) * 12);
+                forecast.totalAssets.push(getForecastValue(historicalData.totalAssets, method, customGrowth, i));
+                forecast.totalBankAccounts.push(getForecastValue(historicalData.totalBankAccounts, method, customGrowth, i));
+                forecast.accountsReceivable.push(getForecastValue(historicalData.accountsReceivable, method, customGrowth, i));
+                forecast.totalCurrentAssets.push(getForecastValue(historicalData.totalCurrentAssets, method, customGrowth, i));
+                forecast.totalCurrentLiabilities.push(getForecastValue(historicalData.totalCurrentLiabilities, method, customGrowth, i));
+                forecast.totalEquity.push(getForecastValue(historicalData.totalEquity, method, customGrowth, i));
+            }
+            
+            return forecast;
+        }enue: [],
                 consultingIncome: [],
                 conversionFees: [],
                 netIncome: [],
@@ -619,13 +680,15 @@
         function createForecastTable(forecast, tableId, showActuals = true) {
             const table = document.getElementById(tableId);
             
-            // Create header
+            // Create header with all historical dates plus forecasts
             let headerHtml = '<thead><tr><th>Financial Statement Item</th>';
             
-            if (showActuals) {
-                headerHtml += '<th class="actual">Latest Actual</th>';
-            }
+            // Add all historical dates
+            historicalData.dates.forEach(date => {
+                headerHtml += `<th class="actual">${date}</th>`;
+            });
             
+            // Add forecast dates
             forecast.dates.forEach(date => {
                 headerHtml += `<th class="forecast">${date}</th>`;
             });
@@ -636,44 +699,84 @@
             let bodyHtml = '<tbody>';
             
             // P&L Section
-            bodyHtml += '<tr><td class="section-header" colspan="' + (forecast.dates.length + (showActuals ? 2 : 1)) + '">PROFIT & LOSS</td></tr>';
+            bodyHtml += '<tr><td class="section-header" colspan="' + (historicalData.dates.length + forecast.dates.length + 1) + '">PROFIT & LOSS</td></tr>';
             
             // Revenue breakdown
-            bodyHtml += '<tr><td class="subsection-header" colspan="' + (forecast.dates.length + (showActuals ? 2 : 1)) + '">Revenue</td></tr>';
+            bodyHtml += '<tr><td class="subsection-header" colspan="' + (historicalData.dates.length + forecast.dates.length + 1) + '">Revenue</td></tr>';
             
             bodyHtml += '<tr><td class="metric-name">Consulting Income</td>';
-            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.consultingIncome[historicalData.consultingIncome.length - 1])}</td>`;
+            // Add all historical data
+            historicalData.consultingIncome.forEach(value => {
+                bodyHtml += `<td class="number actual">${formatCurrency(value)}</td>`;
+            });
+            // Add forecast data
             forecast.consultingIncome.forEach(value => {
                 bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
             });
             bodyHtml += '</tr>';
             
             bodyHtml += '<tr><td class="metric-name">Conversion Fees</td>';
-            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.conversionFees[historicalData.conversionFees.length - 1])}</td>`;
+            historicalData.conversionFees.forEach(value => {
+                bodyHtml += `<td class="number actual">${formatCurrency(value)}</td>`;
+            });
             forecast.conversionFees.forEach(value => {
                 bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
             });
             bodyHtml += '</tr>';
             
+            bodyHtml += '<tr><td class="metric-name">Placement Fees</td>';
+            historicalData.placementFees.forEach(value => {
+                bodyHtml += `<td class="number actual">${formatCurrency(value)}</td>`;
+            });
+            forecast.placementFees.forEach(value => {
+                bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
+            bodyHtml += '<tr><td class="metric-name">Reimbursement Income</td>';
+            historicalData.reimbursementIncome.forEach(value => {
+                bodyHtml += `<td class="number actual">${formatCurrency(value)}</td>`;
+            });
+            forecast.reimbursementIncome.forEach(value => {
+                bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
+            bodyHtml += '<tr><td class="metric-name">Services</td>';
+            historicalData.services.forEach(value => {
+                bodyHtml += `<td class="number actual">${formatCurrency(value)}</td>`;
+            });
+            forecast.services.forEach(value => {
+                bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
             bodyHtml += '<tr><td class="metric-name">Total Revenue</td>';
-            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.totalRevenue[historicalData.totalRevenue.length - 1])}</td>`;
+            historicalData.totalRevenue.forEach(value => {
+                bodyHtml += `<td class="number actual">${formatCurrency(value)}</td>`;
+            });
             forecast.totalRevenue.forEach(value => {
                 bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
             });
             bodyHtml += '</tr>';
             
             // Expenses and Net Income
-            bodyHtml += '<tr><td class="subsection-header" colspan="' + (forecast.dates.length + (showActuals ? 2 : 1)) + '">Expenses & Profitability</td></tr>';
+            bodyHtml += '<tr><td class="subsection-header" colspan="' + (historicalData.dates.length + forecast.dates.length + 1) + '">Expenses & Profitability</td></tr>';
             
             bodyHtml += '<tr><td class="metric-name">Total Operational Expenses</td>';
-            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.totalOperationalExpenses[historicalData.totalOperationalExpenses.length - 1])}</td>`;
+            historicalData.totalOperationalExpenses.forEach(value => {
+                bodyHtml += `<td class="number actual">${formatCurrency(value)}</td>`;
+            });
             forecast.totalOperationalExpenses.forEach(value => {
                 bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
             });
             bodyHtml += '</tr>';
             
             bodyHtml += '<tr><td class="metric-name">Net Income</td>';
-            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.netIncome[historicalData.netIncome.length - 1])}</td>`;
+            historicalData.netIncome.forEach(value => {
+                const className = value >= 0 ? 'positive' : 'negative';
+                bodyHtml += `<td class="number actual ${className}">${formatCurrency(value)}</td>`;
+            });
             forecast.netIncome.forEach(value => {
                 const className = value >= 0 ? 'positive' : 'negative';
                 bodyHtml += `<td class="number forecast ${className}">${formatCurrency(value)}</td>`;
@@ -681,13 +784,16 @@
             bodyHtml += '</tr>';
             
             // Balance Sheet Section
-            bodyHtml += '<tr><td class="section-header" colspan="' + (forecast.dates.length + (showActuals ? 2 : 1)) + '">BALANCE SHEET</td></tr>';
+            bodyHtml += '<tr><td class="section-header" colspan="' + (historicalData.dates.length + forecast.dates.length + 1) + '">BALANCE SHEET</td></tr>';
             
             // Assets
-            bodyHtml += '<tr><td class="subsection-header" colspan="' + (forecast.dates.length + (showActuals ? 2 : 1)) + '">Assets</td></tr>';
+            bodyHtml += '<tr><td class="subsection-header" colspan="' + (historicalData.dates.length + forecast.dates.length + 1) + '">Assets</td></tr>';
             
             bodyHtml += '<tr><td class="metric-name">Cash & Bank Accounts</td>';
-            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.totalBankAccounts[historicalData.totalBankAccounts.length - 1])}</td>`;
+            historicalData.totalBankAccounts.forEach(value => {
+                const className = value >= 0 ? 'positive' : 'negative';
+                bodyHtml += `<td class="number actual ${className}">${formatCurrency(value)}</td>`;
+            });
             forecast.totalBankAccounts.forEach(value => {
                 const className = value >= 0 ? 'positive' : 'negative';
                 bodyHtml += `<td class="number forecast ${className}">${formatCurrency(value)}</td>`;
@@ -695,24 +801,48 @@
             bodyHtml += '</tr>';
             
             bodyHtml += '<tr><td class="metric-name">Accounts Receivable</td>';
-            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.accountsReceivable[historicalData.accountsReceivable.length - 1])}</td>`;
+            historicalData.accountsReceivable.forEach(value => {
+                bodyHtml += `<td class="number actual">${formatCurrency(value)}</td>`;
+            });
             forecast.accountsReceivable.forEach(value => {
                 bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
             });
             bodyHtml += '</tr>';
             
+            bodyHtml += '<tr><td class="metric-name">Total Current Assets</td>';
+            historicalData.totalCurrentAssets.forEach(value => {
+                bodyHtml += `<td class="number actual">${formatCurrency(value)}</td>`;
+            });
+            forecast.totalCurrentAssets.forEach(value => {
+                bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
+            
             bodyHtml += '<tr><td class="metric-name">Total Assets</td>';
-            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.totalAssets[historicalData.totalAssets.length - 1])}</td>`;
+            historicalData.totalAssets.forEach(value => {
+                bodyHtml += `<td class="number actual">${formatCurrency(value)}</td>`;
+            });
             forecast.totalAssets.forEach(value => {
                 bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
             });
             bodyHtml += '</tr>';
             
-            // Equity
-            bodyHtml += '<tr><td class="subsection-header" colspan="' + (forecast.dates.length + (showActuals ? 2 : 1)) + '">Equity</td></tr>';
+            // Liabilities & Equity
+            bodyHtml += '<tr><td class="subsection-header" colspan="' + (historicalData.dates.length + forecast.dates.length + 1) + '">Liabilities & Equity</td></tr>';
+            
+            bodyHtml += '<tr><td class="metric-name">Total Current Liabilities</td>';
+            historicalData.totalCurrentLiabilities.forEach(value => {
+                bodyHtml += `<td class="number actual">${formatCurrency(value)}</td>`;
+            });
+            forecast.totalCurrentLiabilities.forEach(value => {
+                bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
+            });
+            bodyHtml += '</tr>';
             
             bodyHtml += '<tr><td class="metric-name">Total Equity</td>';
-            if (showActuals) bodyHtml += `<td class="number actual">${formatCurrency(historicalData.totalEquity[historicalData.totalEquity.length - 1])}</td>`;
+            historicalData.totalEquity.forEach(value => {
+                bodyHtml += `<td class="number actual">${formatCurrency(value)}</td>`;
+            });
             forecast.totalEquity.forEach(value => {
                 bodyHtml += `<td class="number forecast">${formatCurrency(value)}</td>`;
             });
