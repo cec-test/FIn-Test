@@ -11,6 +11,7 @@ let uploadedLineItems = {
   cashflow: []
 };
 let hasUploadedData = false;
+let dateColumns = [];
 
 /**
  * Formatting
@@ -125,8 +126,10 @@ function createDynamicTable(containerId, statementType, periodType) {
         <td class="metric-name">${item.name}</td>
     `;
     
-    // Add actual value (first column after Item)
-    tableHTML += `<td class="number actual">${formatCurrency(item.actual)}</td>`;
+    // Add actual value (first column after Item) - use the most recent actual value
+    const actualValue = item.actualValues && item.actualValues.length > 0 ? 
+      item.actualValues[item.actualValues.length - 1] : item.actual;
+    tableHTML += `<td class="number actual">${formatCurrency(actualValue)}</td>`;
     
     // Add forecast columns
     for (let i = 1; i < headers.length - 1; i++) {
@@ -196,10 +199,14 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
         itemGrowth = revGrowth;
       }
       
+      // Use the most recent actual value as base
+      const baseValue = item.actualValues && item.actualValues.length > 0 ? 
+        item.actualValues[item.actualValues.length - 1] : item.actual;
+      
       // Update forecast columns
       for (let i = 1; i < periods; i++) {
         const cellId = `${statementType}${item.name.toLowerCase().replace(/\s+/g, '')}${i}`;
-        const forecast = item.actual * Math.pow(1 + itemGrowth, i);
+        const forecast = baseValue * Math.pow(1 + itemGrowth, i);
         updateElement(cellId, formatCurrency(forecast, !hasUploadedData));
       }
     });
@@ -218,35 +225,63 @@ function updateElement(id, text, value = null) {
 }
 
 /**
- * Enhanced CSV Upload handling
+ * Enhanced CSV Upload handling for the user's actual format
  */
 function parseCSVToObject(text) {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) throw new Error('CSV must have at least a header and one data row');
   
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-  const data = {};
+  // Parse the header row to get date columns
+  const headerRow = lines[0].split(',');
+  dateColumns = headerRow.slice(1).map(col => col.trim().replace(/"/g, ''));
+  
+  const data = {
+    pnl: [],
+    balance: [],
+    cashflow: []
+  };
+  
+  let currentStatement = null;
   
   // Process each data row
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim());
-    if (values.length !== headers.length) continue;
+    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+    if (values.length < 2) continue;
     
-    const row = {};
-    headers.forEach((header, index) => {
-      row[header] = values[index];
-    });
+    const firstColumn = values[0].trim();
     
-    // Determine statement type and extract line items
-    if (row.statement) {
-      const statementType = row.statement.toLowerCase();
-      if (!data[statementType]) data[statementType] = [];
+    // Check if this is a statement header
+    if (firstColumn === 'P&L' || firstColumn === 'Balance Sheet' || firstColumn === 'Cashflows') {
+      currentStatement = firstColumn.toLowerCase().replace(/\s+/g, '');
+      if (currentStatement === 'p&l') currentStatement = 'pnl';
+      continue;
+    }
+    
+    // Skip empty rows or section headers
+    if (!firstColumn || firstColumn === '' || firstColumn.includes('Assets') || firstColumn.includes('Liabilities') || firstColumn.includes('Equity')) {
+      continue;
+    }
+    
+    // This is a line item
+    if (currentStatement && firstColumn) {
+      const lineItemName = firstColumn;
+      const actualValues = [];
       
-      data[statementType].push({
-        name: row.item || row.lineitem || row.account,
-        actual: toNumberOrZero(row.actual || row.amount || row.value),
-        statement: statementType
-      });
+      // Extract values from date columns
+      for (let j = 1; j < values.length && j < dateColumns.length + 1; j++) {
+        const value = toNumberOrZero(values[j]);
+        actualValues.push(value);
+      }
+      
+      // Only add if we have actual values
+      if (actualValues.some(v => v !== 0)) {
+        data[currentStatement].push({
+          name: lineItemName,
+          actual: actualValues[actualValues.length - 1], // Use most recent value
+          actualValues: actualValues,
+          statement: currentStatement
+        });
+      }
     }
   }
   
