@@ -5,211 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3-Statement Financial Model</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            font-weight: 300;
-        }
-        
-        .tabs {
-            display: flex;
-            background: #f8f9fa;
-            border-bottom: 3px solid #e9ecef;
-        }
-        
-        .tab {
-            flex: 1;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            background: #f8f9fa;
-            border: none;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #6c757d;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-        
-        .tab:hover {
-            background: #e9ecef;
-            transform: translateY(-2px);
-        }
-        
-        .tab.active {
-            background: white;
-            color: #3498db;
-            transform: translateY(-3px);
-        }
-        
-        .tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -3px;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: #3498db;
-        }
-        
-        .content {
-            padding: 30px;
-        }
-        
-        .controls {
-            background: #f8f9fa;
-            padding: 25px;
-            margin-bottom: 30px;
-            border-radius: 10px;
-            border: 2px solid #e9ecef;
-        }
-        
-        .control-group {
-            display: flex;
-            gap: 30px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .control-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .control-item label {
-            font-weight: 600;
-            color: #495057;
-            min-width: 120px;
-        }
-        
-        .control-item input, .control-item select {
-            padding: 10px 15px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-        
-        .table-container {
-            overflow-x: auto;
-            margin-bottom: 30px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            font-size: 0.9rem;
-        }
-        
-        th {
-            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
-            color: white;
-            padding: 15px 10px;
-            text-align: left;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        
-        td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
-        .metric-name {
-            font-weight: 600;
-            color: #2c3e50;
-            min-width: 200px;
-        }
-        
-        .actual {
-            background-color: #e8f5e8;
-            color: #27ae60;
-            font-weight: 600;
-        }
-        
-        .forecast {
-            background-color: #fff3cd;
-            color: #856404;
-            font-weight: 600;
-        }
-        
-        .number {
-            text-align: right;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .positive {
-            color: #27ae60;
-        }
-        
-        .negative {
-            color: #e74c3c;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .forecast-info {
-            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .export-btn {
-            background: #27ae60;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            margin: 10px 0;
-        }
-        
-        .export-btn:hover {
-            background: #219a52;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); color: white; padding: 30px; text-align: center; }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; font-weight: 300; }
+        .tabs { display: flex; background: #f8f9fa; border-bottom: 3px solid #e9ecef; }
+        .tab { flex: 1; padding: 20px; text-align: center; cursor: pointer; background: #f8f9fa; border: none; font-size: 1.1rem; font-weight: 600; color: #6c757d; transition: all 0.3s ease; position: relative; }
+        .tab:hover { background: #e9ecef; transform: translateY(-2px); }
+        .tab.active { background: white; color: #3498db; transform: translateY(-3px); }
+        .tab.active::after { content: ''; position: absolute; bottom: -3px; left: 0; right: 0; height: 3px; background: #3498db; }
+        .content { padding: 30px; }
+        .controls { background: #f8f9fa; padding: 25px; margin-bottom: 30px; border-radius: 10px; border: 2px solid #e9ecef; }
+        .control-group { display: flex; gap: 30px; align-items: center; flex-wrap: wrap; }
+        .control-item { display: flex; align-items: center; gap: 10px; }
+        .control-item label { font-weight: 600; color: #495057; min-width: 120px; }
+        .control-item input, .control-item select { padding: 10px 15px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem; }
+        .table-container { overflow-x: auto; margin-bottom: 30px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
+        table { width: 100%; border-collapse: collapse; background: white; font-size: 0.9rem; }
+        th { background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); color: white; padding: 15px 10px; text-align: left; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+        td { padding: 12px 10px; border-bottom: 1px solid #e9ecef; }
+        .metric-name { font-weight: 600; color: #2c3e50; min-width: 200px; }
+        .actual { background-color: #e8f5e8; color: #27ae60; font-weight: 600; }
+        .forecast { background-color: #fff3cd; color: #856404; font-weight: 600; }
+        .number { text-align: right; font-family: 'Courier New', monospace; }
+        .positive { color: #27ae60; }
+        .negative { color: #e74c3c; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .forecast-info { background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); color: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
+        .export-btn { background: #27ae60; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; margin: 10px 0; }
+        .export-btn:hover { background: #219a52; }
     </style>
 </head>
 <body>
@@ -220,10 +46,10 @@
         </div>
         
         <div class="tabs">
-            <button class="tab active" onclick="showTab('controls')">Controls</button>
-            <button class="tab" onclick="showTab('pnl')">P&L</button>
-            <button class="tab" onclick="showTab('balance')">Balance Sheet</button>
-            <button class="tab" onclick="showTab('cashflow')">Cash Flow</button>
+            <button class="tab active" data-tab="controls">Controls</button>
+            <button class="tab" data-tab="pnl">P&L</button>
+            <button class="tab" data-tab="balance">Balance Sheet</button>
+            <button class="tab" data-tab="cashflow">Cash Flow</button>
         </div>
         
         <div class="content">
@@ -233,7 +59,7 @@
                     <div class="control-group">
                         <div class="control-item">
                             <label>Method:</label>
-                            <select id="forecastMethod" onchange="updateForecast()">
+                            <select id="forecastMethod">
                                 <option value="custom">Custom Growth</option>
                                 <option value="rolling">Rolling Average</option>
                                 <option value="threemonth">3-Month Average</option>
@@ -241,11 +67,11 @@
                         </div>
                         <div class="control-item">
                             <label>Growth Rate (%):</label>
-                            <input type="number" id="customGrowthRate" value="5.0" step="0.1" onchange="updateForecast()">
+                            <input type="number" id="customGrowthRate" value="5.0" step="0.1">
                         </div>
                         <div class="control-item">
                             <label>Periods:</label>
-                            <input type="number" id="forecastPeriods" value="12" min="1" max="36" onchange="updateForecast()">
+                            <input type="number" id="forecastPeriods" value="12" min="1" max="36">
                         </div>
                     </div>
                 </div>
@@ -424,7 +250,6 @@
     </div>
 
     <script>
-        // Sample financial data
         const sampleData = {
             revenue: 385007,
             expenses: 285669,
@@ -434,58 +259,46 @@
             equity: 478179
         };
 
-        function showTab(tabName) {
-            console.log('Switching to tab:', tabName);
-            
-            // Hide all tabs
+        const currencyFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+        function formatCurrency(amount) {
+            return currencyFmt.format(Math.round(amount));
+        }
+
+        function showTab(tabName, clickedBtn) {
             const contents = document.querySelectorAll('.tab-content');
             contents.forEach(content => content.classList.remove('active'));
-            
             const tabs = document.querySelectorAll('.tab');
             tabs.forEach(tab => tab.classList.remove('active'));
-            
-            // Show selected tab
+
             const selectedContent = document.getElementById(tabName);
-            if (selectedContent) {
-                selectedContent.classList.add('active');
-            }
-            
-            const selectedTab = document.querySelector(`button[onclick="showTab('${tabName}')"]`);
-            if (selectedTab) {
-                selectedTab.classList.add('active');
-            }
+            if (selectedContent) selectedContent.classList.add('active');
+            if (clickedBtn) clickedBtn.classList.add('active');
         }
 
         function updateForecast() {
-            console.log('Updating forecasts...');
-            
             const method = document.getElementById('forecastMethod').value;
             const growthRate = parseFloat(document.getElementById('customGrowthRate').value) || 0;
             const periods = parseInt(document.getElementById('forecastPeriods').value) || 12;
-            
-            // Update settings display
-            let settingsText = `${method} at ${growthRate}% for ${periods} periods`;
-            document.getElementById('currentSettings').textContent = settingsText;
-            
-            // Calculate forecasts based on method
+
+            const methodLabel = method === 'custom' ? 'Custom Growth'
+                              : method === 'rolling' ? 'Rolling Average'
+                              : '3-Month Average';
+            document.getElementById('currentSettings').textContent = `${methodLabel} at ${growthRate}% for ${periods} periods`;
+
             let revGrowth = growthRate / 100;
-            let expGrowth = (growthRate * 0.8) / 100; // Expenses grow slower
-            
+            let expGrowth = (growthRate * 0.8) / 100;
+
             if (method === 'rolling') {
-                revGrowth = 0.03; // 3% default for rolling
+                revGrowth = 0.03;
                 expGrowth = 0.02;
             } else if (method === 'threemonth') {
                 revGrowth = 0.02;
                 expGrowth = 0.015;
             }
-            
-            // Update P&L forecasts
+
             updatePnLForecasts(revGrowth, expGrowth);
-            
-            // Update Balance Sheet forecasts
             updateBalanceForecasts(revGrowth);
-            
-            // Update Cash Flow forecasts
             updateCashFlowForecasts(revGrowth, expGrowth);
         }
 
@@ -494,7 +307,7 @@
                 const revForecast = sampleData.revenue * Math.pow(1 + revGrowth, i);
                 const expForecast = sampleData.expenses * Math.pow(1 + expGrowth, i);
                 const niForecast = revForecast - expForecast;
-                
+
                 document.getElementById(`rev${i}`).textContent = formatCurrency(revForecast);
                 document.getElementById(`exp${i}`).textContent = formatCurrency(expForecast);
                 document.getElementById(`ni${i}`).textContent = formatCurrency(niForecast);
@@ -503,15 +316,14 @@
 
         function updateBalanceForecasts(growth) {
             let cashBalance = sampleData.cash;
-            
+
             for (let i = 1; i <= 3; i++) {
-                // Cash grows by net income each period
                 const netIncomeForPeriod = sampleData.netIncome * Math.pow(1 + growth, i);
                 cashBalance += netIncomeForPeriod;
-                
-                const assetsForecast = sampleData.assets * Math.pow(1 + growth * 0.6, i) + cashBalance - sampleData.cash;
+
+                const assetsForecast = sampleData.assets * Math.pow(1 + growth * 0.6, i) + (cashBalance - sampleData.cash);
                 const equityForecast = sampleData.equity + (cashBalance - sampleData.cash);
-                
+
                 document.getElementById(`cash${i}`).textContent = formatCurrency(cashBalance);
                 document.getElementById(`assets${i}`).textContent = formatCurrency(assetsForecast);
                 document.getElementById(`equity${i}`).textContent = formatCurrency(equityForecast);
@@ -523,8 +335,8 @@
                 const revForecast = sampleData.revenue * Math.pow(1 + revGrowth, i);
                 const expForecast = sampleData.expenses * Math.pow(1 + expGrowth, i);
                 const niForecast = revForecast - expForecast;
-                const ocfForecast = niForecast * 1.1; // OCF slightly higher than NI
-                
+                const ocfForecast = niForecast * 1.1;
+
                 document.getElementById(`cfni${i}`).textContent = formatCurrency(niForecast);
                 document.getElementById(`ocf${i}`).textContent = formatCurrency(ocfForecast);
                 document.getElementById(`fcf${i}`).textContent = formatCurrency(ocfForecast);
@@ -532,32 +344,20 @@
             }
         }
 
-        function formatCurrency(amount) {
-            if (Math.abs(amount) >= 1000000) {
-                return '$' + (amount / 1000000).toFixed(1) + 'M';
-            } else if (Math.abs(amount) >= 1000) {
-                return '$' + (amount / 1000).toFixed(0) + 'K';
-            } else {
-                return '$' + amount.toFixed(0);
-            }
-        }
-
         function exportData(statementType) {
             const tableId = statementType + 'Table';
             const table = document.getElementById(tableId);
-            
             if (!table) {
                 alert('No data to export');
                 return;
             }
-            
             const rows = Array.from(table.rows);
             const csvContent = rows.map(row => {
-                return Array.from(row.cells).map(cell => 
+                return Array.from(row.cells).map(cell =>
                     '"' + cell.textContent.replace(/"/g, '""') + '"'
                 ).join(',');
             }).join('\n');
-            
+
             const blob = new Blob([csvContent], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -569,9 +369,17 @@
             URL.revokeObjectURL(url);
         }
 
-        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Page loaded, initializing...');
+            // Tab clicks
+            document.querySelectorAll('.tab').forEach(btn => {
+                btn.addEventListener('click', () => showTab(btn.getAttribute('data-tab'), btn));
+            });
+
+            // Control changes
+            document.getElementById('forecastMethod').addEventListener('change', updateForecast);
+            document.getElementById('customGrowthRate').addEventListener('change', updateForecast);
+            document.getElementById('forecastPeriods').addEventListener('change', updateForecast);
+
             updateForecast();
         });
     </script>
