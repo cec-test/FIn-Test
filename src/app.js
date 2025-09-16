@@ -14,6 +14,52 @@ let hasUploadedData = false;
 let dateColumns = [];
 
 /**
+ * Default data + helpers
+ */
+function initializeDefaultDateColumns(monthCount = 6) {
+  const result = [];
+  const now = new Date();
+  for (let i = monthCount - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setMonth(d.getMonth() - i);
+    result.push(d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+  }
+  return result;
+}
+
+function buildDefaultSampleData() {
+  const defaults = {
+    pnl: [
+      { name: 'Revenue', actualValues: [120000, 130000, 135000, 150000, 155000, 165000] },
+      { name: 'Cost of Goods Sold Expense', actualValues: [60000, 64000, 65000, 72000, 73000, 78000] },
+      { name: 'Operating Expenses', actualValues: [30000, 31000, 32000, 34000, 35000, 36000] },
+      { name: 'Other Income', actualValues: [2000, 2500, 2100, 2300, 2400, 2600] }
+    ],
+    balance: [
+      { name: 'Cash', actualValues: [80000, 82000, 90000, 95000, 98000, 105000] },
+      { name: 'Accounts Receivable', actualValues: [15000, 16000, 17000, 20000, 21000, 23000] },
+      { name: 'Inventory', actualValues: [10000, 10500, 11000, 11500, 12000, 12500] },
+      { name: 'Accounts Payable', actualValues: [12000, 13000, 14000, 15000, 16000, 17000] }
+    ],
+    cashflow: [
+      { name: 'Operating Cash Flow', actualValues: [15000, 16000, 17500, 18000, 19000, 21000] },
+      { name: 'Investing Cash Flow', actualValues: [-5000, -2000, -3000, -2500, -4000, -3500] },
+      { name: 'Financing Cash Flow', actualValues: [0, 0, 5000, 0, 0, 0] }
+    ]
+  };
+
+  ['pnl', 'balance', 'cashflow'].forEach(key => {
+    defaults[key] = defaults[key].map(item => ({
+      ...item,
+      actual: item.actualValues[item.actualValues.length - 1],
+      statement: key
+    }));
+  });
+
+  return defaults;
+}
+
+/**
  * Formatting
  */
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -255,63 +301,73 @@ function updateElement(id, text, value = null) {
  * Enhanced CSV Upload handling for the user's actual format
  */
 function parseCSVToObject(text) {
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length < 2) throw new Error('CSV must have at least a header and one data row');
-  
-  // Parse the header row to get date columns
-  const headerRow = lines[0].split(',');
-  dateColumns = headerRow.slice(1).map(col => col.trim().replace(/"/g, ''));
-  
-  const data = {
-    pnl: [],
-    balance: [],
-    cashflow: []
-  };
-  
+  const raw = text.replace(/^\uFEFF/, '');
+  const lines = raw.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (lines.length < 2) throw new Error('CSV must include a header row and at least one data row');
+
+  const delimiter = detectDelimiter(lines[0]);
+  const headerFields = parseCsvLine(lines[0], delimiter);
+  dateColumns = headerFields.slice(1).map(col => col.replace(/"/g, ''));
+
+  const data = { pnl: [], balance: [], cashflow: [] };
   let currentStatement = null;
-  
-  // Process each data row
+
+  const normalizeKey = (s) => s.toLowerCase().replace(/[^a-z]/g, '');
+  const statementMap = new Map([
+    ['pl', 'pnl'],
+    ['pandl', 'pnl'],
+    ['profitandloss', 'pnl'],
+    ['incomestatement', 'pnl'],
+    ['balancesheet', 'balance'],
+    ['bs', 'balance'],
+    ['cashflows', 'cashflow'],
+    ['cashflow', 'cashflow'],
+    ['statementofcashflows', 'cashflow']
+  ]);
+
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-    if (values.length < 2) continue;
-    
-    const firstColumn = values[0].trim();
-    
-    // Check if this is a statement header
-    if (firstColumn === 'P&L' || firstColumn === 'Balance Sheet' || firstColumn === 'Cashflows') {
-      currentStatement = firstColumn.toLowerCase().replace(/\s+/g, '');
-      if (currentStatement === 'p&l') currentStatement = 'pnl';
+    const values = parseCsvLine(lines[i], delimiter).map(v => v.replace(/"/g, ''));
+    if (values.length === 0) continue;
+
+    const firstColumn = (values[0] || '').trim();
+    const key = normalizeKey(firstColumn);
+
+    if (statementMap.has(key)) {
+      currentStatement = statementMap.get(key);
       continue;
     }
-    
-    // Skip empty rows or section headers
-    if (!firstColumn || firstColumn === '' || firstColumn.includes('Assets') || firstColumn.includes('Liabilities') || firstColumn.includes('Equity')) {
+
+    if (!firstColumn || /(assets|liabilities|equity|subtotal|total)/i.test(firstColumn)) {
       continue;
     }
-    
-    // This is a line item
-    if (currentStatement && firstColumn && data[currentStatement]) {
-      const lineItemName = firstColumn;
-      const actualValues = [];
-      
-      // Extract values from date columns
-      for (let j = 1; j < values.length && j < dateColumns.length + 1; j++) {
-        const value = toNumberOrZero(values[j]);
-        actualValues.push(value);
-      }
-      
-      // Only add if we have actual values
-      if (actualValues.some(v => v !== 0)) {
-        data[currentStatement].push({
-          name: lineItemName,
-          actual: actualValues[actualValues.length - 1], // Use most recent value
-          actualValues: actualValues,
-          statement: currentStatement
-        });
-      }
+
+    if (!currentStatement || !data[currentStatement]) {
+      if (/revenue|sales|cogs|expense|income/i.test(firstColumn)) currentStatement = 'pnl';
+      else if (/cash|receivable|inventory|payable|asset|liabilit|equity/i.test(firstColumn)) currentStatement = 'balance';
+      else if (/operating|investing|financing/i.test(firstColumn)) currentStatement = 'cashflow';
+      else continue;
+    }
+
+    const lineItemName = firstColumn;
+    const actualValues = [];
+    for (let j = 1; j < values.length && j < dateColumns.length + 1; j++) {
+      actualValues.push(toNumberOrZero(values[j]));
+    }
+
+    if (actualValues.length > 0 && actualValues.some(v => v !== 0)) {
+      data[currentStatement].push({
+        name: lineItemName,
+        actual: actualValues[actualValues.length - 1],
+        actualValues: actualValues,
+        statement: currentStatement
+      });
     }
   }
-  
+
+  if (data.pnl.length === 0 && data.balance.length === 0 && data.cashflow.length === 0) {
+    throw new Error('Could not detect any statement data. Ensure your CSV includes sections like P&L, Balance Sheet, or Cashflows.');
+  }
+
   return data;
 }
 
@@ -319,6 +375,56 @@ function toNumberOrZero(v) {
   if (v == null || v === '') return 0;
   const n = Number(String(v).replace(/[\$,]/g, ''));
   return Number.isFinite(n) ? n : 0;
+}
+
+function detectDelimiter(headerLine) {
+  const candidates = [',', ';', '\t'];
+  let best = ',';
+  let bestCount = -1;
+  candidates.forEach(d => {
+    const count = (headerLine.match(new RegExp(escapeRegExp(d), 'g')) || []).length;
+    if (count > bestCount) {
+      best = d;
+      bestCount = count;
+    }
+  });
+  return best;
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function parseCsvLine(line, delimiter) {
+  const fields = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (inQuotes) {
+      if (char === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === delimiter) {
+        fields.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+  }
+  fields.push(current);
+  return fields.map(v => v.trim());
 }
 
 function applyActualsFromObject(data) {
@@ -403,7 +509,8 @@ function exportMultipleTables(tableIds, filename) {
     const table = document.getElementById(tableId);
     if (table) {
       if (index > 0) csvContent += '\n\n';
-      csvContent += `Statement ${index + 1}\n`;
+      const label = labelFromTableId(tableId);
+      csvContent += `${label}\n`;
       
       const rows = Array.from(table.rows);
       csvContent += rows.map(row => {
@@ -423,6 +530,17 @@ function exportMultipleTables(tableIds, filename) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function labelFromTableId(tableId) {
+  const scope = tableId.startsWith('combined') ? 'Combined' :
+    tableId.startsWith('monthly') ? 'Monthly' :
+    tableId.startsWith('quarterly') ? 'Quarterly' :
+    tableId.startsWith('yearly') ? 'Yearly' : 'Unknown';
+  const type = tableId.includes('pnl') ? 'P&L' :
+    tableId.includes('balance') ? 'Balance Sheet' :
+    tableId.includes('cashflow') ? 'Cash Flow' : 'Statement';
+  return `${type} - ${scope}`;
 }
 
 // Expose functions globally
@@ -479,6 +597,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Initial setup
   toggleGrowthRateInput();
+  // If no uploaded data, seed defaults so UI is populated
+  if (!hasUploadedData) {
+    dateColumns = initializeDefaultDateColumns(6);
+    uploadedLineItems = buildDefaultSampleData();
+  }
   rebuildAllTables();
   updateForecast();
   
