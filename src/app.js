@@ -341,9 +341,13 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
   // Add rows for each line item
   const lineItems = uploadedLineItems[statementKey] || [];
   lineItems.forEach((item) => {
+    const isTotal = /\btotal\b/i.test(item.name);
+    const isSubheader = !item.actualValues || item.actualValues.length === 0;
+    const rowClass = isSubheader ? 'subheader-row' : (isTotal ? 'total-row' : '');
+    const nameCellClass = isSubheader ? 'subheader-cell' : 'metric-name';
     tableHTML += `
-      <tr>
-        <td class="metric-name">${item.name}</td>
+      <tr class="${rowClass}">
+        <td class="${nameCellClass}">${item.name}</td>
     `;
 
     // Add historical actual values (aggregated per period type)
@@ -355,7 +359,8 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
       actualsForItem = agg ? (agg.actuals || []) : [];
     }
     actualsForItem.forEach(value => {
-      tableHTML += `<td class="number actual">${formatCurrency(value)}</td>`;
+      const display = isSubheader ? '' : formatCurrency(value);
+      tableHTML += `<td class="number actual">${display}</td>`;
     });
 
     // Add forecast columns
@@ -364,7 +369,8 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     for (let i = 0; i < forecastPeriods; i++) {
       const forecastKey = `${statementKey}-${safeName}-${i}`;
       const scopedId = `${scope}-${forecastKey}`;
-      tableHTML += `<td class="number forecast" id="${scopedId}" data-forecast-key="${forecastKey}">$0</td>`;
+      const defaultVal = isSubheader ? '' : '$0';
+      tableHTML += `<td class="number forecast" id="${scopedId}" data-forecast-key="${forecastKey}">${defaultVal}</td>`;
     }
 
     tableHTML += `</tr>`;
