@@ -4,15 +4,12 @@
  * App state: base actuals used for forecasts.
  * Replace via CSV upload to drive forecasts from your own numbers.
  */
-let sampleData = {
-  revenue: 385007,
-  expenses: 285669,
-  netIncome: 99338,
-  cash: 2010,
-  assets: 22700,
-  equity: 478179
+let sampleData = {};
+let uploadedLineItems = {
+  pnl: [],
+  balance: [],
+  cashflow: []
 };
-
 let hasUploadedData = false;
 
 /**
@@ -62,6 +59,95 @@ function toggleGrowthRateInput() {
 }
 
 /**
+ * Generate dynamic table headers based on periods
+ */
+function generateTableHeaders(periods, periodType) {
+  const headers = ['Item'];
+  
+  if (periodType === 'monthly') {
+    for (let i = 0; i < periods; i++) {
+      const date = new Date();
+      date.setMonth(date.getMonth() + i);
+      headers.push(date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+    }
+  } else if (periodType === 'quarterly') {
+    const quarters = Math.ceil(periods / 3);
+    for (let i = 0; i < quarters; i++) {
+      const quarter = (i % 4) + 1;
+      const year = new Date().getFullYear() + Math.floor(i / 4);
+      headers.push(`Q${quarter} ${year}`);
+    }
+  } else if (periodType === 'yearly') {
+    const years = Math.ceil(periods / 12);
+    for (let i = 0; i < years; i++) {
+      headers.push(`${new Date().getFullYear() + i}`);
+    }
+  }
+  
+  return headers;
+}
+
+/**
+ * Create dynamic table structure
+ */
+function createDynamicTable(containerId, statementType, periodType) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const periods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+  const headers = generateTableHeaders(periods, periodType);
+  
+  let tableHTML = `
+    <div class="statement-section">
+      <div class="statement-header">${statementType}</div>
+      <div class="table-container">
+        <table id="${statementType.toLowerCase().replace(/\s+/g, '')}Table">
+          <thead>
+            <tr>
+  `;
+  
+  headers.forEach(header => {
+    const className = header === 'Item' ? '' : 'forecast';
+    tableHTML += `<th class="${className}">${header}</th>`;
+  });
+  
+  tableHTML += `
+            </tr>
+          </thead>
+          <tbody>
+  `;
+  
+  // Add rows for each line item
+  const lineItems = uploadedLineItems[statementType.toLowerCase().replace(/\s+/g, '')] || [];
+  lineItems.forEach((item, index) => {
+    tableHTML += `
+      <tr>
+        <td class="metric-name">${item.name}</td>
+    `;
+    
+    // Add actual value (first column after Item)
+    tableHTML += `<td class="number actual">${formatCurrency(item.actual)}</td>`;
+    
+    // Add forecast columns
+    for (let i = 1; i < headers.length - 1; i++) {
+      const cellId = `${statementType.toLowerCase().replace(/\s+/g, '')}${item.name.toLowerCase().replace(/\s+/g, '')}${i}`;
+      tableHTML += `<td class="number forecast" id="${cellId}">$0</td>`;
+    }
+    
+    tableHTML += `</tr>`;
+  });
+  
+  tableHTML += `
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = tableHTML;
+}
+
+/**
  * Forecast controls
  */
 function updateForecast() {
@@ -88,134 +174,36 @@ function updateForecast() {
     expGrowth = 0.015;
   }
 
-  // Update all forecast views
-  updateCombinedForecasts(revGrowth, expGrowth);
-  updateMonthlyForecasts(revGrowth, expGrowth);
-  updateQuarterlyForecasts(revGrowth, expGrowth);
-  updateYearlyForecasts(revGrowth, expGrowth);
+  // Update all forecast views with dynamic periods
+  updateDynamicForecasts(revGrowth, expGrowth, periods);
 }
 
 /**
- * Forecast calculators for different periods
+ * Dynamic forecast calculations for all line items
  */
-function updateCombinedForecasts(revGrowth, expGrowth) {
-  for (let i = 1; i <= 3; i++) {
-    const revForecast = sampleData.revenue * Math.pow(1 + revGrowth, i);
-    const expForecast = sampleData.expenses * Math.pow(1 + expGrowth, i);
-    const niForecast = revForecast - expForecast;
-
-    updateElement(`crev${i}`, formatCurrency(revForecast, !hasUploadedData));
-    updateElement(`cexp${i}`, formatCurrency(expForecast, !hasUploadedData));
-    updateElement(`cni${i}`, formatCurrency(niForecast, !hasUploadedData), niForecast);
-
-    // Balance Sheet
-    const cashBalance = sampleData.cash + (sampleData.netIncome * Math.pow(1 + revGrowth, i));
-    const assetsForecast = sampleData.assets * Math.pow(1 + revGrowth * 0.6, i) + (cashBalance - sampleData.cash);
-    const equityForecast = sampleData.equity + (cashBalance - sampleData.cash);
-
-    updateElement(`ccash${i}`, formatCurrency(cashBalance, !hasUploadedData));
-    updateElement(`cassets${i}`, formatCurrency(assetsForecast, !hasUploadedData));
-    updateElement(`cequity${i}`, formatCurrency(equityForecast, !hasUploadedData));
-
-    // Cash Flow
-    const ocfForecast = niForecast * 1.1;
-    updateElement(`ccfni${i}`, formatCurrency(niForecast, !hasUploadedData));
-    updateElement(`cocf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
-    updateElement(`cfcf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
-    updateElement(`cncc${i}`, formatCurrency(niForecast, !hasUploadedData));
-  }
-}
-
-function updateMonthlyForecasts(revGrowth, expGrowth) {
-  for (let i = 1; i <= 5; i++) {
-    const revForecast = sampleData.revenue * Math.pow(1 + revGrowth, i);
-    const expForecast = sampleData.expenses * Math.pow(1 + expGrowth, i);
-    const niForecast = revForecast - expForecast;
-
-    updateElement(`mrev${i}`, formatCurrency(revForecast, !hasUploadedData));
-    updateElement(`mexp${i}`, formatCurrency(expForecast, !hasUploadedData));
-    updateElement(`mni${i}`, formatCurrency(niForecast, !hasUploadedData), niForecast);
-
-    // Balance Sheet
-    const cashBalance = sampleData.cash + (sampleData.netIncome * Math.pow(1 + revGrowth, i));
-    const assetsForecast = sampleData.assets * Math.pow(1 + revGrowth * 0.6, i) + (cashBalance - sampleData.cash);
-    const equityForecast = sampleData.equity + (cashBalance - sampleData.cash);
-
-    updateElement(`mcash${i}`, formatCurrency(cashBalance, !hasUploadedData));
-    updateElement(`massets${i}`, formatCurrency(assetsForecast, !hasUploadedData));
-    updateElement(`mequity${i}`, formatCurrency(equityForecast, !hasUploadedData));
-
-    // Cash Flow
-    const ocfForecast = niForecast * 1.1;
-    updateElement(`mcfni${i}`, formatCurrency(niForecast, !hasUploadedData));
-    updateElement(`mocf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
-    updateElement(`mfcf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
-    updateElement(`mncc${i}`, formatCurrency(niForecast, !hasUploadedData));
-  }
-}
-
-function updateQuarterlyForecasts(revGrowth, expGrowth) {
-  for (let i = 1; i <= 3; i++) {
-    // Quarterly = 3x monthly growth
-    const quarterlyRevGrowth = revGrowth * 3;
-    const quarterlyExpGrowth = expGrowth * 3;
+function updateDynamicForecasts(revGrowth, expGrowth, periods) {
+  // Update each statement type
+  ['pnl', 'balance', 'cashflow'].forEach(statementType => {
+    const lineItems = uploadedLineItems[statementType] || [];
     
-    const revForecast = sampleData.revenue * Math.pow(1 + quarterlyRevGrowth, i);
-    const expForecast = sampleData.expenses * Math.pow(1 + quarterlyExpGrowth, i);
-    const niForecast = revForecast - expForecast;
-
-    updateElement(`qrev${i}`, formatCurrency(revForecast, !hasUploadedData));
-    updateElement(`qexp${i}`, formatCurrency(expForecast, !hasUploadedData));
-    updateElement(`qni${i}`, formatCurrency(niForecast, !hasUploadedData), niForecast);
-
-    // Balance Sheet
-    const cashBalance = sampleData.cash + (sampleData.netIncome * Math.pow(1 + quarterlyRevGrowth, i));
-    const assetsForecast = sampleData.assets * Math.pow(1 + quarterlyRevGrowth * 0.6, i) + (cashBalance - sampleData.cash);
-    const equityForecast = sampleData.equity + (cashBalance - sampleData.cash);
-
-    updateElement(`qcash${i}`, formatCurrency(cashBalance, !hasUploadedData));
-    updateElement(`qassets${i}`, formatCurrency(assetsForecast, !hasUploadedData));
-    updateElement(`qequity${i}`, formatCurrency(equityForecast, !hasUploadedData));
-
-    // Cash Flow
-    const ocfForecast = niForecast * 1.1;
-    updateElement(`qcfni${i}`, formatCurrency(niForecast, !hasUploadedData));
-    updateElement(`qocf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
-    updateElement(`qfcf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
-    updateElement(`qncc${i}`, formatCurrency(niForecast, !hasUploadedData));
-  }
-}
-
-function updateYearlyForecasts(revGrowth, expGrowth) {
-  for (let i = 1; i <= 3; i++) {
-    // Yearly = 12x monthly growth
-    const yearlyRevGrowth = revGrowth * 12;
-    const yearlyExpGrowth = expGrowth * 12;
-    
-    const revForecast = sampleData.revenue * Math.pow(1 + yearlyRevGrowth, i);
-    const expForecast = sampleData.expenses * Math.pow(1 + yearlyExpGrowth, i);
-    const niForecast = revForecast - expForecast;
-
-    updateElement(`yrev${i}`, formatCurrency(revForecast, !hasUploadedData));
-    updateElement(`yexp${i}`, formatCurrency(expForecast, !hasUploadedData));
-    updateElement(`yni${i}`, formatCurrency(niForecast, !hasUploadedData), niForecast);
-
-    // Balance Sheet
-    const cashBalance = sampleData.cash + (sampleData.netIncome * Math.pow(1 + yearlyRevGrowth, i));
-    const assetsForecast = sampleData.assets * Math.pow(1 + yearlyRevGrowth * 0.6, i) + (cashBalance - sampleData.cash);
-    const equityForecast = sampleData.equity + (cashBalance - sampleData.cash);
-
-    updateElement(`ycash${i}`, formatCurrency(cashBalance, !hasUploadedData));
-    updateElement(`yassets${i}`, formatCurrency(assetsForecast, !hasUploadedData));
-    updateElement(`yequity${i}`, formatCurrency(equityForecast, !hasUploadedData));
-
-    // Cash Flow
-    const ocfForecast = niForecast * 1.1;
-    updateElement(`ycfni${i}`, formatCurrency(niForecast, !hasUploadedData));
-    updateElement(`yocf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
-    updateElement(`yfcf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
-    updateElement(`yncc${i}`, formatCurrency(niForecast, !hasUploadedData));
-  }
+    lineItems.forEach(item => {
+      // Calculate growth rate for this item
+      let itemGrowth = revGrowth;
+      if (statementType === 'pnl' && item.name.toLowerCase().includes('expense')) {
+        itemGrowth = expGrowth;
+      } else if (statementType === 'balance' && item.name.toLowerCase().includes('cash')) {
+        // Cash grows with net income
+        itemGrowth = revGrowth;
+      }
+      
+      // Update forecast columns
+      for (let i = 1; i < periods; i++) {
+        const cellId = `${statementType}${item.name.toLowerCase().replace(/\s+/g, '')}${i}`;
+        const forecast = item.actual * Math.pow(1 + itemGrowth, i);
+        updateElement(cellId, formatCurrency(forecast, !hasUploadedData));
+      }
+    });
+  });
 }
 
 function updateElement(id, text, value = null) {
@@ -230,18 +218,39 @@ function updateElement(id, text, value = null) {
 }
 
 /**
- * CSV Upload handling
+ * Enhanced CSV Upload handling
  */
 function parseCSVToObject(text) {
-  const [headerLine, ...rows] = text.trim().split(/\r?\n/);
-  if (!headerLine) throw new Error('Missing header row');
-  const headers = headerLine.split(',').map(h => h.trim().toLowerCase());
-  if (!rows.length) throw new Error('No data rows found');
-
-  const first = rows[0].split(',').map(x => x.trim());
-  const obj = {};
-  headers.forEach((h, i) => { obj[h] = first[i]; });
-  return obj;
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) throw new Error('CSV must have at least a header and one data row');
+  
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const data = {};
+  
+  // Process each data row
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim());
+    if (values.length !== headers.length) continue;
+    
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index];
+    });
+    
+    // Determine statement type and extract line items
+    if (row.statement) {
+      const statementType = row.statement.toLowerCase();
+      if (!data[statementType]) data[statementType] = [];
+      
+      data[statementType].push({
+        name: row.item || row.lineitem || row.account,
+        actual: toNumberOrZero(row.actual || row.amount || row.value),
+        statement: statementType
+      });
+    }
+  }
+  
+  return data;
 }
 
 function toNumberOrZero(v) {
@@ -250,65 +259,58 @@ function toNumberOrZero(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
-function applyActualsFromObject(o) {
-  const next = {
-    revenue: toNumberOrZero(o.revenue ?? o.totalrevenue),
-    expenses: toNumberOrZero(o.expenses ?? o.operatingexpenses),
-    netIncome: toNumberOrZero(o.netincome),
-    cash: toNumberOrZero(o.cash ?? o.cashbalance),
-    assets: toNumberOrZero(o.assets ?? o.totalassets),
-    equity: toNumberOrZero(o.equity ?? o.totalequity)
-  };
-
-  sampleData = {
-    revenue: next.revenue || sampleData.revenue,
-    expenses: next.expenses || sampleData.expenses,
-    netIncome: next.netIncome || sampleData.netIncome,
-    cash: next.cash || sampleData.cash,
-    assets: next.assets || sampleData.assets,
-    equity: next.equity || sampleData.equity
-  };
-
+function applyActualsFromObject(data) {
+  // Clear existing data
+  uploadedLineItems = { pnl: [], balance: [], cashflow: [] };
+  sampleData = {};
+  
+  // Process each statement type
+  Object.keys(data).forEach(statementType => {
+    if (['pnl', 'profit', 'income'].includes(statementType)) {
+      uploadedLineItems.pnl = data[statementType];
+    } else if (['balance', 'balancesheet'].includes(statementType)) {
+      uploadedLineItems.balance = data[statementType];
+    } else if (['cashflow', 'cash'].includes(statementType)) {
+      uploadedLineItems.cashflow = data[statementType];
+    }
+  });
+  
   hasUploadedData = true;
-
-  // Update Actual cells in all tables
-  updateActualCells();
-
-  // Recompute forecasts from new base
+  
+  // Rebuild all tables with dynamic structure
+  rebuildAllTables();
+  
+  // Recompute forecasts
   updateForecast();
 }
 
-function updateActualCells() {
-  const fmt = amount => formatCurrency(amount, false);
-
-  // Update all actual cells across all tables
-  const actualCells = document.querySelectorAll('td.actual');
-  actualCells.forEach(cell => {
-    const text = cell.textContent;
-    if (text.includes('Revenue') || text.includes('$385')) {
-      cell.textContent = fmt(sampleData.revenue);
-    } else if (text.includes('Expenses') || text.includes('$285')) {
-      cell.textContent = fmt(sampleData.expenses);
-    } else if (text.includes('Net Income') || text.includes('$99')) {
-      cell.textContent = fmt(sampleData.netIncome);
-      cell.classList.toggle('positive', sampleData.netIncome >= 0);
-      cell.classList.toggle('negative', sampleData.netIncome < 0);
-    } else if (text.includes('Cash') || text.includes('$2,010')) {
-      cell.textContent = fmt(sampleData.cash);
-    } else if (text.includes('Assets') || text.includes('$22,700')) {
-      cell.textContent = fmt(sampleData.assets);
-    } else if (text.includes('Equity') || text.includes('$478')) {
-      cell.textContent = fmt(sampleData.equity);
-    }
-  });
+function rebuildAllTables() {
+  const periods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+  
+  // Rebuild each tab's tables
+  createDynamicTable('combinedPnlContainer', 'P&L', 'monthly');
+  createDynamicTable('combinedBalanceContainer', 'Balance Sheet', 'monthly');
+  createDynamicTable('combinedCashflowContainer', 'Cash Flow', 'monthly');
+  
+  createDynamicTable('monthlyPnlContainer', 'P&L', 'monthly');
+  createDynamicTable('monthlyBalanceContainer', 'Balance Sheet', 'monthly');
+  createDynamicTable('monthlyCashflowContainer', 'Cash Flow', 'monthly');
+  
+  createDynamicTable('quarterlyPnlContainer', 'P&L', 'quarterly');
+  createDynamicTable('quarterlyBalanceContainer', 'Balance Sheet', 'quarterly');
+  createDynamicTable('quarterlyCashflowContainer', 'Cash Flow', 'quarterly');
+  
+  createDynamicTable('yearlyPnlContainer', 'P&L', 'yearly');
+  createDynamicTable('yearlyBalanceContainer', 'Balance Sheet', 'yearly');
+  createDynamicTable('yearlyCashflowContainer', 'Cash Flow', 'yearly');
 }
 
 function handleActualsUpload(file) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const obj = parseCSVToObject(reader.result);
-      applyActualsFromObject(obj);
+      const data = parseCSVToObject(reader.result);
+      applyActualsFromObject(data);
     } catch (e) {
       alert('Failed to parse CSV: ' + e.message);
     }
@@ -320,12 +322,12 @@ function handleActualsUpload(file) {
  * Export functions
  */
 function exportCombinedData() {
-  const tables = ['combinedPnlTable', 'combinedBalanceTable', 'combinedCashflowTable'];
+  const tables = ['combinedpnltable', 'combinedbalancetable', 'combinedcashflowtable'];
   exportMultipleTables(tables, 'combined_3_statement_model');
 }
 
 function exportPeriodData(period) {
-  const tables = [`${period}PnlTable`, `${period}BalanceTable`, `${period}CashflowTable`];
+  const tables = [`${period}pnltable`, `${period}balancetable`, `${period}cashflowtable`];
   exportMultipleTables(tables, `${period}_3_statement_forecast`);
 }
 
@@ -368,7 +370,7 @@ window.exportPeriodData = exportPeriodData;
 document.addEventListener('DOMContentLoaded', function () {
   console.log('DOM loaded, initializing...');
   
-  // Tabs - Fix the event listener issue
+  // Tabs
   document.querySelectorAll('.tab').forEach(btn => {
     btn.addEventListener('click', function() {
       const tabName = this.getAttribute('data-tab');
@@ -388,6 +390,14 @@ document.addEventListener('DOMContentLoaded', function () {
     toggleGrowthRateInput();
   });
 
+  // Periods change handler - rebuild tables when periods change
+  periodsEl?.addEventListener('change', function() {
+    if (hasUploadedData) {
+      rebuildAllTables();
+      updateForecast();
+    }
+  });
+
   // Run forecast button
   runBtn?.addEventListener('click', function() {
     console.log('Run Forecast clicked');
@@ -405,8 +415,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // Initial setup
-  toggleGrowthRateInput(); // Set initial state
-  updateForecast(); // Initial render
+  toggleGrowthRateInput();
   
   console.log('Initialization complete');
 });
