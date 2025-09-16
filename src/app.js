@@ -98,73 +98,82 @@ function generateTableHeaders(periods, periodType) {
 
 /**
  * Create dynamic table structure
+ * statementKey must be one of: 'pnl' | 'balance' | 'cashflow'
+ * scope must be one of: 'combined' | 'monthly' | 'quarterly' | 'yearly'
  */
-function createDynamicTable(containerId, statementType, periodType) {
+function createDynamicTable(containerId, statementKey, periodType, scope) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  
+
   const periods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
   const headers = generateTableHeaders(periods, periodType);
-  
+
+  const statementHeaderLabel =
+    statementKey === 'pnl' ? 'P&L' :
+    statementKey === 'balance' ? 'Balance Sheet' :
+    'Cash Flow';
+
+  const tableId = `${scope}${statementKey}table`;
+
   let tableHTML = `
     <div class="statement-section">
-      <div class="statement-header">${statementType}</div>
+      <div class="statement-header">${statementHeaderLabel}</div>
       <div class="table-container">
-        <table id="${statementType.toLowerCase().replace(/\s+/g, '')}Table">
+        <table id="${tableId}">
           <thead>
             <tr>
   `;
-  
+
   headers.forEach((header, index) => {
     let className = '';
     if (index === 0) {
-      className = ''; // Item column
+      className = '';
     } else if (dateColumns && index <= dateColumns.length) {
-      className = 'actual'; // Historical data columns
+      className = 'actual';
     } else {
-      className = 'forecast'; // Forecast columns
+      className = 'forecast';
     }
     tableHTML += `<th class="${className}">${header}</th>`;
   });
-  
+
   tableHTML += `
             </tr>
           </thead>
           <tbody>
   `;
-  
+
   // Add rows for each line item
-  const lineItems = uploadedLineItems[statementType.toLowerCase().replace(/\s+/g, '')] || [];
-  lineItems.forEach((item, index) => {
+  const lineItems = uploadedLineItems[statementKey] || [];
+  lineItems.forEach((item) => {
     tableHTML += `
       <tr>
         <td class="metric-name">${item.name}</td>
     `;
-    
+
     // Add historical actual values
     if (item.actualValues && item.actualValues.length > 0) {
       item.actualValues.forEach(value => {
         tableHTML += `<td class="number actual">${formatCurrency(value)}</td>`;
       });
     }
-    
+
     // Add forecast columns
     const forecastPeriods = periods;
     for (let i = 0; i < forecastPeriods; i++) {
-      const cellId = `${statementType.toLowerCase().replace(/\s+/g, '')}${item.name.toLowerCase().replace(/\s+/g, '')}${i}`;
+      const cellId = `${statementKey}${item.name.toLowerCase().replace(/\s+/g, '')}${i}`;
       tableHTML += `<td class="number forecast" id="${cellId}">$0</td>`;
     }
-    
+
     tableHTML += `</tr>`;
   });
-  
+
   tableHTML += `
           </tbody>
         </table>
       </div>
     </div>
   `;
-  
+
   container.innerHTML = tableHTML;
 }
 
@@ -341,21 +350,21 @@ function rebuildAllTables() {
   const periods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
   
   // Rebuild each tab's tables
-  createDynamicTable('combinedPnlContainer', 'P&L', 'monthly');
-  createDynamicTable('combinedBalanceContainer', 'Balance Sheet', 'monthly');
-  createDynamicTable('combinedCashflowContainer', 'Cash Flow', 'monthly');
+  createDynamicTable('combinedPnlContainer', 'pnl', 'monthly', 'combined');
+  createDynamicTable('combinedBalanceContainer', 'balance', 'monthly', 'combined');
+  createDynamicTable('combinedCashflowContainer', 'cashflow', 'monthly', 'combined');
   
-  createDynamicTable('monthlyPnlContainer', 'P&L', 'monthly');
-  createDynamicTable('monthlyBalanceContainer', 'Balance Sheet', 'monthly');
-  createDynamicTable('monthlyCashflowContainer', 'Cash Flow', 'monthly');
+  createDynamicTable('monthlyPnlContainer', 'pnl', 'monthly', 'monthly');
+  createDynamicTable('monthlyBalanceContainer', 'balance', 'monthly', 'monthly');
+  createDynamicTable('monthlyCashflowContainer', 'cashflow', 'monthly', 'monthly');
   
-  createDynamicTable('quarterlyPnlContainer', 'P&L', 'quarterly');
-  createDynamicTable('quarterlyBalanceContainer', 'Balance Sheet', 'quarterly');
-  createDynamicTable('quarterlyCashflowContainer', 'Cash Flow', 'quarterly');
+  createDynamicTable('quarterlyPnlContainer', 'pnl', 'quarterly', 'quarterly');
+  createDynamicTable('quarterlyBalanceContainer', 'balance', 'quarterly', 'quarterly');
+  createDynamicTable('quarterlyCashflowContainer', 'cashflow', 'quarterly', 'quarterly');
   
-  createDynamicTable('yearlyPnlContainer', 'P&L', 'yearly');
-  createDynamicTable('yearlyBalanceContainer', 'Balance Sheet', 'yearly');
-  createDynamicTable('yearlyCashflowContainer', 'Cash Flow', 'yearly');
+  createDynamicTable('yearlyPnlContainer', 'pnl', 'yearly', 'yearly');
+  createDynamicTable('yearlyBalanceContainer', 'balance', 'yearly', 'yearly');
+  createDynamicTable('yearlyCashflowContainer', 'cashflow', 'yearly', 'yearly');
 }
 
 function handleActualsUpload(file) {
@@ -446,12 +455,10 @@ document.addEventListener('DOMContentLoaded', function () {
     toggleGrowthRateInput();
   });
 
-  // Periods change handler - rebuild tables when periods change
+  // Periods change handler - always rebuild tables when periods change
   periodsEl?.addEventListener('change', function() {
-    if (hasUploadedData) {
-      rebuildAllTables();
-      updateForecast();
-    }
+    rebuildAllTables();
+    updateForecast();
   });
 
   // Run forecast button
@@ -472,6 +479,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Initial setup
   toggleGrowthRateInput();
+  rebuildAllTables();
+  updateForecast();
   
   console.log('Initialization complete');
 });
