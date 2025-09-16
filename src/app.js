@@ -341,8 +341,8 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
   // Add rows for each line item
   const lineItems = uploadedLineItems[statementKey] || [];
   lineItems.forEach((item) => {
-    const isTotal = /\btotal\b/i.test(item.name);
-    const isSubheader = !item.actualValues || item.actualValues.length === 0;
+    const isTotal = /\btotal\b|net\b|gross\b/i.test(item.name);
+    const isSubheader = (!item.actualValues || item.actualValues.length === 0) && !/\btotal\b|net\b|gross\b/i.test(item.name);
     const rowClass = isSubheader ? 'subheader-row' : (isTotal ? 'total-row' : '');
     const nameCellClass = isSubheader ? 'subheader-cell' : 'metric-name';
     tableHTML += `
@@ -426,6 +426,8 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
     const lineItems = uploadedLineItems[statementType] || [];
     
     lineItems.forEach(item => {
+      // Skip subheaders entirely
+      if (item.isSubheader) return;
       // Calculate growth rate for this item
       let itemGrowth = revGrowth;
       if (statementType === 'pnl' && item.name.toLowerCase().includes('expense')) {
@@ -433,8 +435,19 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
       }
       
       // Use the most recent actual value as base
-      const baseValue = item.actualValues && item.actualValues.length > 0 ? 
-        item.actualValues[item.actualValues.length - 1] : item.actual;
+      const baseMonthly = lastNonNull(item.actualValues);
+      const baseValue = (typeof baseMonthly === 'number') ? baseMonthly : (item.actual ?? 0);
+
+      // Compute roll-up bases for quarterly and yearly
+      let baseQuarterly = baseValue;
+      let baseYearly = baseValue;
+      if (item.actualValues && item.actualValues.length > 0) {
+        const agg = aggregateActuals(statementType, item.actualValues);
+        const qo = agg.toQuarterOutputs();
+        const yo = agg.toYearOutputs();
+        if (qo.values && qo.values.length > 0) baseQuarterly = qo.values[qo.values.length - 1];
+        if (yo.values && yo.values.length > 0) baseYearly = yo.values[yo.values.length - 1];
+      }
       
       // Update forecast columns
       const safeName = item.name.toLowerCase().replace(/\s+/g, '');
@@ -444,25 +457,34 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
         const forecastKeyQuarterly = `quarterly-${statementType}-${safeName}-${i}`;
         const forecastKeyYearly = `yearly-${statementType}-${safeName}-${i}`;
         // Non-negative constraints: totals/expenses shouldn't flip sign unintentionally
-        let forecast = baseValue * Math.pow(1 + itemGrowth, i + 1);
-        if (/total/i.test(item.name)) {
-          forecast = Math.max(forecast, 0);
-        }
+        const clamp = (v) => (/total/i.test(item.name) ? Math.max(v, 0) : v);
+        const mForecast = clamp(baseValue * Math.pow(1 + itemGrowth, i + 1));
+        const qForecast = clamp(baseQuarterly * Math.pow(1 + itemGrowth, i + 1));
+        const yForecast = clamp(baseYearly * Math.pow(1 + itemGrowth, i + 1));
         // Update monthly
         document.querySelectorAll(`[data-forecast-key="${forecastKeyMonthly}"]`).forEach(cell => {
-          updateElement(cell.id, formatCurrency(forecast, !hasUploadedData));
+          updateElement(cell.id, formatCurrency(mForecast, !hasUploadedData));
         });
         // Update quarterly based on base of rolled-up last quarter
         document.querySelectorAll(`[data-forecast-key="${forecastKeyQuarterly}"]`).forEach(cell => {
-          updateElement(cell.id, formatCurrency(forecast, !hasUploadedData));
+          updateElement(cell.id, formatCurrency(qForecast, !hasUploadedData));
         });
         // Update yearly based on base of rolled-up last year
         document.querySelectorAll(`[data-forecast-key="${forecastKeyYearly}"]`).forEach(cell => {
-          updateElement(cell.id, formatCurrency(forecast, !hasUploadedData));
+          updateElement(cell.id, formatCurrency(yForecast, !hasUploadedData));
         });
       }
     });
   });
+}
+
+function lastNonNull(arr) {
+  if (!arr || arr.length === 0) return null;
+  for (let i = arr.length - 1; i >= 0; i--) {
+    const v = arr[i];
+    if (v !== null && typeof v !== 'undefined') return Number(v);
+  }
+  return null;
 }
 
 function updateElement(id, text, value = null) {
