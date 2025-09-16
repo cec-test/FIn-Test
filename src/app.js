@@ -15,6 +15,119 @@ let dateColumns = [];
 let forecastCache = { pnl: {}, balance: {}, cashflow: {} };
 
 /**
+ * Date parsing and aggregation helpers
+ */
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function parseHeaderToYearMonth(header) {
+  if (!header) return null;
+  const trimmed = String(header).trim();
+  // Try MMM YYYY
+  const mmm = MONTHS_SHORT.findIndex(m => new RegExp(`^${m}\\s+\\d{4}$`, 'i').test(trimmed));
+  if (mmm >= 0) {
+    const year = Number(trimmed.replace(/[^0-9]/g, '').slice(-4));
+    return { year, month: mmm };
+  }
+  // Try YYYY-MM or YYYY/MM
+  let match = trimmed.match(/^(\d{4})[-\/](\d{1,2})$/);
+  if (match) {
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    return { year, month };
+  }
+  // Try MM/DD/YYYY or M/D/YYYY
+  match = trimmed.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{4})$/);
+  if (match) {
+    const month = Number(match[1]) - 1;
+    const year = Number(match[3]);
+    return { year, month };
+  }
+  // Fallback: Date.parse
+  const d = new Date(trimmed);
+  if (!isNaN(d.getTime())) {
+    return { year: d.getFullYear(), month: d.getMonth() };
+  }
+  return null;
+}
+
+function buildParsedDateColumns() {
+  return (dateColumns || []).map(h => ({ header: h, ym: parseHeaderToYearMonth(h) })).filter(x => !!x.ym);
+}
+
+function aggregateActuals(statementKey, actualValues) {
+  const parsed = buildParsedDateColumns();
+  const byQuarter = new Map();
+  const byYear = new Map();
+
+  parsed.forEach((d, idx) => {
+    const { year, month } = d.ym;
+    const q = Math.floor(month / 3) + 1; // 1..4
+    const qKey = `${year}-Q${q}`;
+    const yKey = `${year}`;
+    const value = Number(actualValues[idx] ?? 0);
+    // Quarterly aggregate
+    if (!byQuarter.has(qKey)) byQuarter.set(qKey, { year, q, months: [], values: [] });
+    const qEntry = byQuarter.get(qKey);
+    qEntry.months.push(month);
+    qEntry.values.push(value);
+    // Yearly aggregate
+    if (!byYear.has(yKey)) byYear.set(yKey, { year, months: [], values: [] });
+    const yEntry = byYear.get(yKey);
+    yEntry.months.push(month);
+    yEntry.values.push(value);
+  });
+
+  // Build outputs
+  const toQuarterOutputs = () => {
+    const labels = [];
+    const values = [];
+    const notes = [];
+    Array.from(byQuarter.values()).sort((a,b) => a.year - b.year || a.q - b.q).forEach(entry => {
+      const monthsInQ = entry.months.length;
+      const endMonth = (entry.q * 3) - 1; // 2,5,8,11
+      const label = `${MONTHS_SHORT[endMonth]} ${entry.year}`;
+      labels.push(label);
+      let val;
+      if (statementKey === 'balance') {
+        // Balance sheet: take last available month in quarter
+        const lastIdx = entry.months.reduce((acc, m, idx) => (m > entry.months[acc] ? idx : acc), 0);
+        val = entry.values[lastIdx] ?? 0;
+      } else {
+        // P&L, Cashflow: sum
+        val = entry.values.reduce((s, v) => s + (Number(v) || 0), 0);
+      }
+      values.push(val);
+      notes.push(monthsInQ < 3 ? `Partial actuals (${monthsInQ}/3 months)` : '');
+    });
+    return { labels, values, notes };
+  };
+
+  const toYearOutputs = () => {
+    const labels = [];
+    const values = [];
+    const notes = [];
+    Array.from(byYear.values()).sort((a,b) => a.year - b.year).forEach(entry => {
+      const monthsInY = entry.months.length;
+      const label = `Dec ${entry.year}`;
+      labels.push(label);
+      let val;
+      if (statementKey === 'balance') {
+        // take last available month in year
+        const lastIdx = entry.months.reduce((acc, m, idx) => (m > entry.months[acc] ? idx : acc), 0);
+        val = entry.values[lastIdx] ?? 0;
+      } else {
+        val = entry.values.reduce((s, v) => s + (Number(v) || 0), 0);
+      }
+      values.push(val);
+      notes.push(monthsInY < 12 ? `Partial actuals (${monthsInY}/12 months)` : '');
+    });
+    return { labels, values, notes };
+  };
+
+  return { toQuarterOutputs, toYearOutputs };
+}
+
+/**
  * Default data + helpers
  */
 function initializeDefaultDateColumns(monthCount = 6) {
@@ -109,37 +222,35 @@ function toggleGrowthRateInput() {
 /**
  * Generate dynamic table headers based on periods
  */
-function generateTableHeaders(periods, periodType) {
+function generateTableHeaders(periods, periodType, actualLabels, forecastStartFrom) {
   const headers = ['Item'];
-  
-  // Add all historical date columns first
-  if (dateColumns && dateColumns.length > 0) {
-    dateColumns.forEach(date => {
-      headers.push(date);
-    });
-  }
-  
-  // Then add forecast periods
+  // Add actual labels
+  (actualLabels || []).forEach(l => headers.push(l));
+  // Forecast labels starting after last actual
+  const start = forecastStartFrom || new Date();
+  const startDate = new Date(start);
   if (periodType === 'monthly') {
     for (let i = 0; i < periods; i++) {
-      const date = new Date();
-      date.setMonth(date.getMonth() + i);
-      headers.push(date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+      const d = new Date(startDate);
+      d.setMonth(d.getMonth() + i);
+      headers.push(d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
     }
   } else if (periodType === 'quarterly') {
-    const quarters = Math.ceil(periods / 3);
-    for (let i = 0; i < quarters; i++) {
-      const quarter = (i % 4) + 1;
-      const year = new Date().getFullYear() + Math.floor(i / 4);
-      headers.push(`Q${quarter} ${year}`);
+    // forecast headers as quarter-end months
+    let d = new Date(startDate);
+    for (let i = 0; i < periods; i++) {
+      const month = d.getMonth();
+      const qEndMonth = month + (2 - (month % 3)); // move to end of this quarter
+      const qEnd = new Date(d.getFullYear(), qEndMonth, 1);
+      headers.push(`${MONTHS_SHORT[qEnd.getMonth()]} ${qEnd.getFullYear()}`);
+      d = new Date(qEnd.getFullYear(), qEnd.getMonth() + 1, 1);
     }
   } else if (periodType === 'yearly') {
-    const years = Math.ceil(periods / 12);
-    for (let i = 0; i < years; i++) {
-      headers.push(`${new Date().getFullYear() + i}`);
+    let y = startDate.getFullYear();
+    for (let i = 0; i < periods; i++) {
+      headers.push(`Dec ${y + i}`);
     }
   }
-  
   return headers;
 }
 
@@ -153,7 +264,41 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
   if (!container) return;
 
   const periods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
-  const headers = generateTableHeaders(periods, periodType);
+  // Build actuals aggregation
+  let actualLabels = [];
+  let noteByIndex = [];
+  // Determine actual values template from first item
+  const sampleItems = uploadedLineItems[statementKey] || [];
+  const firstItem = sampleItems[0];
+  let aggregatedPerItem = new Map();
+  if (periodType === 'monthly') {
+    actualLabels = (dateColumns || []).slice();
+    noteByIndex = new Array(actualLabels.length).fill('');
+    sampleItems.forEach(item => {
+      aggregatedPerItem.set(item.name, { actuals: (item.actualValues || []).slice(), notes: noteByIndex });
+    });
+  } else if (periodType === 'quarterly' || periodType === 'yearly') {
+    sampleItems.forEach(item => {
+      const agg = aggregateActuals(statementKey, item.actualValues || []);
+      const out = periodType === 'quarterly' ? agg.toQuarterOutputs() : agg.toYearOutputs();
+      aggregatedPerItem.set(item.name, { actuals: out.values, notes: out.notes, labels: out.labels });
+    });
+    // Use labels/notes from first item if present, else compute from dateColumns
+    if (firstItem && aggregatedPerItem.get(firstItem.name)) {
+      const ref = aggregatedPerItem.get(firstItem.name);
+      actualLabels = ref.labels || [];
+      noteByIndex = ref.notes || [];
+    }
+  }
+
+  // Forecast start date is after the last actual label
+  let forecastStartFrom = new Date();
+  const parsedActuals = buildParsedDateColumns();
+  if (parsedActuals.length > 0) {
+    const last = parsedActuals[parsedActuals.length - 1].ym;
+    forecastStartFrom = new Date(last.year, last.month + 1, 1);
+  }
+  const headers = generateTableHeaders(periods, periodType, actualLabels, forecastStartFrom);
 
   const statementHeaderLabel =
     statementKey === 'pnl' ? 'P&L' :
@@ -175,12 +320,16 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     let className = '';
     if (index === 0) {
       className = '';
-    } else if (dateColumns && index <= dateColumns.length) {
+    } else if (index <= (actualLabels.length)) {
       className = 'actual';
     } else {
       className = 'forecast';
     }
-    tableHTML += `<th class="${className}">${header}</th>`;
+    let noteHtml = '';
+    if (className === 'actual' && noteByIndex[index - 1]) {
+      noteHtml = ` <span class="note-badge" title="${noteByIndex[index - 1]}">†</span>`;
+    }
+    tableHTML += `<th class="${className}">${header}${noteHtml}</th>`;
   });
 
   tableHTML += `
@@ -197,18 +346,25 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
         <td class="metric-name">${item.name}</td>
     `;
 
-    // Add historical actual values
-    if (item.actualValues && item.actualValues.length > 0) {
-      item.actualValues.forEach(value => {
-        tableHTML += `<td class="number actual">${formatCurrency(value)}</td>`;
-      });
+    // Add historical actual values (aggregated per period type)
+    let actualsForItem = [];
+    if (periodType === 'monthly') {
+      actualsForItem = (item.actualValues || []).slice();
+    } else {
+      const agg = aggregatedPerItem.get(item.name);
+      actualsForItem = agg ? (agg.actuals || []) : [];
     }
+    actualsForItem.forEach(value => {
+      tableHTML += `<td class="number actual">${formatCurrency(value)}</td>`;
+    });
 
     // Add forecast columns
     const forecastPeriods = periods;
+    const safeName = item.name.toLowerCase().replace(/\s+/g, '');
     for (let i = 0; i < forecastPeriods; i++) {
-      const cellId = `${statementKey}${item.name.toLowerCase().replace(/\s+/g, '')}${i}`;
-      tableHTML += `<td class="number forecast" id="${cellId}">$0</td>`;
+      const forecastKey = `${statementKey}-${safeName}-${i}`;
+      const scopedId = `${scope}-${forecastKey}`;
+      tableHTML += `<td class="number forecast" id="${scopedId}" data-forecast-key="${forecastKey}">$0</td>`;
     }
 
     tableHTML += `</tr>`;
