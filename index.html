@@ -24,7 +24,7 @@
             background: white;
             border-radius: 15px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
+            overflow: visible;
         }
         
         .header {
@@ -157,7 +157,7 @@
             background: white;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            overflow: hidden;
+            overflow: visible;
         }
         
         .statement-header {
@@ -193,12 +193,26 @@
             top: 0;
             z-index: 10;
             font-size: 0.8rem;
+            white-space: nowrap;
         }
         
         td {
             padding: 10px 8px;
             border-bottom: 1px solid #e9ecef;
             white-space: nowrap;
+        }
+
+        /* Sticky first column for better context while scrolling */
+        th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 12;
+        }
+        td:first-child {
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 11;
         }
         
         .metric-name {

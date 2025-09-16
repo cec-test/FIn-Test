@@ -267,9 +267,6 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
       let itemGrowth = revGrowth;
       if (statementType === 'pnl' && item.name.toLowerCase().includes('expense')) {
         itemGrowth = expGrowth;
-      } else if (statementType === 'balance' && item.name.toLowerCase().includes('cash')) {
-        // Cash grows with net income
-        itemGrowth = revGrowth;
       }
       
       // Use the most recent actual value as base
@@ -279,7 +276,11 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
       // Update forecast columns
       for (let i = 0; i < periods; i++) {
         const cellId = `${statementType}${item.name.toLowerCase().replace(/\s+/g, '')}${i}`;
-        const forecast = baseValue * Math.pow(1 + itemGrowth, i + 1);
+        // Non-negative constraints: totals/expenses shouldn't flip sign unintentionally
+        let forecast = baseValue * Math.pow(1 + itemGrowth, i + 1);
+        if (/total/i.test(item.name)) {
+          forecast = Math.max(forecast, 0);
+        }
         updateElement(cellId, formatCurrency(forecast, !hasUploadedData));
       }
     });
@@ -337,7 +338,8 @@ function parseCSVToObject(text) {
       continue;
     }
 
-    if (!firstColumn || /(assets|liabilities|equity|subtotal|total)/i.test(firstColumn)) {
+    // Keep totals and subtotals; only skip empty structural separators
+    if (!firstColumn) {
       continue;
     }
 
@@ -354,14 +356,13 @@ function parseCSVToObject(text) {
       actualValues.push(toNumberOrZero(values[j]));
     }
 
-    if (actualValues.length > 0 && actualValues.some(v => v !== 0)) {
-      data[currentStatement].push({
-        name: lineItemName,
-        actual: actualValues[actualValues.length - 1],
-        actualValues: actualValues,
-        statement: currentStatement
-      });
-    }
+    // Always include the line item, even if all zeros, so nothing is dropped
+    data[currentStatement].push({
+      name: lineItemName,
+      actual: actualValues.length ? actualValues[actualValues.length - 1] : 0,
+      actualValues: actualValues,
+      statement: currentStatement
+    });
   }
 
   if (data.pnl.length === 0 && data.balance.length === 0 && data.cashflow.length === 0) {
