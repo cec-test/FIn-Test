@@ -450,10 +450,16 @@
             tabs.forEach(tab => tab.classList.remove('active'));
             
             // Show selected tab content
-            document.getElementById(tabName).classList.add('active');
+            const selectedTabContent = document.getElementById(tabName);
+            if (selectedTabContent) {
+                selectedTabContent.classList.add('active');
+            }
             
-            // Add active class to clicked tab
-            event.target.classList.add('active');
+            // Find and activate the clicked tab button
+            const clickedTab = document.querySelector(`button[onclick="showTab('${tabName}')"]`);
+            if (clickedTab) {
+                clickedTab.classList.add('active');
+            }
         }
 
         function formatCurrency(amount) {
@@ -925,7 +931,16 @@
             });
             
             // Initialize forecasts
+            console.log('Initializing forecasts...');
             updateForecast();
+            
+            // Small delay to ensure DOM is ready, then try again if needed
+            setTimeout(() => {
+                if (!document.getElementById('monthlyTable').innerHTML.includes('tbody')) {
+                    console.log('Retrying forecast generation...');
+                    updateForecast();
+                }
+            }, 100);
         }
 
         // Add keyboard shortcuts
