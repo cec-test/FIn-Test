@@ -102,24 +102,4 @@ function updateCombinedForecasts(revGrowth, expGrowth) {
     updateElement(`cequity${i}`, formatCurrency(equityForecast, !hasUploadedData));
 
     // Cash Flow
-    const ocfForecast = niForecast * 1.1;
-    updateElement(`ccfni${i}`, formatCurrency(niForecast, !hasUploadedData));
-    updateElement(`cocf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
-    updateElement(`cfcf${i}`, formatCurrency(ocfForecast, !hasUploadedData));
-    updateElement(`cncc${i}`, formatCurrency(niForecast, !hasUploadedData));
-  }
-}
-
-function updateMonthlyForecasts(revGrowth, expGrowth) {
-  for (let i = 1; i <= 5; i++) {
-    const revForecast = sampleData.revenue * Math.pow(1 + revGrowth, i);
-    const expForecast = sampleData.expenses * Math.pow(1 + expGrowth, i);
-    const niForecast = revForecast - expForecast;
-
-    updateElement(`mrev${i}`, formatCurrency(revForecast, !hasUploadedData));
-    updateElement(`mexp${i}`, formatCurrency(expForecast, !hasUploadedData));
-    updateElement(`mni${i}`, formatCurrency(niForecast, !hasUploadedData), niForecast);
-
-    // Balance Sheet
-    const cashBalance = sampleData.cash + (sampleData.netIncome * Math.pow(1 + revGrowth, i));
-    const assetsForecast = sampleData.assets * Math.pow(1 + revGrowth
+    const ocfForecast = niForeca
