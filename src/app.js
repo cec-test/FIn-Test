@@ -341,10 +341,10 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
   // Add rows for each line item
   const lineItems = uploadedLineItems[statementKey] || [];
   lineItems.forEach((item) => {
-    const isTotal = /\btotal\b|net\b|gross\b/i.test(item.name);
-    const isSubheader = (!item.actualValues || item.actualValues.length === 0) && !/\btotal\b|net\b|gross\b/i.test(item.name);
-    const rowClass = isSubheader ? 'subheader-row' : (isTotal ? 'total-row' : '');
-    const nameCellClass = isSubheader ? 'subheader-cell' : 'metric-name';
+    const isTotal = /\btotal\b/i.test(item.name);
+    const isSubheader = (!item.actualValues || item.actualValues.length === 0) && !isTotal;
+    const rowClass = isTotal ? 'total-row' : '';
+    const nameCellClass = 'metric-name';
     tableHTML += `
       <tr class="${rowClass}">
         <td class="${nameCellClass}">${item.name}</td>
