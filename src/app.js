@@ -281,7 +281,7 @@ function parseCSVToObject(text) {
     }
     
     // This is a line item
-    if (currentStatement && firstColumn) {
+    if (currentStatement && firstColumn && data[currentStatement]) {
       const lineItemName = firstColumn;
       const actualValues = [];
       
@@ -320,11 +320,11 @@ function applyActualsFromObject(data) {
   // Process each statement type
   Object.keys(data).forEach(statementType => {
     if (['pnl', 'profit', 'income'].includes(statementType)) {
-      uploadedLineItems.pnl = data[statementType];
+      uploadedLineItems.pnl = data[statementType] || [];
     } else if (['balance', 'balancesheet'].includes(statementType)) {
-      uploadedLineItems.balance = data[statementType];
+      uploadedLineItems.balance = data[statementType] || [];
     } else if (['cashflow', 'cash'].includes(statementType)) {
-      uploadedLineItems.cashflow = data[statementType];
+      uploadedLineItems.cashflow = data[statementType] || [];
     }
   });
   
@@ -362,9 +362,12 @@ function handleActualsUpload(file) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
+      console.log('Parsing CSV...');
       const data = parseCSVToObject(reader.result);
+      console.log('Parsed data:', data);
       applyActualsFromObject(data);
     } catch (e) {
+      console.error('CSV parsing error:', e);
       alert('Failed to parse CSV: ' + e.message);
     }
   };
