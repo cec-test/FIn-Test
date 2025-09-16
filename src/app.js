@@ -431,14 +431,18 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
         item.actualValues[item.actualValues.length - 1] : item.actual;
       
       // Update forecast columns
+      const safeName = item.name.toLowerCase().replace(/\s+/g, '');
       for (let i = 0; i < periods; i++) {
-        const cellId = `${statementType}${item.name.toLowerCase().replace(/\s+/g, '')}${i}`;
+        const forecastKey = `${statementType}-${safeName}-${i}`;
         // Non-negative constraints: totals/expenses shouldn't flip sign unintentionally
         let forecast = baseValue * Math.pow(1 + itemGrowth, i + 1);
         if (/total/i.test(item.name)) {
           forecast = Math.max(forecast, 0);
         }
-        updateElement(cellId, formatCurrency(forecast, !hasUploadedData));
+        // Update all cells sharing this forecast key across tabs
+        document.querySelectorAll(`[data-forecast-key="${forecastKey}"]`).forEach(cell => {
+          updateElement(cell.id, formatCurrency(forecast, !hasUploadedData));
+        });
       }
     });
   });
