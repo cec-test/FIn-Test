@@ -605,5 +605,16 @@ document.addEventListener('DOMContentLoaded', function () {
   rebuildAllTables();
   updateForecast();
   
+  // Enhance horizontal scrolling with mouse wheel
+  document.addEventListener('wheel', function(e) {
+    const container = e.target && (e.target.closest && e.target.closest('.table-container'));
+    if (container && container.scrollWidth > container.clientWidth) {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        container.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    }
+  }, { passive: false });
+  
   console.log('Initialization complete');
 });
