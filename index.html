@@ -441,6 +441,8 @@
         };
 
         function showTab(tabName) {
+            console.log('Switching to tab:', tabName);
+            
             // Hide all tab contents
             const tabContents = document.querySelectorAll('.tab-content');
             tabContents.forEach(content => content.classList.remove('active'));
@@ -453,12 +455,22 @@
             const selectedTabContent = document.getElementById(tabName);
             if (selectedTabContent) {
                 selectedTabContent.classList.add('active');
+                console.log('Tab content found and activated:', tabName);
+            } else {
+                console.error('Tab content not found:', tabName);
             }
             
             // Find and activate the clicked tab button
             const clickedTab = document.querySelector(`button[onclick="showTab('${tabName}')"]`);
             if (clickedTab) {
                 clickedTab.classList.add('active');
+                console.log('Tab button activated:', tabName);
+            }
+            
+            // Force update forecasts if switching to a forecast tab
+            if (tabName !== 'variables') {
+                console.log('Updating forecasts for tab:', tabName);
+                setTimeout(updateForecast, 100);
             }
         }
 
@@ -860,9 +872,12 @@
         }
 
         function updateForecast() {
+            console.log('Starting updateForecast...');
             const method = document.getElementById('forecastMethod').value;
             const customGrowth = document.getElementById('customGrowthRate').value;
             const periods = document.getElementById('forecastPeriods').value;
+            
+            console.log('Forecast parameters:', { method, customGrowth, periods });
             
             // Update settings display
             let methodText = '';
@@ -880,99 +895,77 @@
             document.getElementById('currentSettings').textContent = methodText;
             
             // Update method displays in other tabs
-            document.getElementById('monthlyMethod').textContent = method === 'custom' ? `custom growth rate (${customGrowth}%)` : method.replace('threemonth', '3-month average');
-            document.getElementById('quarterlyMethod').textContent = method === 'custom' ? `custom growth rate (${customGrowth}%)` : method.replace('threemonth', '3-month average');
-            document.getElementById('annualMethod').textContent = method === 'custom' ? `custom growth rate (${customGrowth}%)` : method.replace('threemonth', '3-month average');
+            const monthlyMethodEl = document.getElementById('monthlyMethod');
+            const quarterlyMethodEl = document.getElementById('quarterlyMethod');
+            const annualMethodEl = document.getElementById('annualMethod');
             
-            // Generate forecasts
-            currentForecast.monthly = generateMonthlyForecast();
-            currentForecast.quarterly = generateQuarterlyForecast();
-            currentForecast.annual = generateAnnualForecast();
+            const methodDisplay = method === 'custom' ? `custom growth rate (${customGrowth}%)` : method.replace('threemonth', '3-month average');
             
-            // Update tables
-            createForecastTable(currentForecast.monthly, 'monthlyTable');
-            createForecastTable(currentForecast.quarterly, 'quarterlyTable');
-            createForecastTable(currentForecast.annual, 'annualTable');
-        }
-
-        function exportToCSV(tableId, filename) {
-            const table = document.getElementById(tableId);
-            const rows = table.querySelectorAll('tr');
-            const csvContent = Array.from(rows).map(row => {
-                const cells = row.querySelectorAll('th, td');
-                return Array.from(cells).map(cell => 
-                    `"${cell.textContent.replace(/"/g, '""')}"`
-                ).join(',');
-            }).join('\n');
+            if (monthlyMethodEl) monthlyMethodEl.textContent = methodDisplay;
+            if (quarterlyMethodEl) quarterlyMethodEl.textContent = methodDisplay;
+            if (annualMethodEl) annualMethodEl.textContent = methodDisplay;
             
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
+            try {
+                // Generate forecasts
+                console.log('Generating monthly forecast...');
+                currentForecast.monthly = generateMonthlyForecast();
+                console.log('Monthly forecast generated:', currentForecast.monthly);
+                
+                console.log('Generating quarterly forecast...');
+                currentForecast.quarterly = generateQuarterlyForecast();
+                
+                console.log('Generating annual forecast...');
+                currentForecast.annual = generateAnnualForecast();
+                
+                // Update tables
+                console.log('Creating forecast tables...');
+                createForecastTable(currentForecast.monthly, 'monthlyTable');
+                createForecastTable(currentForecast.quarterly, 'quarterlyTable');
+                createForecastTable(currentForecast.annual, 'annualTable');
+                
+                console.log('Forecast update complete!');
+            } catch (error) {
+                console.error('Error updating forecasts:', error);
+            }
         }
 
         function initializeModel() {
+            console.log('Initializing model...');
+            
             // Enable/disable custom growth rate input based on method
             const methodSelect = document.getElementById('forecastMethod');
             const customGrowthInput = document.getElementById('customGrowthRate');
             
-            methodSelect.addEventListener('change', function() {
-                customGrowthInput.disabled = this.value !== 'custom';
-                if (this.value !== 'custom') {
-                    customGrowthInput.style.opacity = '0.5';
-                } else {
-                    customGrowthInput.style.opacity = '1';
-                }
-            });
+            if (methodSelect && customGrowthInput) {
+                methodSelect.addEventListener('change', function() {
+                    customGrowthInput.disabled = this.value !== 'custom';
+                    if (this.value !== 'custom') {
+                        customGrowthInput.style.opacity = '0.5';
+                    } else {
+                        customGrowthInput.style.opacity = '1';
+                    }
+                    updateForecast();
+                });
+            }
             
             // Initialize forecasts
             console.log('Initializing forecasts...');
-            updateForecast();
-            
-            // Small delay to ensure DOM is ready, then try again if needed
             setTimeout(() => {
-                if (!document.getElementById('monthlyTable').innerHTML.includes('tbody')) {
-                    console.log('Retrying forecast generation...');
-                    updateForecast();
-                }
-            }, 100);
+                updateForecast();
+            }, 500);
         }
 
-        // Add keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey || e.metaKey) {
-                switch(e.key) {
-                    case '1':
-                        e.preventDefault();
-                        showTab('variables');
-                        break;
-                    case '2':
-                        e.preventDefault();
-                        showTab('monthly');
-                        break;
-                    case '3':
-                        e.preventDefault();
-                        showTab('quarterly');
-                        break;
-                    case '4':
-                        e.preventDefault();
-                        showTab('annual');
-                        break;
-                    case 'r':
-                        e.preventDefault();
-                        updateForecast();
-                        break;
-                }
-            }
+        // Initialize the model when the page loads
+        window.addEventListener('load', function() {
+            console.log('Page loaded, initializing...');
+            initializeModel();
         });
 
-        // Initialize the model when the page loads
-        window.addEventListener('load', initializeModel);
+        // Backup initialization in case load event doesn't fire
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing...');
+            setTimeout(initializeModel, 100);
+        });
     </script>
 </body>
 </html>
