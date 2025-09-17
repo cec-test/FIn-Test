@@ -401,33 +401,33 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
       if (tc.scrollLeft > 10) tc.classList.remove('is-clipped'); else updateHint();
     });
 
-    // Add explicit horizontal slider synced with container scroll
-    const sliderWrap = document.createElement('div');
-    sliderWrap.className = 'h-scrollbar';
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.min = '0';
-    slider.max = '100';
-    slider.value = '0';
-    sliderWrap.appendChild(slider);
-    container.appendChild(sliderWrap);
-
-    const syncSlider = () => {
-      const maxScroll = Math.max(1, tc.scrollWidth - tc.clientWidth);
-      const pct = (tc.scrollLeft / maxScroll) * 100;
-      slider.value = String(Math.max(0, Math.min(100, Math.round(pct))));
+    // Enable grab-to-scroll on the table container
+    let isDown = false;
+    let startX = 0;
+    let startScrollLeft = 0;
+    const onDown = (e) => {
+      isDown = true;
+      tc.classList.add('dragging');
+      startX = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
+      startScrollLeft = tc.scrollLeft;
+      e.preventDefault();
     };
-    const syncScroll = () => {
-      const maxScroll = Math.max(1, tc.scrollWidth - tc.clientWidth);
-      const target = (Number(slider.value) / 100) * maxScroll;
-      tc.scrollLeft = target;
+    const onMove = (e) => {
+      if (!isDown) return;
+      const x = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
+      const walk = (startX - x);
+      tc.scrollLeft = startScrollLeft + walk;
     };
-    tc.addEventListener('scroll', syncSlider);
-    slider.addEventListener('input', syncScroll);
-    const resizeObserver = new ResizeObserver(syncSlider);
-    resizeObserver.observe(tc);
-    // Initial sync
-    syncSlider();
+    const onUp = () => {
+      isDown = false;
+      tc.classList.remove('dragging');
+    };
+    tc.addEventListener('mousedown', onDown);
+    tc.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    tc.addEventListener('touchstart', onDown, { passive: false });
+    tc.addEventListener('touchmove', onMove, { passive: false });
+    tc.addEventListener('touchend', onUp);
   }
 }
 
