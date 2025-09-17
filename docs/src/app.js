@@ -812,6 +812,8 @@ document.addEventListener('DOMContentLoaded', function () {
     dateColumns = initializeDefaultDateColumns(6);
     uploadedLineItems = buildDefaultSampleData();
   }
+  // Force monthly tab active by default
+  showTab('monthly', document.querySelector('.tabs .tab[data-tab="monthly"]'));
   rebuildAllTables();
   updateForecast();
   
