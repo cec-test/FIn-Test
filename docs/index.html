@@ -203,6 +203,33 @@
         .table-container::-webkit-scrollbar-track { background: #f1f3f5; }
         .table-container { scrollbar-width: thin; }
 
+        /* Make horizontal drag affordance obvious */
+        .table-container { cursor: grab; }
+        .table-container.dragging { cursor: grabbing; }
+
+        /* Inline left/right nav arrows for horizontal scroll */
+        .table-container .scroll-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 32px;
+            height: 52px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(52, 58, 64, 0.6);
+            color: #fff;
+            font-size: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            z-index: 20;
+            user-select: none;
+        }
+        .table-container .scroll-nav.left { left: 4px; }
+        .table-container .scroll-nav.right { right: 4px; }
+        .table-container.is-clipped .scroll-nav { display: flex; }
+        .table-container .scroll-nav:hover { background: rgba(33, 37, 41, 0.8); }
+
         /* Explicit horizontal slider UI */
         .h-scrollbar {
             width: 100%;
