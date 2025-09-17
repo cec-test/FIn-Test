@@ -26,6 +26,7 @@
             border-radius: 15px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             overflow: visible;
+            width: 100%;
         }
         
         .header {
@@ -177,7 +178,8 @@
             background: white;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            overflow: visible;
+            overflow: hidden;
+            margin-bottom: 20px;
         }
         
         .statement-header {
@@ -189,19 +191,41 @@
         }
         
         .table-container {
-            overflow-x: scroll;
-            overflow-y: hidden;
+            overflow-x: auto;
+            overflow-y: auto;
             max-width: 100%;
+            max-height: 70vh;
             -webkit-overflow-scrolling: touch;
             padding-right: 16px;
             padding-bottom: 10px;
             position: relative;
             overscroll-behavior-x: contain;
+            overscroll-behavior-y: contain;
+            border: 1px solid #e9ecef;
         }
-        .table-container::-webkit-scrollbar { height: 10px; }
-        .table-container::-webkit-scrollbar-thumb { background: #c1c7d0; border-radius: 8px; }
-        .table-container::-webkit-scrollbar-track { background: #f1f3f5; }
-        .table-container { scrollbar-width: thin; }
+        .table-container::-webkit-scrollbar { 
+            height: 12px; 
+            width: 12px;
+        }
+        .table-container::-webkit-scrollbar-thumb { 
+            background: #c1c7d0; 
+            border-radius: 8px; 
+            border: 2px solid #f1f3f5;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #adb5bd;
+        }
+        .table-container::-webkit-scrollbar-track { 
+            background: #f1f3f5; 
+            border-radius: 8px;
+        }
+        .table-container::-webkit-scrollbar-corner {
+            background: #f1f3f5;
+        }
+        .table-container { 
+            scrollbar-width: thin; 
+            scrollbar-color: #c1c7d0 #f1f3f5;
+        }
 
         /* Make horizontal drag affordance obvious */
         .table-container { cursor: grab; }
@@ -244,7 +268,7 @@
             border-collapse: collapse;
             background: white;
             font-size: 0.85rem;
-            min-width: 1600px;
+            min-width: 100%;
         }
 
         .scroll-hint {
@@ -404,9 +428,180 @@
             font-family: 'Courier New', monospace;
         }
         
+        /* Enhanced scroll indicators */
+        .scroll-indicator {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(52, 152, 219, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 15;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .scroll-indicator.left {
+            left: 10px;
+        }
+        
+        .scroll-indicator.right {
+            right: 10px;
+        }
+        
+        .table-container.has-left-scroll .scroll-indicator.left,
+        .table-container.has-right-scroll .scroll-indicator.right {
+            opacity: 1;
+        }
+
+        /* Responsive design improvements */
         @media (max-width: 1200px) {
             .statements-container {
                 grid-template-columns: 1fr;
+            }
+            
+            .layout {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .sidebar {
+                flex: none;
+                position: static;
+            }
+            
+            .table-container {
+                max-height: 60vh;
+                font-size: 0.8rem;
+            }
+            
+            table {
+                font-size: 0.75rem;
+            }
+            
+            th, td {
+                padding: 8px 6px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                border-radius: 8px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 15px;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                padding: 15px;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .tab.active::after {
+                display: none;
+            }
+            
+            .table-container {
+                max-height: 50vh;
+                padding-right: 8px;
+                padding-bottom: 8px;
+                border-radius: 8px;
+            }
+            
+            .table-container::-webkit-scrollbar {
+                height: 8px;
+                width: 8px;
+            }
+            
+            table {
+                font-size: 0.7rem;
+            }
+            
+            th, td {
+                padding: 6px 4px;
+                font-size: 0.7rem;
+            }
+            
+            .metric-name {
+                min-width: 100px;
+                font-size: 0.7rem;
+            }
+            
+            .scroll-nav {
+                width: 28px;
+                height: 40px;
+                font-size: 20px;
+            }
+            
+            .h-scrollbar {
+                padding: 4px 6px 0 6px;
+            }
+            
+            /* Touch-friendly scroll indicators */
+            .table-container.is-clipped .scroll-hint {
+                opacity: 1;
+                background: rgba(52, 152, 219, 0.9);
+                padding: 6px 10px;
+                font-size: 0.7rem;
+                border-radius: 4px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .tab {
+                font-size: 0.9rem;
+                padding: 12px;
+            }
+            
+            .table-container {
+                max-height: 45vh;
+            }
+            
+            table {
+                font-size: 0.65rem;
+            }
+            
+            th, td {
+                padding: 5px 3px;
+                font-size: 0.65rem;
+            }
+            
+            .metric-name {
+                min-width: 80px;
+            }
+            
+            /* Larger touch targets for mobile */
+            .scroll-nav {
+                width: 32px;
+                height: 44px;
+                font-size: 18px;
+                touch-action: manipulation;
             }
         }
     </style>

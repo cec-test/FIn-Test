@@ -441,6 +441,16 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     rightNav.textContent = '›';
     tc.appendChild(leftNav);
     tc.appendChild(rightNav);
+    
+    // Add enhanced scroll indicators
+    const leftIndicator = document.createElement('div');
+    leftIndicator.className = 'scroll-indicator left';
+    leftIndicator.textContent = '← Scroll';
+    const rightIndicator = document.createElement('div');
+    rightIndicator.className = 'scroll-indicator right';
+    rightIndicator.textContent = 'Scroll →';
+    tc.appendChild(leftIndicator);
+    tc.appendChild(rightIndicator);
     const scrollByChunk = (dir) => {
       const delta = Math.round(tc.clientWidth * 0.85);
       tc.scrollBy({ left: dir === 'left' ? -delta : delta, behavior: 'smooth' });
@@ -464,8 +474,15 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     const updateArrows = () => {
       if (!leftNav || !rightNav) return;
       const maxScroll = Math.max(tc.scrollWidth - tc.clientWidth, 0);
-      leftNav.style.visibility = tc.scrollLeft > 2 ? 'visible' : 'hidden';
-      rightNav.style.visibility = (tc.scrollLeft < maxScroll - 2) ? 'visible' : 'hidden';
+      const hasLeftScroll = tc.scrollLeft > 2;
+      const hasRightScroll = tc.scrollLeft < maxScroll - 2;
+      
+      leftNav.style.visibility = hasLeftScroll ? 'visible' : 'hidden';
+      rightNav.style.visibility = hasRightScroll ? 'visible' : 'hidden';
+      
+      // Update scroll indicator classes
+      tc.classList.toggle('has-left-scroll', hasLeftScroll);
+      tc.classList.toggle('has-right-scroll', hasRightScroll);
     };
     const updateHint = () => {
       if (tc.scrollWidth > tc.clientWidth + 4) tc.classList.add('is-clipped'); else tc.classList.remove('is-clipped');
@@ -519,6 +536,75 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     tc.addEventListener('touchstart', onDown, { passive: false });
     tc.addEventListener('touchmove', onMove, { passive: false });
     tc.addEventListener('touchend', onUp);
+    
+    // Add keyboard navigation support
+    tc.setAttribute('tabindex', '0');
+    tc.addEventListener('keydown', (e) => {
+      const step = 50;
+      switch (e.key) {
+        case 'ArrowLeft':
+          tc.scrollLeft -= step;
+          e.preventDefault();
+          break;
+        case 'ArrowRight':
+          tc.scrollLeft += step;
+          e.preventDefault();
+          break;
+        case 'ArrowUp':
+          tc.scrollTop -= step;
+          e.preventDefault();
+          break;
+        case 'ArrowDown':
+          tc.scrollTop += step;
+          e.preventDefault();
+          break;
+        case 'Home':
+          if (e.ctrlKey) {
+            tc.scrollLeft = 0;
+            tc.scrollTop = 0;
+          } else {
+            tc.scrollLeft = 0;
+          }
+          e.preventDefault();
+          break;
+        case 'End':
+          if (e.ctrlKey) {
+            tc.scrollLeft = tc.scrollWidth;
+            tc.scrollTop = tc.scrollHeight;
+          } else {
+            tc.scrollLeft = tc.scrollWidth;
+          }
+          e.preventDefault();
+          break;
+      }
+    });
+    
+    // Enhanced touch gesture support
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isTouchScrolling = false;
+    
+    tc.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      isTouchScrolling = false;
+    }, { passive: true });
+    
+    tc.addEventListener('touchmove', (e) => {
+      if (!isTouchScrolling) {
+        const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+        const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+        
+        // Determine scroll direction
+        if (deltaX > deltaY && deltaX > 10) {
+          isTouchScrolling = true;
+          // Prevent vertical scroll when horizontal scrolling
+          if (tc.scrollWidth > tc.clientWidth) {
+            e.preventDefault();
+          }
+        }
+      }
+    }, { passive: false });
   }
 }
 
@@ -936,12 +1022,37 @@ document.addEventListener('DOMContentLoaded', function () {
   rebuildAllTables();
   updateForecast();
   
-  // Enhance horizontal scrolling with mouse wheel
+  // Enhanced mouse wheel scrolling with better detection
   document.addEventListener('wheel', function(e) {
     const container = e.target && (e.target.closest && e.target.closest('.table-container'));
-    if (container && container.scrollWidth > container.clientWidth) {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    if (container) {
+      const hasHorizontalScroll = container.scrollWidth > container.clientWidth;
+      const hasVerticalScroll = container.scrollHeight > container.clientHeight;
+      
+      // Check if shift key is held for horizontal scrolling
+      if (e.shiftKey && hasHorizontalScroll) {
         container.scrollLeft += e.deltaY;
+        e.preventDefault();
+        return;
+      }
+      
+      // Auto-detect scroll direction based on available scroll space
+      if (hasHorizontalScroll && !hasVerticalScroll) {
+        // Only horizontal scroll available, use vertical wheel for horizontal scroll
+        container.scrollLeft += e.deltaY;
+        e.preventDefault();
+      } else if (hasHorizontalScroll && hasVerticalScroll) {
+        // Both scrolls available, use deltaX for horizontal, deltaY for vertical
+        if (Math.abs(e.deltaX) > 0) {
+          container.scrollLeft += e.deltaX;
+        }
+        if (Math.abs(e.deltaY) > 0) {
+          container.scrollTop += e.deltaY;
+        }
+        e.preventDefault();
+      } else if (hasVerticalScroll && Math.abs(e.deltaY) > 0) {
+        // Only vertical scroll
+        container.scrollTop += e.deltaY;
         e.preventDefault();
       }
     }
