@@ -203,6 +203,10 @@
         .table-container::-webkit-scrollbar-track { background: #f1f3f5; }
         .table-container { scrollbar-width: thin; }
 
+        /* Make horizontal drag affordance obvious */
+        .table-container { cursor: grab; }
+        .table-container.dragging { cursor: grabbing; }
+
         /* Explicit horizontal slider UI */
         .h-scrollbar {
             width: 100%;
