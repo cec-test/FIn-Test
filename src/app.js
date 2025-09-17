@@ -400,6 +400,34 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     tc.addEventListener('scroll', () => {
       if (tc.scrollLeft > 10) tc.classList.remove('is-clipped'); else updateHint();
     });
+
+    // Add explicit horizontal slider synced with container scroll
+    const sliderWrap = document.createElement('div');
+    sliderWrap.className = 'h-scrollbar';
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = '0';
+    slider.max = '100';
+    slider.value = '0';
+    sliderWrap.appendChild(slider);
+    container.appendChild(sliderWrap);
+
+    const syncSlider = () => {
+      const maxScroll = Math.max(1, tc.scrollWidth - tc.clientWidth);
+      const pct = (tc.scrollLeft / maxScroll) * 100;
+      slider.value = String(Math.max(0, Math.min(100, Math.round(pct))));
+    };
+    const syncScroll = () => {
+      const maxScroll = Math.max(1, tc.scrollWidth - tc.clientWidth);
+      const target = (Number(slider.value) / 100) * maxScroll;
+      tc.scrollLeft = target;
+    };
+    tc.addEventListener('scroll', syncSlider);
+    slider.addEventListener('input', syncScroll);
+    const resizeObserver = new ResizeObserver(syncSlider);
+    resizeObserver.observe(tc);
+    // Initial sync
+    syncSlider();
   }
 }
 
