@@ -414,6 +414,9 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
           </tbody>
         </table>
       </div>
+      <div class="h-scrollbar" aria-hidden="true">
+        <input type="range" min="0" max="100" value="0" aria-label="Scroll table horizontally" />
+      </div>
     </div>
   `;
 
@@ -425,15 +428,42 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     hint.className = 'scroll-hint';
     hint.textContent = 'Scroll →';
     tc.appendChild(hint);
+    const sliderWrap = container.querySelector('.h-scrollbar');
+    const sliderEl = sliderWrap && sliderWrap.querySelector('input[type="range"]');
+    const updateSlider = () => {
+      if (!sliderWrap || !sliderEl) return;
+      const maxScroll = Math.max(tc.scrollWidth - tc.clientWidth, 0);
+      if (maxScroll <= 1) {
+        sliderWrap.style.display = 'none';
+        sliderEl.value = '0';
+      } else {
+        sliderWrap.style.display = 'block';
+        const ratio = maxScroll ? (tc.scrollLeft / maxScroll) : 0;
+        sliderEl.value = String(Math.round(ratio * 100));
+      }
+    };
     const updateHint = () => {
       if (tc.scrollWidth > tc.clientWidth + 4) tc.classList.add('is-clipped'); else tc.classList.remove('is-clipped');
+      updateSlider();
     };
     updateHint();
     const ro = new ResizeObserver(updateHint);
     ro.observe(tc);
     tc.addEventListener('scroll', () => {
       if (tc.scrollLeft > 10) tc.classList.remove('is-clipped'); else updateHint();
+      updateSlider();
     });
+    if (sliderEl) {
+      sliderEl.addEventListener('input', () => {
+        const val = Number(sliderEl.value) || 0;
+        const maxScroll = Math.max(tc.scrollWidth - tc.clientWidth, 0);
+        tc.scrollLeft = (val / 100) * maxScroll;
+      });
+      // Prevent the page from scrolling when interacting with the slider via wheel
+      sliderEl.addEventListener('wheel', (e) => {
+        e.stopPropagation();
+      }, { passive: true });
+    }
 
     // Enable grab-to-scroll on the table container
     let isDown = false;
