@@ -473,8 +473,13 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
       updateArrows();
     };
     updateHint();
-    const ro = new ResizeObserver(updateHint);
-    ro.observe(tc);
+    if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
+      const ro = new ResizeObserver(updateHint);
+      ro.observe(tc);
+    } else {
+      // Fallback for browsers without ResizeObserver
+      window.addEventListener('resize', updateHint);
+    }
     tc.addEventListener('scroll', () => {
       if (tc.scrollLeft > 10) tc.classList.remove('is-clipped'); else updateHint();
       updateSlider();
