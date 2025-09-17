@@ -338,9 +338,10 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     <div class="statement-section">
       <div class="statement-header">${statementHeaderLabel}</div>
       <div class="table-container">
-        <table id="${tableId}">
-          <thead>
-            <tr>
+        <div class="table-wrapper">
+          <table id="${tableId}">
+            <thead>
+              <tr>
   `;
 
   headers.forEach((header, index) => {
@@ -412,199 +413,56 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
 
   tableHTML += `
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
-      <div class="h-scrollbar" aria-hidden="true">
-        <input type="range" min="0" max="100" value="0" aria-label="Scroll table horizontally" />
+      <div class="table-scroll-slider">
+        <input type="range" min="0" max="100" value="0" class="scroll-slider" data-table-id="${tableId}" aria-label="Scroll table horizontally" />
       </div>
     </div>
   `;
 
   container.innerHTML = tableHTML;
-  // Add scroll hint element and toggle based on overflow
-  const tc = container.querySelector('.table-container');
-  if (tc) {
-    const hint = document.createElement('div');
-    hint.className = 'scroll-hint';
-    hint.textContent = 'Scroll →';
-    tc.appendChild(hint);
-    const sliderWrap = container.querySelector('.h-scrollbar');
-    const sliderEl = sliderWrap && sliderWrap.querySelector('input[type="range"]');
-    // Add left/right nav arrows
-    const leftNav = document.createElement('div');
-    leftNav.className = 'scroll-nav left';
-    leftNav.setAttribute('aria-label', 'Scroll left');
-    leftNav.textContent = '‹';
-    const rightNav = document.createElement('div');
-    rightNav.className = 'scroll-nav right';
-    rightNav.setAttribute('aria-label', 'Scroll right');
-    rightNav.textContent = '›';
-    tc.appendChild(leftNav);
-    tc.appendChild(rightNav);
-    
-    // Add enhanced scroll indicators
-    const leftIndicator = document.createElement('div');
-    leftIndicator.className = 'scroll-indicator left';
-    leftIndicator.textContent = '← Scroll';
-    const rightIndicator = document.createElement('div');
-    rightIndicator.className = 'scroll-indicator right';
-    rightIndicator.textContent = 'Scroll →';
-    tc.appendChild(leftIndicator);
-    tc.appendChild(rightIndicator);
-    const scrollByChunk = (dir) => {
-      const delta = Math.round(tc.clientWidth * 0.85);
-      tc.scrollBy({ left: dir === 'left' ? -delta : delta, behavior: 'smooth' });
-    };
-    leftNav.addEventListener('click', () => scrollByChunk('left'));
-    rightNav.addEventListener('click', () => scrollByChunk('right'));
-    const stopDragStart = (e) => { e.stopPropagation(); };
-    leftNav.addEventListener('mousedown', stopDragStart, { passive: true });
-    rightNav.addEventListener('mousedown', stopDragStart, { passive: true });
-    leftNav.addEventListener('touchstart', stopDragStart, { passive: true });
-    rightNav.addEventListener('touchstart', stopDragStart, { passive: true });
+  
+  // Set up simple slider-only scrolling
+  const slider = container.querySelector('.scroll-slider');
+  const tableWrapper = container.querySelector('.table-wrapper');
+  const table = container.querySelector('table');
+  
+  if (slider && tableWrapper && table) {
     const updateSlider = () => {
-      if (!sliderWrap || !sliderEl) return;
-      const maxScroll = Math.max(tc.scrollWidth - tc.clientWidth, 0);
-      // Always show the slider; disable if there's nothing to scroll
-      sliderWrap.style.display = 'block';
-      sliderEl.disabled = maxScroll <= 1;
-      const ratio = maxScroll ? (tc.scrollLeft / maxScroll) : 0;
-      sliderEl.value = String(Math.round(ratio * 100));
-    };
-    const updateArrows = () => {
-      if (!leftNav || !rightNav) return;
-      const maxScroll = Math.max(tc.scrollWidth - tc.clientWidth, 0);
-      const hasLeftScroll = tc.scrollLeft > 2;
-      const hasRightScroll = tc.scrollLeft < maxScroll - 2;
+      const containerWidth = tableWrapper.clientWidth;
+      const tableWidth = table.scrollWidth;
+      const maxScroll = Math.max(tableWidth - containerWidth, 0);
       
-      leftNav.style.visibility = hasLeftScroll ? 'visible' : 'hidden';
-      rightNav.style.visibility = hasRightScroll ? 'visible' : 'hidden';
+      slider.disabled = maxScroll <= 0;
       
-      // Update scroll indicator classes
-      tc.classList.toggle('has-left-scroll', hasLeftScroll);
-      tc.classList.toggle('has-right-scroll', hasRightScroll);
+      // Get current transform value
+      const transform = table.style.transform;
+      const currentTranslate = transform ? parseFloat(transform.replace(/[^-\d.]/g, '')) || 0 : 0;
+      const currentScroll = Math.abs(currentTranslate);
+      
+      const ratio = maxScroll > 0 ? (currentScroll / maxScroll) : 0;
+      slider.value = String(Math.round(ratio * 100));
     };
-    const updateHint = () => {
-      if (tc.scrollWidth > tc.clientWidth + 4) tc.classList.add('is-clipped'); else tc.classList.remove('is-clipped');
-      updateSlider();
-      updateArrows();
-    };
-    updateHint();
-    const ro = new ResizeObserver(updateHint);
-    ro.observe(tc);
-    tc.addEventListener('scroll', () => {
-      if (tc.scrollLeft > 10) tc.classList.remove('is-clipped'); else updateHint();
-      updateSlider();
-      updateArrows();
-    });
-    if (sliderEl) {
-      sliderEl.addEventListener('input', () => {
-        const val = Number(sliderEl.value) || 0;
-        const maxScroll = Math.max(tc.scrollWidth - tc.clientWidth, 0);
-        tc.scrollLeft = (val / 100) * maxScroll;
-      });
-      // Prevent the page from scrolling when interacting with the slider via wheel
-      sliderEl.addEventListener('wheel', (e) => {
-        e.stopPropagation();
-      }, { passive: true });
-    }
-
-    // Enable grab-to-scroll on the table container
-    let isDown = false;
-    let startX = 0;
-    let startScrollLeft = 0;
-    const onDown = (e) => {
-      isDown = true;
-      tc.classList.add('dragging');
-      startX = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
-      startScrollLeft = tc.scrollLeft;
-      e.preventDefault();
-    };
-    const onMove = (e) => {
-      if (!isDown) return;
-      const x = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
-      const walk = (startX - x);
-      tc.scrollLeft = startScrollLeft + walk;
-    };
-    const onUp = () => {
-      isDown = false;
-      tc.classList.remove('dragging');
-    };
-    tc.addEventListener('mousedown', onDown);
-    tc.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    tc.addEventListener('touchstart', onDown, { passive: false });
-    tc.addEventListener('touchmove', onMove, { passive: false });
-    tc.addEventListener('touchend', onUp);
     
-    // Add keyboard navigation support
-    tc.setAttribute('tabindex', '0');
-    tc.addEventListener('keydown', (e) => {
-      const step = 50;
-      switch (e.key) {
-        case 'ArrowLeft':
-          tc.scrollLeft -= step;
-          e.preventDefault();
-          break;
-        case 'ArrowRight':
-          tc.scrollLeft += step;
-          e.preventDefault();
-          break;
-        case 'ArrowUp':
-          tc.scrollTop -= step;
-          e.preventDefault();
-          break;
-        case 'ArrowDown':
-          tc.scrollTop += step;
-          e.preventDefault();
-          break;
-        case 'Home':
-          if (e.ctrlKey) {
-            tc.scrollLeft = 0;
-            tc.scrollTop = 0;
-          } else {
-            tc.scrollLeft = 0;
-          }
-          e.preventDefault();
-          break;
-        case 'End':
-          if (e.ctrlKey) {
-            tc.scrollLeft = tc.scrollWidth;
-            tc.scrollTop = tc.scrollHeight;
-          } else {
-            tc.scrollLeft = tc.scrollWidth;
-          }
-          e.preventDefault();
-          break;
-      }
+    slider.addEventListener('input', () => {
+      const containerWidth = tableWrapper.clientWidth;
+      const tableWidth = table.scrollWidth;
+      const maxScroll = Math.max(tableWidth - containerWidth, 0);
+      
+      const val = Number(slider.value) || 0;
+      const scrollAmount = (val / 100) * maxScroll;
+      
+      table.style.transform = `translateX(-${scrollAmount}px)`;
     });
     
-    // Enhanced touch gesture support
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let isTouchScrolling = false;
+    // Initial setup
+    updateSlider();
     
-    tc.addEventListener('touchstart', (e) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      isTouchScrolling = false;
-    }, { passive: true });
-    
-    tc.addEventListener('touchmove', (e) => {
-      if (!isTouchScrolling) {
-        const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-        const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-        
-        // Determine scroll direction
-        if (deltaX > deltaY && deltaX > 10) {
-          isTouchScrolling = true;
-          // Prevent vertical scroll when horizontal scrolling
-          if (tc.scrollWidth > tc.clientWidth) {
-            e.preventDefault();
-          }
-        }
-      }
-    }, { passive: false });
+    // Update on window resize
+    const resizeObserver = new ResizeObserver(updateSlider);
+    resizeObserver.observe(tableWrapper);
   }
 }
 
@@ -1022,41 +880,6 @@ document.addEventListener('DOMContentLoaded', function () {
   rebuildAllTables();
   updateForecast();
   
-  // Enhanced mouse wheel scrolling with better detection
-  document.addEventListener('wheel', function(e) {
-    const container = e.target && (e.target.closest && e.target.closest('.table-container'));
-    if (container) {
-      const hasHorizontalScroll = container.scrollWidth > container.clientWidth;
-      const hasVerticalScroll = container.scrollHeight > container.clientHeight;
-      
-      // Check if shift key is held for horizontal scrolling
-      if (e.shiftKey && hasHorizontalScroll) {
-        container.scrollLeft += e.deltaY;
-        e.preventDefault();
-        return;
-      }
-      
-      // Auto-detect scroll direction based on available scroll space
-      if (hasHorizontalScroll && !hasVerticalScroll) {
-        // Only horizontal scroll available, use vertical wheel for horizontal scroll
-        container.scrollLeft += e.deltaY;
-        e.preventDefault();
-      } else if (hasHorizontalScroll && hasVerticalScroll) {
-        // Both scrolls available, use deltaX for horizontal, deltaY for vertical
-        if (Math.abs(e.deltaX) > 0) {
-          container.scrollLeft += e.deltaX;
-        }
-        if (Math.abs(e.deltaY) > 0) {
-          container.scrollTop += e.deltaY;
-        }
-        e.preventDefault();
-      } else if (hasVerticalScroll && Math.abs(e.deltaY) > 0) {
-        // Only vertical scroll
-        container.scrollTop += e.deltaY;
-        e.preventDefault();
-      }
-    }
-  }, { passive: false });
   
   console.log('Initialization complete');
   
