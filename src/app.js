@@ -430,6 +430,28 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     tc.appendChild(hint);
     const sliderWrap = container.querySelector('.h-scrollbar');
     const sliderEl = sliderWrap && sliderWrap.querySelector('input[type="range"]');
+    // Add left/right nav arrows
+    const leftNav = document.createElement('div');
+    leftNav.className = 'scroll-nav left';
+    leftNav.setAttribute('aria-label', 'Scroll left');
+    leftNav.textContent = '‹';
+    const rightNav = document.createElement('div');
+    rightNav.className = 'scroll-nav right';
+    rightNav.setAttribute('aria-label', 'Scroll right');
+    rightNav.textContent = '›';
+    tc.appendChild(leftNav);
+    tc.appendChild(rightNav);
+    const scrollByChunk = (dir) => {
+      const delta = Math.round(tc.clientWidth * 0.85);
+      tc.scrollBy({ left: dir === 'left' ? -delta : delta, behavior: 'smooth' });
+    };
+    leftNav.addEventListener('click', () => scrollByChunk('left'));
+    rightNav.addEventListener('click', () => scrollByChunk('right'));
+    const stopDragStart = (e) => { e.stopPropagation(); };
+    leftNav.addEventListener('mousedown', stopDragStart, { passive: true });
+    rightNav.addEventListener('mousedown', stopDragStart, { passive: true });
+    leftNav.addEventListener('touchstart', stopDragStart, { passive: true });
+    rightNav.addEventListener('touchstart', stopDragStart, { passive: true });
     const updateSlider = () => {
       if (!sliderWrap || !sliderEl) return;
       const maxScroll = Math.max(tc.scrollWidth - tc.clientWidth, 0);
@@ -442,9 +464,16 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
         sliderEl.value = String(Math.round(ratio * 100));
       }
     };
+    const updateArrows = () => {
+      if (!leftNav || !rightNav) return;
+      const maxScroll = Math.max(tc.scrollWidth - tc.clientWidth, 0);
+      leftNav.style.visibility = tc.scrollLeft > 2 ? 'visible' : 'hidden';
+      rightNav.style.visibility = (tc.scrollLeft < maxScroll - 2) ? 'visible' : 'hidden';
+    };
     const updateHint = () => {
       if (tc.scrollWidth > tc.clientWidth + 4) tc.classList.add('is-clipped'); else tc.classList.remove('is-clipped');
       updateSlider();
+      updateArrows();
     };
     updateHint();
     const ro = new ResizeObserver(updateHint);
@@ -452,6 +481,7 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     tc.addEventListener('scroll', () => {
       if (tc.scrollLeft > 10) tc.classList.remove('is-clipped'); else updateHint();
       updateSlider();
+      updateArrows();
     });
     if (sliderEl) {
       sliderEl.addEventListener('input', () => {
