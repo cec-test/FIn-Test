@@ -455,14 +455,11 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     const updateSlider = () => {
       if (!sliderWrap || !sliderEl) return;
       const maxScroll = Math.max(tc.scrollWidth - tc.clientWidth, 0);
-      if (maxScroll <= 1) {
-        sliderWrap.style.display = 'none';
-        sliderEl.value = '0';
-      } else {
-        sliderWrap.style.display = 'block';
-        const ratio = maxScroll ? (tc.scrollLeft / maxScroll) : 0;
-        sliderEl.value = String(Math.round(ratio * 100));
-      }
+      // Always show the slider; disable if there's nothing to scroll
+      sliderWrap.style.display = 'block';
+      sliderEl.disabled = maxScroll <= 1;
+      const ratio = maxScroll ? (tc.scrollLeft / maxScroll) : 0;
+      sliderEl.value = String(Math.round(ratio * 100));
     };
     const updateArrows = () => {
       if (!leftNav || !rightNav) return;
