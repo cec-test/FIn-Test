@@ -416,7 +416,7 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
           </table>
         </div>
       </div>
-      <div class="table-scroll-slider">
+      <div class="h-scrollbar" aria-hidden="true">
         <input type="range" min="0" max="100" value="0" class="scroll-slider" data-table-id="${tableId}" aria-label="Scroll table horizontally" />
       </div>
     </div>

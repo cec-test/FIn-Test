@@ -25,7 +25,7 @@
             background: white;
             border-radius: 15px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
+            overflow: visible;
         }
         
         .header {
@@ -177,7 +177,7 @@
             background: white;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            overflow: hidden;
+            overflow: visible;
         }
         
         .statement-header {
@@ -191,62 +191,48 @@
         .table-container {
             overflow: hidden;
             max-width: 100%;
+            padding-right: 16px;
+            padding-bottom: 10px;
             position: relative;
-            border: 1px solid #e9ecef;
         }
-
-        /* Simple horizontal slider UI */
-        .table-scroll-slider {
-            width: 100%;
-            padding: 10px;
-            background: #f8f9fa;
-            border-top: 1px solid #e9ecef;
-        }
-        
-        .table-scroll-slider input[type=range] {
-            width: 100%;
-            height: 6px;
-            border-radius: 3px;
-            background: #e9ecef;
-            outline: none;
-            -webkit-appearance: none;
-        }
-        
-        .table-scroll-slider input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #3498db;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        .table-scroll-slider input[type=range]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #3498db;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        
         .table-wrapper {
             overflow: hidden;
             width: 100%;
         }
+
+
+        /* Explicit horizontal slider UI */
+        .h-scrollbar {
+            width: 100%;
+            padding: 6px 8px 0 8px;
+        }
+        .h-scrollbar input[type=range] {
+            width: 100%;
+        }
         
         table {
+            width: max-content;
             border-collapse: collapse;
             background: white;
             font-size: 0.85rem;
-            width: max-content;
-            min-width: 100%;
+            min-width: 1600px;
             transition: transform 0.2s ease;
         }
 
+        .scroll-hint {
+            position: absolute;
+            right: 6px;
+            top: 6px;
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .table-container.is-clipped .scroll-hint { opacity: 1; }
         
         th {
             background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
@@ -254,6 +240,9 @@
             padding: 12px 8px;
             text-align: left;
             font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
             font-size: 0.8rem;
             white-space: nowrap;
         }
@@ -262,6 +251,19 @@
             padding: 10px 8px;
             border-bottom: 1px solid #e9ecef;
             white-space: nowrap;
+        }
+
+        /* Sticky first column for better context while scrolling */
+        th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 12;
+        }
+        td:first-child {
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 11;
         }
         
         .metric-name {

@@ -282,7 +282,7 @@ function generateTableHeaders(periods, periodType, actualLabels, forecastStartFr
 }
 
 /**
- * Create dynamic table structure - FIXED CONTAINER VERSION
+ * Create dynamic table structure
  * statementKey must be one of: 'pnl' | 'balance' | 'cashflow'
  * scope must be one of: 'combined' | 'monthly' | 'quarterly' | 'yearly'
  */
@@ -335,12 +335,13 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
   const tableId = `${scope}${statementKey}table`;
 
   let tableHTML = `
-    <div class="statement-section" style="width: 100%; max-width: 100%; overflow: hidden; margin-bottom: 20px; box-sizing: border-box;">
+    <div class="statement-section">
       <div class="statement-header">${statementHeaderLabel}</div>
-      <div class="table-container" style="width: 100%; max-width: 100%; overflow-x: auto; overflow-y: hidden; border: 1px solid #dee2e6; box-sizing: border-box;">
-        <table id="${tableId}" style="min-width: 1000px; border-collapse: collapse; width: auto;">
-          <thead>
-            <tr>
+      <div class="table-container">
+        <div class="table-wrapper">
+          <table id="${tableId}">
+            <thead>
+              <tr>
   `;
 
   headers.forEach((header, index) => {
@@ -356,11 +357,7 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     if (className === 'actual' && noteByIndex[index - 1]) {
       noteHtml = ` <span class="note-badge" title="${noteByIndex[index - 1]}">•</span>`;
     }
-    
-    // Set fixed widths - first column wider, others uniform
-    const cellWidth = index === 0 ? '200px' : '120px';
-    const bgColor = index === 0 ? '#f8f9fa' : (className === 'actual' ? '#e3f2fd' : '#f3e5f5');
-    tableHTML += `<th class="${className}" style="width: ${cellWidth}; min-width: ${cellWidth}; padding: 8px 12px; border: 1px solid #ddd; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; background: ${bgColor};">${header}${noteHtml}</th>`;
+    tableHTML += `<th class="${className}">${header}${noteHtml}</th>`;
   });
 
   tableHTML += `
@@ -378,10 +375,9 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     const isSubheader = manualSubheader || heuristicSubheader;
     const rowClass = isTotal ? 'total-row' : '';
     const nameCellClass = 'metric-name';
-    
     tableHTML += `
       <tr class="${rowClass}">
-        <td class="${nameCellClass}" style="width: 200px; min-width: 200px; padding: 8px 12px; border: 1px solid #ddd; position: sticky; left: 0; background: white; z-index: 2; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+        <td class="${nameCellClass}">
           ${item.name}
           <label style="margin-left:8px; font-weight:400; font-size:0.8rem; color:#6c757d;">
             <input type="checkbox" class="toggle-subheader" data-statement="${statementKey}" data-name="${item.name.replace(/"/g, '&quot;')}" ${isSubheader ? 'checked' : ''} /> Subheader
@@ -399,7 +395,7 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     }
     actualsForItem.forEach(value => {
       const display = isSubheader ? '' : formatCurrency(value);
-      tableHTML += `<td class="number actual" style="width: 120px; min-width: 120px; padding: 8px 12px; border: 1px solid #ddd; text-align: right; white-space: nowrap; background: #e3f2fd; text-overflow: ellipsis; overflow: hidden;">${display}</td>`;
+      tableHTML += `<td class="number actual">${display}</td>`;
     });
 
     // Add forecast columns
@@ -409,7 +405,7 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
       const forecastKey = `${periodType}-${statementKey}-${safeName}-${i}`;
       const scopedId = `${scope}-${forecastKey}`;
       const defaultVal = isSubheader ? '' : '$0';
-      tableHTML += `<td class="number forecast" id="${scopedId}" data-forecast-key="${forecastKey}" style="width: 120px; min-width: 120px; padding: 8px 12px; border: 1px solid #ddd; text-align: right; white-space: nowrap; background: #f3e5f5; text-overflow: ellipsis; overflow: hidden;">${defaultVal}</td>`;
+      tableHTML += `<td class="number forecast" id="${scopedId}" data-forecast-key="${forecastKey}">${defaultVal}</td>`;
     }
 
     tableHTML += `</tr>`;
@@ -417,64 +413,56 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
 
   tableHTML += `
           </tbody>
-        </table>
-      </div>
-      <div class="table-slider" style="padding: 10px; background: #f8f9fa; border: 1px solid #dee2e6; border-top: none; width: 100%; box-sizing: border-box;">
-        <input type="range" min="0" max="100" value="0" style="width: 100%; height: 6px; background: #dee2e6; border-radius: 3px; outline: none; cursor: pointer;" aria-label="Scroll table horizontally" />
-        <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6c757d; margin-top: 4px;">
-          <span>Start</span>
-          <span>Scroll to navigate table</span>
-          <span>End</span>
+          </table>
         </div>
+      </div>
+      <div class="h-scrollbar" aria-hidden="true">
+        <input type="range" min="0" max="100" value="0" class="scroll-slider" data-table-id="${tableId}" aria-label="Scroll table horizontally" />
       </div>
     </div>
   `;
 
   container.innerHTML = tableHTML;
   
-  // Setup ONLY the slider functionality
-  const tc = container.querySelector('.table-container');
-  const sliderContainer = container.querySelector('.table-slider');
-  const slider = sliderContainer?.querySelector('input[type="range"]');
+  // Set up simple slider-only scrolling
+  const slider = container.querySelector('.scroll-slider');
+  const tableWrapper = container.querySelector('.table-wrapper');
+  const table = container.querySelector('table');
   
-  if (tc && slider) {
-    // Function to update slider position based on table scroll
+  if (slider && tableWrapper && table) {
     const updateSlider = () => {
-      const maxScroll = Math.max(tc.scrollWidth - tc.clientWidth, 0);
-      if (maxScroll <= 1) {
-        slider.disabled = true;
-        sliderContainer.style.opacity = '0.5';
-      } else {
-        slider.disabled = false;
-        sliderContainer.style.opacity = '1';
-        const ratio = tc.scrollLeft / maxScroll;
-        slider.value = String(Math.round(ratio * 100));
-      }
+      const containerWidth = tableWrapper.clientWidth;
+      const tableWidth = table.scrollWidth;
+      const maxScroll = Math.max(tableWidth - containerWidth, 0);
+      
+      slider.disabled = maxScroll <= 0;
+      
+      // Get current transform value
+      const transform = table.style.transform;
+      const currentTranslate = transform ? parseFloat(transform.replace(/[^-\d.]/g, '')) || 0 : 0;
+      const currentScroll = Math.abs(currentTranslate);
+      
+      const ratio = maxScroll > 0 ? (currentScroll / maxScroll) : 0;
+      slider.value = String(Math.round(ratio * 100));
     };
-
-    // Function to scroll table based on slider position
-    const updateTableScroll = () => {
+    
+    slider.addEventListener('input', () => {
+      const containerWidth = tableWrapper.clientWidth;
+      const tableWidth = table.scrollWidth;
+      const maxScroll = Math.max(tableWidth - containerWidth, 0);
+      
       const val = Number(slider.value) || 0;
-      const maxScroll = Math.max(tc.scrollWidth - tc.clientWidth, 0);
-      tc.scrollLeft = (val / 100) * maxScroll;
-    };
-
-    // Event listeners
-    slider.addEventListener('input', updateTableScroll);
-    tc.addEventListener('scroll', updateSlider);
-    
-    // Handle window resize
-    const resizeObserver = new ResizeObserver(updateSlider);
-    resizeObserver.observe(tc);
-    
-    // Initial update
-    setTimeout(updateSlider, 100); // Small delay to ensure table is rendered
-    
-    console.log(`Table setup complete for ${containerId}:`, {
-      tableWidth: tc.scrollWidth,
-      containerWidth: tc.clientWidth,
-      canScroll: tc.scrollWidth > tc.clientWidth
+      const scrollAmount = (val / 100) * maxScroll;
+      
+      table.style.transform = `translateX(-${scrollAmount}px)`;
     });
+    
+    // Initial setup
+    updateSlider();
+    
+    // Update on window resize
+    const resizeObserver = new ResizeObserver(updateSlider);
+    resizeObserver.observe(tableWrapper);
   }
 }
 
@@ -685,7 +673,7 @@ function detectDelimiter(headerLine) {
 }
 
 function escapeRegExp(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\      else if (/operating|investing|financing/i.test(firstColumn)) currentStatement = 'cashflow';');
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function parseCsvLine(line, delimiter) {
@@ -781,6 +769,8 @@ function handleActualsUpload(file) {
 /**
  * Export functions
  */
+// Combined export removed
+
 function exportPeriodData(period) {
   const tables = [`${period}pnltable`, `${period}balancetable`, `${period}cashflowtable`];
   exportMultipleTables(tables, `${period}_3_statement_forecast`);
@@ -831,119 +821,10 @@ function labelFromTableId(tableId) {
 window.exportPeriodData = exportPeriodData;
 
 /**
- * Inject required CSS for slider functionality and FIXED CONTAINER OVERFLOW
- */
-function injectSliderCSS() {
-  if (!document.getElementById('table-scroll-styles')) {
-    const styleSheet = document.createElement('style');
-    styleSheet.id = 'table-scroll-styles';
-    styleSheet.innerHTML = `
-      /* Force container constraints to prevent overflow */
-      .statement-section {
-        width: 100% !important;
-        max-width: 100% !important;
-        overflow: hidden !important;
-        box-sizing: border-box !important;
-        margin-bottom: 20px !important;
-      }
-      
-      .table-container {
-        width: 100% !important;
-        max-width: 100% !important;
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
-        scroll-behavior: smooth !important;
-        box-sizing: border-box !important;
-        border: 1px solid #dee2e6 !important;
-      }
-      
-      .table-container table {
-        min-width: 1000px !important;
-        width: auto !important;
-        border-collapse: collapse !important;
-        table-layout: fixed !important;
-      }
-      
-      /* Slider styling */
-      .table-slider {
-        width: 100% !important;
-        box-sizing: border-box !important;
-      }
-      
-      .table-slider input[type="range"] {
-        appearance: none !important;
-        -webkit-appearance: none !important;
-        width: 100% !important;
-      }
-
-      .table-slider input[type="range"]::-webkit-slider-thumb {
-        appearance: none !important;
-        -webkit-appearance: none !important;
-        width: 20px;
-        height: 20px;
-        background: #007bff;
-        border-radius: 50%;
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      }
-
-      .table-slider input[type="range"]::-webkit-slider-track {
-        height: 6px;
-        background: #dee2e6;
-        border-radius: 3px;
-      }
-
-      .table-slider input[type="range"]::-moz-range-thumb {
-        width: 20px;
-        height: 20px;
-        background: #007bff;
-        border-radius: 50%;
-        cursor: pointer;
-        border: none;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      }
-
-      .table-slider input[type="range"]::-moz-range-track {
-        height: 6px;
-        background: #dee2e6;
-        border-radius: 3px;
-        border: none;
-      }
-      
-      /* Force table cells to respect fixed widths */
-      .table-container th,
-      .table-container td {
-        text-overflow: ellipsis !important;
-        overflow: hidden !important;
-        white-space: nowrap !important;
-      }
-      
-      /* Sticky first column */
-      .table-container th:first-child,
-      .table-container td:first-child {
-        position: sticky !important;
-        left: 0 !important;
-        background: white !important;
-        z-index: 2 !important;
-      }
-      
-      .table-container th:first-child {
-        background: #f8f9fa !important;
-        z-index: 3 !important;
-      }
-    `;
-    document.head.appendChild(styleSheet);
-  }
-}
-
-/**
  * Boot
  */
 document.addEventListener('DOMContentLoaded', function () {
   console.log('DOM loaded, initializing...');
-  
-  // Inject CSS for slider functionality and container fixes
-  injectSliderCSS();
   
   // Tabs
   document.querySelectorAll('.tab').forEach(btn => {
@@ -998,6 +879,7 @@ document.addEventListener('DOMContentLoaded', function () {
   showTab('monthly', document.querySelector('.tabs .tab[data-tab="monthly"]'));
   rebuildAllTables();
   updateForecast();
+  
   
   console.log('Initialization complete');
   
