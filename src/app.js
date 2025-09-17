@@ -282,7 +282,7 @@ function generateTableHeaders(periods, periodType, actualLabels, forecastStartFr
 }
 
 /**
- * Create dynamic table structure - SIMPLIFIED VERSION WITH SLIDER ONLY
+ * Create dynamic table structure - FIXED CONTAINER VERSION
  * statementKey must be one of: 'pnl' | 'balance' | 'cashflow'
  * scope must be one of: 'combined' | 'monthly' | 'quarterly' | 'yearly'
  */
@@ -335,10 +335,10 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
   const tableId = `${scope}${statementKey}table`;
 
   let tableHTML = `
-    <div class="statement-section">
+    <div class="statement-section" style="width: 100%; max-width: 100%; overflow: hidden; margin-bottom: 20px; box-sizing: border-box;">
       <div class="statement-header">${statementHeaderLabel}</div>
-      <div class="table-container" style="width: 100%; max-width: 100vw; overflow-x: auto; overflow-y: hidden; border: 1px solid #dee2e6;">
-        <table id="${tableId}" style="min-width: 1200px; border-collapse: collapse;">
+      <div class="table-container" style="width: 100%; max-width: 100%; overflow-x: auto; overflow-y: hidden; border: 1px solid #dee2e6; box-sizing: border-box;">
+        <table id="${tableId}" style="min-width: 1000px; border-collapse: collapse; width: auto;">
           <thead>
             <tr>
   `;
@@ -356,7 +356,11 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     if (className === 'actual' && noteByIndex[index - 1]) {
       noteHtml = ` <span class="note-badge" title="${noteByIndex[index - 1]}">•</span>`;
     }
-    tableHTML += `<th class="${className}" style="padding: 8px 12px; border: 1px solid #ddd; white-space: nowrap; min-width: 100px;">${header}${noteHtml}</th>`;
+    
+    // Set fixed widths - first column wider, others uniform
+    const cellWidth = index === 0 ? '200px' : '120px';
+    const bgColor = index === 0 ? '#f8f9fa' : (className === 'actual' ? '#e3f2fd' : '#f3e5f5');
+    tableHTML += `<th class="${className}" style="width: ${cellWidth}; min-width: ${cellWidth}; padding: 8px 12px; border: 1px solid #ddd; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; background: ${bgColor};">${header}${noteHtml}</th>`;
   });
 
   tableHTML += `
@@ -374,9 +378,10 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     const isSubheader = manualSubheader || heuristicSubheader;
     const rowClass = isTotal ? 'total-row' : '';
     const nameCellClass = 'metric-name';
+    
     tableHTML += `
       <tr class="${rowClass}">
-        <td class="${nameCellClass}" style="padding: 8px 12px; border: 1px solid #ddd; white-space: nowrap; position: sticky; left: 0; background: white; z-index: 2; min-width: 200px;">
+        <td class="${nameCellClass}" style="width: 200px; min-width: 200px; padding: 8px 12px; border: 1px solid #ddd; position: sticky; left: 0; background: white; z-index: 2; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
           ${item.name}
           <label style="margin-left:8px; font-weight:400; font-size:0.8rem; color:#6c757d;">
             <input type="checkbox" class="toggle-subheader" data-statement="${statementKey}" data-name="${item.name.replace(/"/g, '&quot;')}" ${isSubheader ? 'checked' : ''} /> Subheader
@@ -394,7 +399,7 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     }
     actualsForItem.forEach(value => {
       const display = isSubheader ? '' : formatCurrency(value);
-      tableHTML += `<td class="number actual" style="padding: 8px 12px; border: 1px solid #ddd; text-align: right; white-space: nowrap; background: #e3f2fd;">${display}</td>`;
+      tableHTML += `<td class="number actual" style="width: 120px; min-width: 120px; padding: 8px 12px; border: 1px solid #ddd; text-align: right; white-space: nowrap; background: #e3f2fd; text-overflow: ellipsis; overflow: hidden;">${display}</td>`;
     });
 
     // Add forecast columns
@@ -404,7 +409,7 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
       const forecastKey = `${periodType}-${statementKey}-${safeName}-${i}`;
       const scopedId = `${scope}-${forecastKey}`;
       const defaultVal = isSubheader ? '' : '$0';
-      tableHTML += `<td class="number forecast" id="${scopedId}" data-forecast-key="${forecastKey}" style="padding: 8px 12px; border: 1px solid #ddd; text-align: right; white-space: nowrap; background: #f3e5f5;">${defaultVal}</td>`;
+      tableHTML += `<td class="number forecast" id="${scopedId}" data-forecast-key="${forecastKey}" style="width: 120px; min-width: 120px; padding: 8px 12px; border: 1px solid #ddd; text-align: right; white-space: nowrap; background: #f3e5f5; text-overflow: ellipsis; overflow: hidden;">${defaultVal}</td>`;
     }
 
     tableHTML += `</tr>`;
@@ -414,7 +419,7 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
           </tbody>
         </table>
       </div>
-      <div class="table-slider" style="padding: 10px; background: #f8f9fa; border: 1px solid #dee2e6; border-top: none;">
+      <div class="table-slider" style="padding: 10px; background: #f8f9fa; border: 1px solid #dee2e6; border-top: none; width: 100%; box-sizing: border-box;">
         <input type="range" min="0" max="100" value="0" style="width: 100%; height: 6px; background: #dee2e6; border-radius: 3px; outline: none; cursor: pointer;" aria-label="Scroll table horizontally" />
         <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6c757d; margin-top: 4px;">
           <span>Start</span>
@@ -680,7 +685,7 @@ function detectDelimiter(headerLine) {
 }
 
 function escapeRegExp(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\  if (data.pnl.length === 0 && data.balance.length === 0 && data.cashflow.length === 0) {');
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\      else if (/operating|investing|financing/i.test(firstColumn)) currentStatement = 'cashflow';');
 }
 
 function parseCsvLine(line, delimiter) {
@@ -826,25 +831,54 @@ function labelFromTableId(tableId) {
 window.exportPeriodData = exportPeriodData;
 
 /**
- * Inject required CSS for slider functionality
+ * Inject required CSS for slider functionality and FIXED CONTAINER OVERFLOW
  */
 function injectSliderCSS() {
   if (!document.getElementById('table-scroll-styles')) {
     const styleSheet = document.createElement('style');
     styleSheet.id = 'table-scroll-styles';
     styleSheet.innerHTML = `
-      .table-container {
-        scroll-behavior: smooth;
+      /* Force container constraints to prevent overflow */
+      .statement-section {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        margin-bottom: 20px !important;
       }
-
+      
+      .table-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        scroll-behavior: smooth !important;
+        box-sizing: border-box !important;
+        border: 1px solid #dee2e6 !important;
+      }
+      
+      .table-container table {
+        min-width: 1000px !important;
+        width: auto !important;
+        border-collapse: collapse !important;
+        table-layout: fixed !important;
+      }
+      
+      /* Slider styling */
+      .table-slider {
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      
       .table-slider input[type="range"] {
-        appearance: none;
-        -webkit-appearance: none;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        width: 100% !important;
       }
 
       .table-slider input[type="range"]::-webkit-slider-thumb {
-        appearance: none;
-        -webkit-appearance: none;
+        appearance: none !important;
+        -webkit-appearance: none !important;
         width: 20px;
         height: 20px;
         background: #007bff;
@@ -875,6 +909,28 @@ function injectSliderCSS() {
         border-radius: 3px;
         border: none;
       }
+      
+      /* Force table cells to respect fixed widths */
+      .table-container th,
+      .table-container td {
+        text-overflow: ellipsis !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+      }
+      
+      /* Sticky first column */
+      .table-container th:first-child,
+      .table-container td:first-child {
+        position: sticky !important;
+        left: 0 !important;
+        background: white !important;
+        z-index: 2 !important;
+      }
+      
+      .table-container th:first-child {
+        background: #f8f9fa !important;
+        z-index: 3 !important;
+      }
     `;
     document.head.appendChild(styleSheet);
   }
@@ -886,7 +942,7 @@ function injectSliderCSS() {
 document.addEventListener('DOMContentLoaded', function () {
   console.log('DOM loaded, initializing...');
   
-  // Inject CSS for slider functionality
+  // Inject CSS for slider functionality and container fixes
   injectSliderCSS();
   
   // Tabs
