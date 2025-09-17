@@ -14,6 +14,33 @@ let hasUploadedData = false;
 let dateColumns = [];
 let forecastCache = { pnl: {}, balance: {}, cashflow: {} };
 
+// Subheader overrides (manual toggles)
+const SUBHEADER_OVERRIDES_KEY = 'subheader_overrides_v1';
+function loadSubheaderOverrides() {
+  try {
+    const raw = localStorage.getItem(SUBHEADER_OVERRIDES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    return {};
+  }
+}
+function saveSubheaderOverrides(map) {
+  try { localStorage.setItem(SUBHEADER_OVERRIDES_KEY, JSON.stringify(map)); } catch (_) {}
+}
+function overrideKey(statementKey, name) {
+  return `${statementKey}::${(name || '').toLowerCase()}`;
+}
+function isSubheaderOverridden(statementKey, name) {
+  const map = loadSubheaderOverrides();
+  return !!map[overrideKey(statementKey, name)];
+}
+function setSubheaderOverride(statementKey, name, value) {
+  const map = loadSubheaderOverrides();
+  const key = overrideKey(statementKey, name);
+  if (value) map[key] = true; else delete map[key];
+  saveSubheaderOverrides(map);
+}
+
 /**
  * Date parsing and aggregation helpers
  */
@@ -342,12 +369,18 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
   const lineItems = uploadedLineItems[statementKey] || [];
   lineItems.forEach((item) => {
     const isTotal = /\btotal\b/i.test(item.name);
-    const isSubheader = (!item.actualValues || item.actualValues.length === 0) && !isTotal;
+    const heuristicSubheader = (!item.actualValues || item.actualValues.length === 0) && !isTotal;
+    const manualSubheader = isSubheaderOverridden(statementKey, item.name);
+    const isSubheader = manualSubheader || heuristicSubheader;
     const rowClass = isTotal ? 'total-row' : '';
     const nameCellClass = 'metric-name';
     tableHTML += `
       <tr class="${rowClass}">
-        <td class="${nameCellClass}">${item.name}</td>
+        <td class="${nameCellClass}">${item.name}
+          <label style="margin-left:8px; font-weight:400; font-size:0.8rem; color:#6c757d;">
+            <input type="checkbox" class="toggle-subheader" data-statement="${statementKey}" data-name="${item.name.replace(/"/g, '&quot;')}" ${isSubheader ? 'checked' : ''} /> Subheader
+          </label>
+        </td>
     `;
 
     // Add historical actual values (aggregated per period type)
@@ -857,4 +890,16 @@ document.addEventListener('DOMContentLoaded', function () {
   }, { passive: false });
   
   console.log('Initialization complete');
+  
+  // Delegate manual subheader toggle
+  document.body.addEventListener('change', function(e) {
+    const target = e.target;
+    if (target && target.classList && target.classList.contains('toggle-subheader')) {
+      const statement = target.getAttribute('data-statement');
+      const name = target.getAttribute('data-name');
+      setSubheaderOverride(statement, name, target.checked);
+      rebuildAllTables();
+      updateForecast();
+    }
+  });
 });
