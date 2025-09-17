@@ -1,0 +1,20 @@
+.statement-section .table-container {
+  overflow-x: scroll !important;
+  overflow-y: hidden;
+  display: block;
+  max-width: 100%;
+  padding-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.statement-section table {
+  width: max-content !important;
+  min-width: 1600px !important;
+}
+
+.statement-section .table-container::-webkit-scrollbar { height: 12px; }
+.statement-section .table-container::-webkit-scrollbar-thumb { background: #c1c7d0; border-radius: 8px; }
+.statement-section .table-container::-webkit-scrollbar-track { background: #f1f3f5; }
+.statement-section .table-container { scrollbar-width: thin; }
+
+.sidebar { overflow: visible !important; max-height: none !important; }
