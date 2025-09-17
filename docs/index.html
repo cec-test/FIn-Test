@@ -83,7 +83,7 @@
         }
         
         .content {
-            padding: 30px;
+            padding: 30px 40px;
         }
         
         .layout {
@@ -177,7 +177,7 @@
             background: white;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            overflow: visible;
+            overflow: hidden;
         }
         
         .statement-header {
@@ -190,7 +190,8 @@
         
         .table-container {
             overflow: hidden;
-            max-width: 100%;
+            max-width: calc(100% - 40px);
+            margin: 0 20px;
             padding-right: 16px;
             padding-bottom: 10px;
             position: relative;
@@ -226,7 +227,8 @@
 
         /* Explicit horizontal slider UI */
         .h-scrollbar {
-            width: 100%;
+            width: calc(100% - 40px);
+            margin: 0 20px;
             padding: 6px 8px 0 8px;
         }
         .h-scrollbar input[type=range] {
