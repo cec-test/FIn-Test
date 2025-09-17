@@ -1,0 +1,25 @@
+{
+  "name": "financial-statement-model",
+  "version": "1.0.0",
+  "description": "3-Statement Financial Model - Professional Financial Forecasting Platform",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "build": "cp index.html docs/ && cp -r src docs/",
+    "deploy": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cec-test/FIn-Test"
+  },
+  "keywords": [
+    "financial",
+    "forecasting",
+    "financial-statements",
+    "budgeting",
+    "financial-modeling"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "homepage": "https://cec-test.github.io/FIn-Test/"
+}
