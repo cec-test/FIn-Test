@@ -1247,6 +1247,11 @@ document.addEventListener('DOMContentLoaded', function () {
   
   // Calculate initial insights
   setTimeout(() => {
+    console.log('Attempting to calculate insights...');
+    const chatContainer = document.getElementById('chatMessages');
+    const insightsContainer = document.getElementById('insightsContainer');
+    console.log('Chat container found:', !!chatContainer);
+    console.log('Insights container found:', !!insightsContainer);
     calculateInsights();
   }, 1000);
 });
