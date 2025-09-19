@@ -495,6 +495,11 @@ function updateForecast() {
 
   // Update all forecast views with dynamic periods
   updateDynamicForecasts(revGrowth, expGrowth, periods);
+  
+  // Refresh insights when forecasts change
+  setTimeout(() => {
+    calculateInsights();
+  }, 500);
 }
 
 /**
@@ -821,6 +826,325 @@ function labelFromTableId(tableId) {
 window.exportPeriodData = exportPeriodData;
 
 /**
+ * Insights calculations
+ */
+function calculateInsights() {
+  const largestChanges = calculateLargestChanges();
+  const anomalousItems = calculateAnomalousItems();
+  
+  displayLargestChanges(largestChanges);
+  displayAnomalousItems(anomalousItems);
+}
+
+function calculateLargestChanges() {
+  const changes = [];
+  
+  // Analyze all statement types
+  ['pnl', 'balance', 'cashflow'].forEach(statementType => {
+    const lineItems = uploadedLineItems[statementType] || [];
+    
+    lineItems.forEach(item => {
+      if (!item.actualValues || item.actualValues.length === 0) return;
+      
+      // Get last actual value
+      const lastActual = lastNonNull(item.actualValues);
+      if (lastActual === null || lastActual === 0) return;
+      
+      // Get furthest forecast value (simplified - using the last forecast period)
+      const periods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+      const growthRate = parseFloat(document.getElementById('customGrowthRate')?.value) || 5;
+      
+      // Calculate forecast value
+      let itemGrowth = growthRate / 100;
+      if (statementType === 'pnl' && item.name.toLowerCase().includes('expense')) {
+        itemGrowth = (growthRate * 0.8) / 100;
+      }
+      
+      const furthestForecast = lastActual * Math.pow(1 + itemGrowth, periods);
+      const percentChange = ((furthestForecast - lastActual) / Math.abs(lastActual)) * 100;
+      
+      changes.push({
+        name: item.name,
+        statement: statementType,
+        lastActual: lastActual,
+        furthestForecast: furthestForecast,
+        percentChange: percentChange,
+        isPositive: percentChange > 0
+      });
+    });
+  });
+  
+  // Sort by absolute percent change and return top 3
+  return changes
+    .sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange))
+    .slice(0, 3);
+}
+
+function calculateAnomalousItems() {
+  const anomalies = [];
+  
+  ['pnl', 'balance', 'cashflow'].forEach(statementType => {
+    const lineItems = uploadedLineItems[statementType] || [];
+    
+    lineItems.forEach(item => {
+      if (!item.actualValues || item.actualValues.length < 3) return;
+      
+      const values = item.actualValues.filter(v => v !== null && v !== undefined);
+      if (values.length < 3) return;
+      
+      // Calculate trend and volatility
+      const recentValues = values.slice(-3); // Last 3 values
+      const trend = calculateTrend(recentValues);
+      const volatility = calculateVolatility(values);
+      const lastValue = values[values.length - 1];
+      
+      // Detect anomalies based on:
+      // 1. Values that deviate significantly from trend
+      // 2. High volatility items
+      // 3. Values that are unusually large/small relative to historical average
+      
+      const avgValue = values.reduce((sum, v) => sum + v, 0) / values.length;
+      const deviationFromAvg = Math.abs(lastValue - avgValue) / Math.abs(avgValue);
+      
+      if (deviationFromAvg > 0.5 || volatility > 0.3) { // 50% deviation or 30% volatility
+        anomalies.push({
+          name: item.name,
+          statement: statementType,
+          lastValue: lastValue,
+          avgValue: avgValue,
+          deviation: deviationFromAvg,
+          volatility: volatility,
+          trend: trend,
+          anomalyType: deviationFromAvg > 0.5 ? 'deviation' : 'volatility'
+        });
+      }
+    });
+  });
+  
+  // Sort by deviation/volatility and return top 3
+  return anomalies
+    .sort((a, b) => Math.max(b.deviation, b.volatility) - Math.max(a.deviation, a.volatility))
+    .slice(0, 3);
+}
+
+function calculateTrend(values) {
+  if (values.length < 2) return 0;
+  const first = values[0];
+  const last = values[values.length - 1];
+  return (last - first) / first;
+}
+
+function calculateVolatility(values) {
+  if (values.length < 2) return 0;
+  const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+  const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+  const stdDev = Math.sqrt(variance);
+  return stdDev / Math.abs(mean);
+}
+
+function displayLargestChanges(changes) {
+  const container = document.getElementById('largestChanges');
+  if (!container) return;
+  
+  if (changes.length === 0) {
+    container.innerHTML = '<div class="loading">No significant changes detected</div>';
+    return;
+  }
+  
+  container.innerHTML = changes.map(change => {
+    const changeClass = change.isPositive ? 'positive' : 'negative';
+    const changeSymbol = change.isPositive ? '+' : '';
+    const statementLabel = change.statement === 'pnl' ? 'P&L' : 
+                          change.statement === 'balance' ? 'Balance' : 'Cash Flow';
+    
+    return `
+      <div class="insight-item ${changeClass}">
+        <div class="insight-label">${change.name}</div>
+        <div class="insight-value">
+          ${statementLabel}: ${changeSymbol}${change.percentChange.toFixed(1)}%
+          <br>From ${formatCurrency(change.lastActual)} to ${formatCurrency(change.furthestForecast)}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function displayAnomalousItems(anomalies) {
+  const container = document.getElementById('anomalousItems');
+  if (!container) return;
+  
+  if (anomalies.length === 0) {
+    container.innerHTML = '<div class="loading">No anomalies detected</div>';
+    return;
+  }
+  
+  container.innerHTML = anomalies.map(anomaly => {
+    const statementLabel = anomaly.statement === 'pnl' ? 'P&L' : 
+                          anomaly.statement === 'balance' ? 'Balance' : 'Cash Flow';
+    const anomalyDesc = anomaly.anomalyType === 'deviation' ? 
+                       `${(anomaly.deviation * 100).toFixed(0)}% deviation from average` :
+                       `${(anomaly.volatility * 100).toFixed(0)}% volatility`;
+    
+    return `
+      <div class="insight-item anomaly">
+        <div class="insight-label">${anomaly.name}</div>
+        <div class="insight-value">
+          ${statementLabel}: ${anomalyDesc}
+          <br>Current: ${formatCurrency(anomaly.lastValue)} | Avg: ${formatCurrency(anomaly.avgValue)}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Chat functionality
+ */
+let chatHistory = [];
+
+async function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendChatBtn');
+  const messagesContainer = document.getElementById('chatMessages');
+  
+  if (!input || !sendBtn || !messagesContainer) return;
+  
+  const message = input.value.trim();
+  if (!message) return;
+  
+  // Disable input while processing
+  input.disabled = true;
+  sendBtn.disabled = true;
+  sendBtn.textContent = 'Sending...';
+  
+  // Add user message to chat
+  addChatMessage('user', message);
+  input.value = '';
+  
+  try {
+    // Prepare financial data context
+    const financialContext = prepareFinancialContext();
+    
+    // Call OpenAI API
+    const response = await callOpenAI(message, financialContext);
+    
+    // Add assistant response
+    addChatMessage('assistant', response);
+    
+  } catch (error) {
+    console.error('Chat error:', error);
+    addChatMessage('assistant', 'Sorry, I encountered an error processing your request. Please try again.');
+  } finally {
+    // Re-enable input
+    input.disabled = false;
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'Send';
+  }
+}
+
+function addChatMessage(sender, content) {
+  const messagesContainer = document.getElementById('chatMessages');
+  if (!messagesContainer) return;
+  
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `chat-message ${sender}`;
+  
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'message-content';
+  contentDiv.textContent = content;
+  
+  messageDiv.appendChild(contentDiv);
+  messagesContainer.appendChild(messageDiv);
+  
+  // Scroll to bottom
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  
+  // Store in history
+  chatHistory.push({ sender, content });
+}
+
+function prepareFinancialContext() {
+  const context = {
+    statements: {},
+    dateColumns: dateColumns || [],
+    forecastSettings: {
+      method: document.getElementById('forecastMethod')?.value || 'custom',
+      growthRate: parseFloat(document.getElementById('customGrowthRate')?.value) || 5,
+      periods: parseInt(document.getElementById('forecastPeriods')?.value) || 12
+    }
+  };
+  
+  // Add all statement data
+  ['pnl', 'balance', 'cashflow'].forEach(statementType => {
+    const lineItems = uploadedLineItems[statementType] || [];
+    context.statements[statementType] = lineItems.map(item => ({
+      name: item.name,
+      actualValues: item.actualValues || [],
+      lastActual: item.actual || 0
+    }));
+  });
+  
+  return context;
+}
+
+async function callOpenAI(question, financialContext) {
+  // Get API key from input field
+  const apiKeyInput = document.getElementById('openaiApiKey');
+  const API_KEY = apiKeyInput?.value?.trim();
+  
+  if (!API_KEY) {
+    throw new Error('Please enter your OpenAI API key in the input field above');
+  }
+  
+  const prompt = `You are a financial analyst assistant. The user has asked: "${question}"
+
+Financial Data Context:
+- Date Columns: ${financialContext.dateColumns.join(', ')}
+- Forecast Settings: ${financialContext.forecastSettings.method} method, ${financialContext.forecastSettings.growthRate}% growth rate, ${financialContext.forecastSettings.periods} periods
+
+P&L Statement:
+${JSON.stringify(financialContext.statements.pnl, null, 2)}
+
+Balance Sheet:
+${JSON.stringify(financialContext.statements.balance, null, 2)}
+
+Cash Flow Statement:
+${JSON.stringify(financialContext.statements.cashflow, null, 2)}
+
+Please provide a clear, helpful response about their financial data. Include specific numbers and insights where relevant. Keep your response concise but informative.`;
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful financial analyst assistant. Provide clear, accurate analysis of financial data.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 500,
+      temperature: 0.3
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`OpenAI API error: ${response.status}`);
+  }
+  
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
+/**
  * Boot
  */
 document.addEventListener('DOMContentLoaded', function () {
@@ -904,4 +1228,31 @@ document.addEventListener('DOMContentLoaded', function () {
       updateForecast();
     }
   });
+  
+  // Chat functionality
+  const chatInput = document.getElementById('chatInput');
+  const sendChatBtn = document.getElementById('sendChatBtn');
+  
+  if (sendChatBtn) {
+    sendChatBtn.addEventListener('click', sendChatMessage);
+  }
+  
+  if (chatInput) {
+    chatInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        sendChatMessage();
+      }
+    });
+  }
+  
+  // Insights functionality
+  const refreshInsightsBtn = document.getElementById('refreshInsightsBtn');
+  if (refreshInsightsBtn) {
+    refreshInsightsBtn.addEventListener('click', calculateInsights);
+  }
+  
+  // Calculate initial insights
+  setTimeout(() => {
+    calculateInsights();
+  }, 1000);
 });
