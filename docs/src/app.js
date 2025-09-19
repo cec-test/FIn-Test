@@ -849,13 +849,22 @@ function calculateLargestChanges() {
       const furthestForecast = lastActual * Math.pow(1 + itemGrowth, periods);
       const percentChange = ((furthestForecast - lastActual) / Math.abs(lastActual)) * 100;
       
+      // Get the date of the last actual value
+      const lastActualIndex = item.actualValues.lastIndexOf(lastActual);
+      const lastActualDate = dateColumns[lastActualIndex] || `Period ${lastActualIndex + 1}`;
+      
+      // Calculate forecast date (last actual + forecast periods)
+      const forecastDate = `Forecast +${periods} periods`;
+      
       changes.push({
         name: item.name,
         statement: statementType,
         lastActual: lastActual,
         furthestForecast: furthestForecast,
         percentChange: percentChange,
-        isPositive: percentChange > 0
+        isPositive: percentChange > 0,
+        lastActualDate: lastActualDate,
+        forecastDate: forecastDate
       });
     });
   });
@@ -948,7 +957,7 @@ function displayLargestChanges(changes) {
         <div class="insight-label">${change.name}</div>
         <div class="insight-value">
           ${statementLabel}: ${changeSymbol}${change.percentChange.toFixed(1)}%
-          <br>From ${formatCurrency(change.lastActual)} to ${formatCurrency(change.furthestForecast)}
+          <br>From ${formatCurrency(change.lastActual)} (${change.lastActualDate}) to ${formatCurrency(change.furthestForecast)} (${change.forecastDate})
         </div>
       </div>
     `;
