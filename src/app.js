@@ -1088,13 +1088,7 @@ function prepareFinancialContext() {
 }
 
 async function callOpenAI(question, financialContext) {
-  // Get API key from input field
-  const apiKeyInput = document.getElementById('openaiApiKey');
-  const API_KEY = apiKeyInput?.value?.trim();
-  
-  if (!API_KEY) {
-    throw new Error('Please enter your OpenAI API key in the input field above');
-  }
+  const API_KEY = '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';
   
   const prompt = `You are a financial analyst assistant. The user has asked: "${question}"
 
