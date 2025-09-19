@@ -1143,6 +1143,11 @@ Please provide a clear, helpful response about their financial data. Include spe
  */
 document.addEventListener('DOMContentLoaded', function () {
   console.log('DOM loaded, initializing...');
+  console.log('JavaScript is running!');
+  
+  // Test if we can find any elements
+  const forecastBtn = document.getElementById('runForecastBtn');
+  console.log('Forecast button found:', !!forecastBtn);
   
   // Tabs
   document.querySelectorAll('.tab').forEach(btn => {
@@ -1252,6 +1257,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const insightsContainer = document.getElementById('insightsContainer');
     console.log('Chat container found:', !!chatContainer);
     console.log('Insights container found:', !!insightsContainer);
+    
+    // Test if we can find the debug elements
+    const debugElements = document.querySelectorAll('[style*="background: red"], [style*="background: blue"]');
+    console.log('Debug elements found:', debugElements.length);
+    
+    // Test if we can find the controls containers
+    const controlsContainers = document.querySelectorAll('.controls');
+    console.log('Controls containers found:', controlsContainers.length);
+    
     calculateInsights();
   }, 1000);
 });
