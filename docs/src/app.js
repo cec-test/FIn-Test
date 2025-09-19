@@ -1145,9 +1145,33 @@ document.addEventListener('DOMContentLoaded', function () {
   console.log('DOM loaded, initializing...');
   console.log('JavaScript is running!');
   
+  // Simple test - count all elements
+  const allElements = document.querySelectorAll('*');
+  console.log('Total elements on page:', allElements.length);
+  
   // Test if we can find any elements
   const forecastBtn = document.getElementById('runForecastBtn');
   console.log('Forecast button found:', !!forecastBtn);
+  
+  // Test if we can find the containers
+  const chatContainer = document.getElementById('chatMessages');
+  const insightsContainer = document.getElementById('insightsContainer');
+  console.log('Chat container found:', !!chatContainer);
+  console.log('Insights container found:', !!insightsContainer);
+  
+  // Test if we can find the debug elements
+  const debugElements = document.querySelectorAll('[style*="background: red"], [style*="background: blue"]');
+  console.log('Debug elements found:', debugElements.length);
+  
+  // Test if we can find the controls containers
+  const controlsContainers = document.querySelectorAll('.controls');
+  console.log('Controls containers found:', controlsContainers.length);
+  
+  // List all control containers
+  controlsContainers.forEach((container, index) => {
+    const title = container.querySelector('h3');
+    console.log(`Control container ${index}:`, title ? title.textContent : 'No title');
+  });
   
   // Tabs
   document.querySelectorAll('.tab').forEach(btn => {
