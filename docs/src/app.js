@@ -416,54 +416,10 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
           </table>
         </div>
       </div>
-      <div class="h-scrollbar" aria-hidden="true">
-        <input type="range" min="0" max="100" value="0" class="scroll-slider" data-table-id="${tableId}" aria-label="Scroll table horizontally" />
-      </div>
     </div>
   `;
 
   container.innerHTML = tableHTML;
-  
-  // Set up simple slider-only scrolling
-  const slider = container.querySelector('.scroll-slider');
-  const tableWrapper = container.querySelector('.table-wrapper');
-  const table = container.querySelector('table');
-  
-  if (slider && tableWrapper && table) {
-    const updateSlider = () => {
-      const containerWidth = tableWrapper.clientWidth;
-      const tableWidth = table.scrollWidth;
-      const maxScroll = Math.max(tableWidth - containerWidth, 0);
-      
-      slider.disabled = maxScroll <= 0;
-      
-      // Get current transform value
-      const transform = table.style.transform;
-      const currentTranslate = transform ? parseFloat(transform.replace(/[^-\d.]/g, '')) || 0 : 0;
-      const currentScroll = Math.abs(currentTranslate);
-      
-      const ratio = maxScroll > 0 ? (currentScroll / maxScroll) : 0;
-      slider.value = String(Math.round(ratio * 100));
-    };
-    
-    slider.addEventListener('input', () => {
-      const containerWidth = tableWrapper.clientWidth;
-      const tableWidth = table.scrollWidth;
-      const maxScroll = Math.max(tableWidth - containerWidth, 0);
-      
-      const val = Number(slider.value) || 0;
-      const scrollAmount = (val / 100) * maxScroll;
-      
-      table.style.transform = `translateX(-${scrollAmount}px)`;
-    });
-    
-    // Initial setup
-    updateSlider();
-    
-    // Update on window resize
-    const resizeObserver = new ResizeObserver(updateSlider);
-    resizeObserver.observe(tableWrapper);
-  }
 }
 
 /**
