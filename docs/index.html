@@ -92,7 +92,7 @@
         }
         
         .sidebar {
-            flex: 0 0 350px;
+            flex: 0 0 400px;
             position: sticky;
             top: 20px;
             align-self: flex-start;
@@ -224,6 +224,7 @@
             margin: 0;
             padding: 0;
             position: relative;
+            scroll-behavior: smooth;
         }
 
         .table-wrapper {
@@ -231,23 +232,14 @@
             width: 100%;
         }
 
-        /* Style the horizontal scrollbar to match the sidebar */
+        /* Hide scrollbar but keep functionality - natural scrolling like sidebar */
         .table-container::-webkit-scrollbar {
-            height: 8px;
+            display: none;
         }
         
-        .table-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-        
-        .table-container::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 4px;
-        }
-        
-        .table-container::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
+        .table-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
         
         table {
