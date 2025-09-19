@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 // OpenAI API configuration
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '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';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 // Chat endpoint
