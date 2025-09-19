@@ -1083,54 +1083,36 @@ function prepareFinancialContext() {
 }
 
 async function callOpenAI(question, financialContext) {
-  const API_KEY = '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';
+  // Backend API endpoint - update this URL when you deploy your backend
+  const BACKEND_URL = 'http://localhost:3001/api/chat';
   
-  const prompt = `You are a financial analyst assistant. The user has asked: "${question}"
+  try {
+    const response = await fetch(BACKEND_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: question,
+        financialData: financialContext
+      })
+    });
 
-Financial Data Context:
-- Date Columns: ${financialContext.dateColumns.join(', ')}
-- Forecast Settings: ${financialContext.forecastSettings.method} method, ${financialContext.forecastSettings.growthRate}% growth rate, ${financialContext.forecastSettings.periods} periods
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status}`);
+    }
 
-P&L Statement:
-${JSON.stringify(financialContext.statements.pnl, null, 2)}
-
-Balance Sheet:
-${JSON.stringify(financialContext.statements.balance, null, 2)}
-
-Cash Flow Statement:
-${JSON.stringify(financialContext.statements.cashflow, null, 2)}
-
-Please provide a clear, helpful response about their financial data. Include specific numbers and insights where relevant. Keep your response concise but informative.`;
-
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful financial analyst assistant. Provide clear, accurate analysis of financial data.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 500,
-      temperature: 0.3
-    })
-  });
-  
-  if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.status}`);
+    const data = await response.json();
+    
+    if (data.success) {
+      return data.response;
+    } else {
+      throw new Error(data.error || 'Unknown error');
+    }
+  } catch (error) {
+    console.error('Error calling backend:', error);
+    return 'Sorry, I encountered an error while processing your request. Please make sure the backend server is running and try again.';
   }
-  
-  const data = await response.json();
-  return data.choices[0].message.content;
 }
 
 /**

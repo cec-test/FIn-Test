@@ -1,82 +1,76 @@
-# 3-Statement Financial Model
+# Financial Analysis Application
 
-A professional financial forecasting platform that provides comprehensive financial statement modeling with dynamic forecasting capabilities.
+A comprehensive financial planning and analysis tool with AI-powered insights.
 
-## Features
+## Architecture
 
-- **Three Financial Statements**: P&L, Balance Sheet, and Cash Flow
-- **Multiple Time Periods**: Monthly, Quarterly, and Yearly forecasts
-- **CSV Data Import**: Upload your own financial data
-- **Dynamic Forecasting**: Multiple forecasting methods (Custom Growth, Rolling Average, 3-Month Average)
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Slider-based Navigation**: Smooth horizontal scrolling through large datasets
-- **Export Functionality**: Download forecasts as CSV files
+- **Frontend**: Static HTML/CSS/JavaScript (hosted on GitHub Pages)
+- **Backend**: Node.js/Express server (handles OpenAI API calls securely)
 
-## Live Demo
+## Setup Instructions
 
-Visit the live application: [https://cec-test.github.io/FIn-Test/](https://cec-test.github.io/FIn-Test/)
+### 1. Install Dependencies
 
-## Local Development
+```bash
+npm install
+```
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/cec-test/FIn-Test.git
-   cd FIn-Test
-   ```
+### 2. Environment Setup
 
-2. Start a local server:
-   ```bash
-   python3 -m http.server 8000
-   ```
+Copy the example environment file:
+```bash
+cp .env.example .env
+```
 
-3. Open your browser and navigate to `http://localhost:8000`
+The `.env` file already contains your OpenAI API key. For production, you should:
+- Use environment variables on your hosting platform
+- Never commit the `.env` file to version control
+
+### 3. Start the Backend Server
+
+```bash
+npm start
+```
+
+The server will run on `http://localhost:3001`
+
+### 4. Test the Backend
+
+Visit: `http://localhost:3001/api/health`
+
+You should see: `{"status":"OK","message":"Financial Analysis Backend is running"}`
+
+### 5. Start the Frontend
+
+Open `index.html` in your browser or serve it locally.
+
+## API Endpoints
+
+- `POST /api/chat` - Send chat messages to OpenAI
+- `GET /api/health` - Health check
 
 ## Deployment
 
-This project is automatically deployed to GitHub Pages when changes are pushed to the main branch.
+### Backend Deployment Options:
 
-### Manual Deployment Steps:
+1. **Heroku** (Recommended for beginners)
+2. **Railway** 
+3. **Vercel**
+4. **DigitalOcean**
 
-1. Ensure your changes are in the `docs/` directory
-2. Push to the main branch
-3. GitHub Actions will automatically build and deploy
+### Frontend Deployment:
+- Already deployed on GitHub Pages
+- Update the `BACKEND_URL` in `src/app.js` to point to your deployed backend
 
-### File Structure:
+## Security Notes
+
+- API key is stored securely on the backend server
+- Frontend never exposes the OpenAI API key
+- CORS is enabled for development (configure for production)
+
+## Development
+
+To run in development mode with auto-restart:
+```bash
+npm run dev
 ```
-├── index.html          # Main application file
-├── src/
-│   └── app.js         # Application JavaScript
-├── docs/              # GitHub Pages deployment directory
-│   ├── index.html     # Copy of main application
-│   └── src/
-│       └── app.js     # Copy of application JavaScript
-└── .github/
-    └── workflows/
-        └── deploy-pages.yml  # GitHub Actions deployment
-```
-
-## Usage
-
-1. **Upload Data**: Use the CSV upload feature to import your financial data
-2. **Configure Forecast**: Select forecasting method and parameters
-3. **Run Forecast**: Click "Run Forecasts" to generate projections
-4. **Navigate**: Use the horizontal slider to scroll through periods
-5. **Export**: Download results using the export buttons
-
-## CSV Format
-
-Your CSV should include:
-- First column: Line item names
-- Subsequent columns: Historical data by period
-- Section headers: "P&L", "Balance Sheet", "Cash Flow"
-
-## Browser Support
-
-- Chrome/Chromium 60+
-- Firefox 55+
-- Safari 12+
-- Edge 79+
-
-## License
-
-MIT License - see LICENSE file for details.
