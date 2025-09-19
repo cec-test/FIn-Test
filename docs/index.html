@@ -174,10 +174,13 @@
         }
         
         .statements-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
+            display: block;
             margin-bottom: 30px;
+        }
+        
+        .independent-table-container {
+            margin-bottom: 20px;
+            width: 100%;
         }
         
         .statement-section {
@@ -643,9 +646,9 @@
                 </div>
                 <button class="export-btn" onclick="exportPeriodData('monthly')">Export Monthly Forecast</button>
                 <div class="statements-container">
-                    <div id="monthlyPnlContainer"></div>
-                    <div id="monthlyBalanceContainer"></div>
-                    <div id="monthlyCashflowContainer"></div>
+                <div id="monthlyPnlContainer" class="independent-table-container"></div>
+                <div id="monthlyBalanceContainer" class="independent-table-container"></div>
+                <div id="monthlyCashflowContainer" class="independent-table-container"></div>
                 </div>
             </div>
             
@@ -655,9 +658,9 @@
                 </div>
                 <button class="export-btn" onclick="exportPeriodData('quarterly')">Export Quarterly Forecast</button>
                 <div class="statements-container">
-                    <div id="quarterlyPnlContainer"></div>
-                    <div id="quarterlyBalanceContainer"></div>
-                    <div id="quarterlyCashflowContainer"></div>
+                <div id="quarterlyPnlContainer" class="independent-table-container"></div>
+                <div id="quarterlyBalanceContainer" class="independent-table-container"></div>
+                <div id="quarterlyCashflowContainer" class="independent-table-container"></div>
                 </div>
             </div>
             
@@ -667,9 +670,9 @@
                 </div>
                 <button class="export-btn" onclick="exportPeriodData('yearly')">Export Yearly Forecast</button>
                 <div class="statements-container">
-                    <div id="yearlyPnlContainer"></div>
-                    <div id="yearlyBalanceContainer"></div>
-                    <div id="yearlyCashflowContainer"></div>
+                <div id="yearlyPnlContainer" class="independent-table-container"></div>
+                <div id="yearlyBalanceContainer" class="independent-table-container"></div>
+                <div id="yearlyCashflowContainer" class="independent-table-container"></div>
                 </div>
             </div>
         </div>
