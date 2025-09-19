@@ -785,22 +785,33 @@ window.exportPeriodData = exportPeriodData;
  * Insights calculations
  */
 function calculateInsights() {
+  console.log('calculateInsights called, hasUploadedData:', hasUploadedData);
+  
   // Check if we have uploaded data
   if (!hasUploadedData) {
+    console.log('No uploaded data, showing blank insights');
     displayBlankInsights();
     return;
   }
   
+  console.log('Calculating insights with uploaded data');
   const largestChanges = calculateLargestChanges();
   const anomalousItems = calculateAnomalousItems();
+  
+  console.log('Largest changes:', largestChanges);
+  console.log('Anomalous items:', anomalousItems);
   
   displayLargestChanges(largestChanges);
   displayAnomalousItems(anomalousItems);
 }
 
 function displayBlankInsights() {
+  console.log('displayBlankInsights called');
   const largestChangesContainer = document.getElementById('largestChanges');
   const anomalousItemsContainer = document.getElementById('anomalousItems');
+  
+  console.log('Largest changes container:', largestChangesContainer);
+  console.log('Anomalous items container:', anomalousItemsContainer);
   
   if (largestChangesContainer) {
     largestChangesContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
