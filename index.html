@@ -98,6 +98,8 @@
             align-self: flex-start;
             max-height: calc(100vh - 40px);
             overflow-y: auto;
+            background: #f8f9fa;
+            padding: 10px;
         }
         
         .main {
@@ -112,6 +114,9 @@
             border-radius: 10px;
             border: 1px solid #e9ecef;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
         }
         
         .control-group {
@@ -405,12 +410,13 @@
         
         /* Chat Container Styles */
         .chat-container {
-            height: 300px;
+            height: 250px;
             display: flex;
             flex-direction: column;
-            border: 1px solid #e9ecef;
+            border: 2px solid #3498db;
             border-radius: 8px;
             overflow: hidden;
+            background: white;
         }
         
         .chat-messages {
@@ -487,9 +493,13 @@
         
         /* Insights Container Styles */
         .insights-container {
-            height: 300px;
+            height: 250px;
             display: flex;
             flex-direction: column;
+            border: 2px solid #27ae60;
+            border-radius: 8px;
+            background: white;
+            padding: 10px;
         }
         
         .insights-section {
