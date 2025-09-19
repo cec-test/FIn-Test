@@ -785,11 +785,30 @@ window.exportPeriodData = exportPeriodData;
  * Insights calculations
  */
 function calculateInsights() {
+  // Check if we have uploaded data
+  if (!hasUploadedData) {
+    displayBlankInsights();
+    return;
+  }
+  
   const largestChanges = calculateLargestChanges();
   const anomalousItems = calculateAnomalousItems();
   
   displayLargestChanges(largestChanges);
   displayAnomalousItems(anomalousItems);
+}
+
+function displayBlankInsights() {
+  const largestChangesContainer = document.getElementById('largestChanges');
+  const anomalousItemsContainer = document.getElementById('anomalousItems');
+  
+  if (largestChangesContainer) {
+    largestChangesContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
+  }
+  
+  if (anomalousItemsContainer) {
+    anomalousItemsContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
+  }
 }
 
 function calculateLargestChanges() {
@@ -843,43 +862,43 @@ function calculateAnomalousItems() {
     const lineItems = uploadedLineItems[statementType] || [];
     
     lineItems.forEach(item => {
-      if (!item.actualValues || item.actualValues.length < 3) return;
+      if (!item.actualValues || item.actualValues.length < 2) return;
       
       const values = item.actualValues.filter(v => v !== null && v !== undefined);
-      if (values.length < 3) return;
+      if (values.length < 2) return;
       
-      // Calculate trend and volatility
-      const recentValues = values.slice(-3); // Last 3 values
-      const trend = calculateTrend(recentValues);
-      const volatility = calculateVolatility(values);
-      const lastValue = values[values.length - 1];
-      
-      // Detect anomalies based on:
-      // 1. Values that deviate significantly from trend
-      // 2. High volatility items
-      // 3. Values that are unusually large/small relative to historical average
-      
-      const avgValue = values.reduce((sum, v) => sum + v, 0) / values.length;
-      const deviationFromAvg = Math.abs(lastValue - avgValue) / Math.abs(avgValue);
-      
-      if (deviationFromAvg > 0.5 || volatility > 0.3) { // 50% deviation or 30% volatility
-        anomalies.push({
-          name: item.name,
-          statement: statementType,
-          lastValue: lastValue,
-          avgValue: avgValue,
-          deviation: deviationFromAvg,
-          volatility: volatility,
-          trend: trend,
-          anomalyType: deviationFromAvg > 0.5 ? 'deviation' : 'volatility'
-        });
+      // Check for month-to-month changes > 30%
+      for (let i = 1; i < values.length; i++) {
+        const currentValue = values[i];
+        const previousValue = values[i - 1];
+        
+        if (previousValue === 0) continue; // Avoid division by zero
+        
+        const percentChange = Math.abs((currentValue - previousValue) / Math.abs(previousValue)) * 100;
+        
+        if (percentChange > 30) {
+          // Get the date for this change
+          const dateIndex = i;
+          const dateLabel = dateColumns[dateIndex] || `Period ${dateIndex + 1}`;
+          
+          anomalies.push({
+            name: item.name,
+            statement: statementType,
+            currentValue: currentValue,
+            previousValue: previousValue,
+            percentChange: percentChange,
+            isIncrease: currentValue > previousValue,
+            date: dateLabel,
+            anomalyType: 'monthly_change'
+          });
+        }
       }
     });
   });
   
-  // Sort by deviation/volatility and return top 3
+  // Sort by percent change and return top 3
   return anomalies
-    .sort((a, b) => Math.max(b.deviation, b.volatility) - Math.max(a.deviation, a.volatility))
+    .sort((a, b) => b.percentChange - a.percentChange)
     .slice(0, 3);
 }
 
@@ -937,16 +956,16 @@ function displayAnomalousItems(anomalies) {
   container.innerHTML = anomalies.map(anomaly => {
     const statementLabel = anomaly.statement === 'pnl' ? 'P&L' : 
                           anomaly.statement === 'balance' ? 'Balance' : 'Cash Flow';
-    const anomalyDesc = anomaly.anomalyType === 'deviation' ? 
-                       `${(anomaly.deviation * 100).toFixed(0)}% deviation from average` :
-                       `${(anomaly.volatility * 100).toFixed(0)}% volatility`;
+    const changeSymbol = anomaly.isIncrease ? '+' : '-';
+    const changeClass = anomaly.isIncrease ? 'positive' : 'negative';
     
     return `
-      <div class="insight-item anomaly">
+      <div class="insight-item anomaly ${changeClass}">
         <div class="insight-label">${anomaly.name}</div>
         <div class="insight-value">
-          ${statementLabel}: ${anomalyDesc}
-          <br>Current: ${formatCurrency(anomaly.lastValue)} | Avg: ${formatCurrency(anomaly.avgValue)}
+          ${statementLabel}: ${changeSymbol}${anomaly.percentChange.toFixed(1)}% change
+          <br>Date: ${anomaly.date}
+          <br>From ${formatCurrency(anomaly.previousValue)} to ${formatCurrency(anomaly.currentValue)}
         </div>
       </div>
     `;
