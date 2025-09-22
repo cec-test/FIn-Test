@@ -636,6 +636,32 @@
             border-radius: 4px;
         }
         
+        .anomalous-items-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            background: white;
+        }
+        
+        .anomalous-items-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .anomalous-items-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .anomalous-items-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        .anomalous-items-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
         .anomaly-controls .control-item {
             margin: 0;
         }
@@ -775,18 +801,20 @@
                                         <div class="loading">Calculating insights...</div>
                                     </div>
                                 </div>
-                                <div class="insights-section">
-                                    <h4>Anomalous Items</h4>
-                                    <div class="anomaly-controls">
-                                        <div class="control-item">
-                                            <label>Threshold (%):</label>
-                                            <input type="number" id="monthlyAnomalyThreshold" value="30" min="1" max="100" step="1">
-                                        </div>
+                            <div class="insights-section">
+                                <h4>Anomalous Items</h4>
+                                <div class="anomaly-controls">
+                                    <div class="control-item">
+                                        <label>Threshold (%):</label>
+                                        <input type="number" id="monthlyAnomalyThreshold" value="30" min="1" max="100" step="1">
                                     </div>
+                                </div>
+                                <div class="anomalous-items-container">
                                     <div id="monthlyAnomalousItems" class="insights-list">
                                         <div class="loading">Analyzing patterns...</div>
                                     </div>
                                 </div>
+                            </div>
                                 <div class="insights-section">
                                     <h4>Line Chart</h4>
                                     <div class="chart-controls">
@@ -825,18 +853,20 @@
                                         <div class="loading">Calculating insights...</div>
                                     </div>
                                 </div>
-                                <div class="insights-section">
-                                    <h4>Anomalous Items</h4>
-                                    <div class="anomaly-controls">
-                                        <div class="control-item">
-                                            <label>Threshold (%):</label>
-                                            <input type="number" id="quarterlyAnomalyThreshold" value="30" min="1" max="100" step="1">
-                                        </div>
+                            <div class="insights-section">
+                                <h4>Anomalous Items</h4>
+                                <div class="anomaly-controls">
+                                    <div class="control-item">
+                                        <label>Threshold (%):</label>
+                                        <input type="number" id="quarterlyAnomalyThreshold" value="30" min="1" max="100" step="1">
                                     </div>
+                                </div>
+                                <div class="anomalous-items-container">
                                     <div id="quarterlyAnomalousItems" class="insights-list">
                                         <div class="loading">Analyzing patterns...</div>
                                     </div>
                                 </div>
+                            </div>
                                 <div class="insights-section">
                                     <h4>Line Chart</h4>
                                     <div class="chart-controls">
@@ -875,18 +905,20 @@
                                         <div class="loading">Calculating insights...</div>
                                     </div>
                                 </div>
-                                <div class="insights-section">
-                                    <h4>Anomalous Items</h4>
-                                    <div class="anomaly-controls">
-                                        <div class="control-item">
-                                            <label>Threshold (%):</label>
-                                            <input type="number" id="yearlyAnomalyThreshold" value="30" min="1" max="100" step="1">
-                                        </div>
+                            <div class="insights-section">
+                                <h4>Anomalous Items</h4>
+                                <div class="anomaly-controls">
+                                    <div class="control-item">
+                                        <label>Threshold (%):</label>
+                                        <input type="number" id="yearlyAnomalyThreshold" value="30" min="1" max="100" step="1">
                                     </div>
+                                </div>
+                                <div class="anomalous-items-container">
                                     <div id="yearlyAnomalousItems" class="insights-list">
                                         <div class="loading">Analyzing patterns...</div>
                                     </div>
                                 </div>
+                            </div>
                                 <div class="insights-section">
                                     <h4>Line Chart</h4>
                                     <div class="chart-controls">
