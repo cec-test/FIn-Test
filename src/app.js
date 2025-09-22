@@ -1580,8 +1580,8 @@ document.addEventListener('DOMContentLoaded', function () {
     dateColumns = initializeDefaultDateColumns(6);
     uploadedLineItems = buildDefaultSampleData();
   }
-  // Force insights tab active by default
-  showTab('insights', document.querySelector('.tabs .tab[data-tab="insights"]'));
+  // Force monthly tab active by default
+  showTab('monthly', document.querySelector('.tabs .tab[data-tab="monthly"]'));
   rebuildAllTables();
   updateForecast();
   
