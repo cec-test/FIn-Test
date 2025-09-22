@@ -795,31 +795,41 @@ function calculateInsights() {
   }
   
   console.log('Calculating insights with uploaded data');
-  const largestChanges = calculateLargestChanges();
-  const anomalousItems = calculateAnomalousItems();
   
-  console.log('Largest changes:', largestChanges);
-  console.log('Anomalous items:', anomalousItems);
+  // Calculate insights for each period type
+  ['monthly', 'quarterly', 'yearly'].forEach(periodType => {
+    const largestChanges = calculateLargestChangesForPeriod(periodType);
+    const anomalousItems = calculateAnomalousItemsForPeriod(periodType);
+    
+    displayLargestChangesForPeriod(periodType, largestChanges);
+    displayAnomalousItemsForPeriod(periodType, anomalousItems);
+  });
   
-  displayLargestChanges(largestChanges);
-  displayAnomalousItems(anomalousItems);
+  // Populate line item dropdowns
+  populateLineItemDropdowns();
 }
 
 function displayBlankInsights() {
   console.log('displayBlankInsights called');
-  const largestChangesContainer = document.getElementById('largestChanges');
-  const anomalousItemsContainer = document.getElementById('anomalousItems');
   
-  console.log('Largest changes container:', largestChangesContainer);
-  console.log('Anomalous items container:', anomalousItemsContainer);
-  
-  if (largestChangesContainer) {
-    largestChangesContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
-  }
-  
-  if (anomalousItemsContainer) {
-    anomalousItemsContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
-  }
+  // Update all period-specific containers
+  ['monthly', 'quarterly', 'yearly'].forEach(periodType => {
+    const largestChangesContainer = document.getElementById(`${periodType}LargestChanges`);
+    const anomalousItemsContainer = document.getElementById(`${periodType}AnomalousItems`);
+    const lineChartContainer = document.getElementById(`${periodType}LineChart`);
+    
+    if (largestChangesContainer) {
+      largestChangesContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
+    }
+    
+    if (anomalousItemsContainer) {
+      anomalousItemsContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
+    }
+    
+    if (lineChartContainer) {
+      lineChartContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
+    }
+  });
 }
 
 function calculateLargestChanges() {
@@ -990,6 +1000,447 @@ function displayAnomalousItems(anomalies) {
       </div>
     `;
   }).join('');
+}
+
+/**
+ * Period-specific insights calculations
+ */
+function calculateLargestChangesForPeriod(periodType) {
+  const changes = [];
+  
+  // Analyze all statement types
+  ['pnl', 'balance', 'cashflow'].forEach(statementType => {
+    const lineItems = uploadedLineItems[statementType] || [];
+    
+    lineItems.forEach(item => {
+      if (!item.actualValues || item.actualValues.length === 0) return;
+      
+      // Get aggregated data for this period type
+      let actualsForItem = [];
+      let labels = [];
+      
+      if (periodType === 'monthly') {
+        actualsForItem = (item.actualValues || []).slice();
+        labels = (dateColumns || []).slice();
+      } else {
+        const agg = aggregateActuals(statementType, item.actualValues || []);
+        const out = periodType === 'quarterly' ? agg.toQuarterOutputs() : agg.toYearOutputs();
+        actualsForItem = out.values || [];
+        labels = out.labels || [];
+      }
+      
+      if (actualsForItem.length === 0) return;
+      
+      // Get last actual value
+      const lastActual = lastNonNull(actualsForItem);
+      if (lastActual === null || lastActual === 0) return;
+      
+      // Get furthest forecast value
+      const periods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+      const growthRate = parseFloat(document.getElementById('customGrowthRate')?.value) || 5;
+      
+      // Calculate forecast value
+      let itemGrowth = growthRate / 100;
+      if (statementType === 'pnl' && item.name.toLowerCase().includes('expense')) {
+        itemGrowth = (growthRate * 0.8) / 100;
+      }
+      
+      const furthestForecast = lastActual * Math.pow(1 + itemGrowth, periods);
+      const percentChange = ((furthestForecast - lastActual) / Math.abs(lastActual)) * 100;
+      
+      // Get the date of the last actual value
+      const lastActualIndex = actualsForItem.lastIndexOf(lastActual);
+      const lastActualDate = labels[lastActualIndex] || `Period ${lastActualIndex + 1}`;
+      
+      // Calculate forecast date
+      const forecastDate = `Forecast +${periods} periods`;
+      
+      changes.push({
+        name: item.name,
+        statement: statementType,
+        lastActual: lastActual,
+        furthestForecast: furthestForecast,
+        percentChange: percentChange,
+        isPositive: percentChange > 0,
+        lastActualDate: lastActualDate,
+        forecastDate: forecastDate
+      });
+    });
+  });
+  
+  // Sort by absolute percent change and return top 3
+  return changes
+    .sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange))
+    .slice(0, 3);
+}
+
+function calculateAnomalousItemsForPeriod(periodType) {
+  const anomalies = [];
+  const threshold = parseFloat(document.getElementById('anomalyThreshold')?.value) || 30;
+  
+  ['pnl', 'balance', 'cashflow'].forEach(statementType => {
+    const lineItems = uploadedLineItems[statementType] || [];
+    
+    lineItems.forEach(item => {
+      if (!item.actualValues || item.actualValues.length < 2) return;
+      
+      // Get aggregated data for this period type
+      let actualsForItem = [];
+      let labels = [];
+      
+      if (periodType === 'monthly') {
+        actualsForItem = (item.actualValues || []).slice();
+        labels = (dateColumns || []).slice();
+      } else {
+        const agg = aggregateActuals(statementType, item.actualValues || []);
+        const out = periodType === 'quarterly' ? agg.toQuarterOutputs() : agg.toYearOutputs();
+        actualsForItem = out.values || [];
+        labels = out.labels || [];
+      }
+      
+      if (actualsForItem.length < 2) return;
+      
+      const values = actualsForItem.filter(v => v !== null && v !== undefined);
+      if (values.length < 2) return;
+      
+      // Check for period-to-period changes above threshold
+      for (let i = 1; i < values.length; i++) {
+        const currentValue = values[i];
+        const previousValue = values[i - 1];
+        
+        if (previousValue === 0) continue; // Avoid division by zero
+        
+        const percentChange = Math.abs((currentValue - previousValue) / Math.abs(previousValue)) * 100;
+        
+        if (percentChange >= threshold) {
+          // Get the date for this change
+          const dateIndex = i;
+          const dateLabel = labels[dateIndex] || `Period ${dateIndex + 1}`;
+          
+          anomalies.push({
+            name: item.name,
+            statement: statementType,
+            currentValue: currentValue,
+            previousValue: previousValue,
+            percentChange: percentChange,
+            isIncrease: currentValue > previousValue,
+            date: dateLabel,
+            anomalyType: 'period_change'
+          });
+        }
+      }
+    });
+  });
+  
+  // Sort by percent change and return top 3
+  return anomalies
+    .sort((a, b) => b.percentChange - a.percentChange)
+    .slice(0, 3);
+}
+
+function displayLargestChangesForPeriod(periodType, changes) {
+  const container = document.getElementById(`${periodType}LargestChanges`);
+  if (!container) return;
+  
+  if (changes.length === 0) {
+    container.innerHTML = '<div class="loading">No significant changes detected</div>';
+    return;
+  }
+  
+  container.innerHTML = changes.map(change => {
+    const changeClass = change.isPositive ? 'positive' : 'negative';
+    const changeSymbol = change.isPositive ? '+' : '';
+    const statementLabel = change.statement === 'pnl' ? 'P&L' : 
+                          change.statement === 'balance' ? 'Balance' : 'Cash Flow';
+    
+    return `
+      <div class="insight-item ${changeClass}">
+        <div class="insight-label">${change.name}</div>
+        <div class="insight-value">
+          ${statementLabel}: ${changeSymbol}${change.percentChange.toFixed(1)}%
+          <br>From ${formatCurrency(change.lastActual)} (${change.lastActualDate}) to ${formatCurrency(change.furthestForecast)} (${change.forecastDate})
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function displayAnomalousItemsForPeriod(periodType, anomalies) {
+  const container = document.getElementById(`${periodType}AnomalousItems`);
+  if (!container) return;
+  
+  if (anomalies.length === 0) {
+    container.innerHTML = '<div class="loading">No anomalies detected</div>';
+    return;
+  }
+  
+  container.innerHTML = anomalies.map(anomaly => {
+    const statementLabel = anomaly.statement === 'pnl' ? 'P&L' : 
+                          anomaly.statement === 'balance' ? 'Balance' : 'Cash Flow';
+    const changeSymbol = anomaly.isIncrease ? '+' : '-';
+    const changeClass = anomaly.isIncrease ? 'positive' : 'negative';
+    
+    return `
+      <div class="insight-item anomaly ${changeClass}">
+        <div class="insight-label">${anomaly.name}</div>
+        <div class="insight-value">
+          ${statementLabel}: ${changeSymbol}${anomaly.percentChange.toFixed(1)}% change
+          <br>Date: ${anomaly.date}
+          <br>From ${formatCurrency(anomaly.previousValue)} to ${formatCurrency(anomaly.currentValue)}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Line chart functionality
+ */
+function populateLineItemDropdowns() {
+  const allLineItems = [];
+  
+  // Collect all line items from all statement types
+  ['pnl', 'balance', 'cashflow'].forEach(statementType => {
+    const lineItems = uploadedLineItems[statementType] || [];
+    lineItems.forEach(item => {
+      if (item.actualValues && item.actualValues.length > 0) {
+        allLineItems.push({
+          name: item.name,
+          statement: statementType,
+          actualValues: item.actualValues
+        });
+      }
+    });
+  });
+  
+  // Populate dropdowns for each period type
+  ['monthly', 'quarterly', 'yearly'].forEach(periodType => {
+    for (let i = 1; i <= 3; i++) {
+      const select = document.getElementById(`${periodType}LineItem${i}`);
+      if (select) {
+        // Clear existing options except the first one
+        select.innerHTML = '<option value="">Select line item ' + i + '</option>';
+        
+        // Add all line items
+        allLineItems.forEach(item => {
+          const option = document.createElement('option');
+          option.value = `${item.statement}::${item.name}`;
+          option.textContent = `${item.statement.toUpperCase()}: ${item.name}`;
+          select.appendChild(option);
+        });
+        
+        // Add change listener
+        select.addEventListener('change', () => updateLineChart(periodType));
+      }
+    }
+  });
+}
+
+function updateLineChart(periodType) {
+  const chartContainer = document.getElementById(`${periodType}LineChart`);
+  if (!chartContainer) return;
+  
+  // Get selected line items
+  const selectedItems = [];
+  for (let i = 1; i <= 3; i++) {
+    const select = document.getElementById(`${periodType}LineItem${i}`);
+    if (select && select.value) {
+      const [statementType, itemName] = select.value.split('::');
+      const lineItem = uploadedLineItems[statementType]?.find(item => item.name === itemName);
+      if (lineItem) {
+        selectedItems.push({
+          name: itemName,
+          statement: statementType,
+          actualValues: lineItem.actualValues || []
+        });
+      }
+    }
+  }
+  
+  if (selectedItems.length === 0) {
+    chartContainer.innerHTML = '<div class="loading">Select line items to display chart</div>';
+    return;
+  }
+  
+  // Generate chart data
+  const chartData = generateChartData(periodType, selectedItems);
+  
+  // Create SVG chart
+  createSVGChart(chartContainer, chartData, periodType);
+}
+
+function generateChartData(periodType, selectedItems) {
+  const data = {
+    labels: [],
+    datasets: []
+  };
+  
+  // Generate labels based on period type
+  if (periodType === 'monthly') {
+    data.labels = (dateColumns || []).slice();
+  } else {
+    // For quarterly/yearly, we need to get aggregated labels
+    const firstItem = selectedItems[0];
+    if (firstItem && firstItem.actualValues.length > 0) {
+      const agg = aggregateActuals(firstItem.statement, firstItem.actualValues);
+      const out = periodType === 'quarterly' ? agg.toQuarterOutputs() : agg.toYearOutputs();
+      data.labels = out.labels || [];
+    }
+  }
+  
+  // Generate datasets for each selected item
+  const colors = ['#3498db', '#e74c3c', '#27ae60'];
+  
+  selectedItems.forEach((item, index) => {
+    let values = [];
+    
+    if (periodType === 'monthly') {
+      values = (item.actualValues || []).slice();
+    } else {
+      const agg = aggregateActuals(item.statement, item.actualValues || []);
+      const out = periodType === 'quarterly' ? agg.toQuarterOutputs() : agg.toYearOutputs();
+      values = out.values || [];
+    }
+    
+    data.datasets.push({
+      label: `${item.statement.toUpperCase()}: ${item.name}`,
+      values: values,
+      color: colors[index % colors.length]
+    });
+  });
+  
+  return data;
+}
+
+function createSVGChart(container, data, periodType) {
+  const width = 400;
+  const height = 180;
+  const padding = 40;
+  const chartWidth = width - padding * 2;
+  const chartHeight = height - padding * 2;
+  
+  // Clear container
+  container.innerHTML = '';
+  
+  // Create SVG
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', height);
+  svg.style.background = 'white';
+  
+  // Find min/max values across all datasets
+  let minValue = Infinity;
+  let maxValue = -Infinity;
+  
+  data.datasets.forEach(dataset => {
+    dataset.values.forEach(value => {
+      if (value !== null && value !== undefined) {
+        minValue = Math.min(minValue, value);
+        maxValue = Math.max(maxValue, value);
+      }
+    });
+  });
+  
+  if (minValue === Infinity || maxValue === -Infinity) {
+    container.innerHTML = '<div class="loading">No data available for chart</div>';
+    return;
+  }
+  
+  // Add some padding to the value range
+  const valueRange = maxValue - minValue;
+  const paddedMin = minValue - valueRange * 0.1;
+  const paddedMax = maxValue + valueRange * 0.1;
+  const paddedRange = paddedMax - paddedMin;
+  
+  // Helper function to convert value to y coordinate
+  const valueToY = (value) => {
+    if (value === null || value === undefined) return null;
+    return padding + chartHeight - ((value - paddedMin) / paddedRange) * chartHeight;
+  };
+  
+  // Helper function to convert index to x coordinate
+  const indexToX = (index) => {
+    return padding + (index / (data.labels.length - 1)) * chartWidth;
+  };
+  
+  // Draw axes
+  const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  xAxis.setAttribute('x1', padding);
+  xAxis.setAttribute('y1', padding + chartHeight);
+  xAxis.setAttribute('x2', padding + chartWidth);
+  xAxis.setAttribute('y2', padding + chartHeight);
+  xAxis.setAttribute('stroke', '#ddd');
+  xAxis.setAttribute('stroke-width', '1');
+  svg.appendChild(xAxis);
+  
+  const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  yAxis.setAttribute('x1', padding);
+  yAxis.setAttribute('y1', padding);
+  yAxis.setAttribute('x2', padding);
+  yAxis.setAttribute('y2', padding + chartHeight);
+  yAxis.setAttribute('stroke', '#ddd');
+  yAxis.setAttribute('stroke-width', '1');
+  svg.appendChild(yAxis);
+  
+  // Draw lines for each dataset
+  data.datasets.forEach(dataset => {
+    const pathData = [];
+    let hasValidData = false;
+    
+    dataset.values.forEach((value, index) => {
+      const x = indexToX(index);
+      const y = valueToY(value);
+      
+      if (y !== null) {
+        if (hasValidData) {
+          pathData.push(`L ${x} ${y}`);
+        } else {
+          pathData.push(`M ${x} ${y}`);
+          hasValidData = true;
+        }
+      }
+    });
+    
+    if (hasValidData) {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', pathData.join(' '));
+      path.setAttribute('stroke', dataset.color);
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('fill', 'none');
+      svg.appendChild(path);
+      
+      // Add dots for data points
+      dataset.values.forEach((value, index) => {
+        const x = indexToX(index);
+        const y = valueToY(value);
+        
+        if (y !== null) {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', x);
+          circle.setAttribute('cy', y);
+          circle.setAttribute('r', '3');
+          circle.setAttribute('fill', dataset.color);
+          svg.appendChild(circle);
+        }
+      });
+    }
+  });
+  
+  // Add labels
+  data.labels.forEach((label, index) => {
+    if (index % Math.ceil(data.labels.length / 6) === 0) { // Show every nth label to avoid crowding
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', indexToX(index));
+      text.setAttribute('y', height - 5);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('font-size', '10');
+      text.setAttribute('fill', '#666');
+      text.textContent = label.length > 8 ? label.substring(0, 8) + '...' : label;
+      svg.appendChild(text);
+    }
+  });
+  
+  container.appendChild(svg);
 }
 
 /**
@@ -1249,6 +1700,12 @@ document.addEventListener('DOMContentLoaded', function () {
   const refreshInsightsBtn = document.getElementById('refreshInsightsBtn');
   if (refreshInsightsBtn) {
     refreshInsightsBtn.addEventListener('click', calculateInsights);
+  }
+  
+  // Anomaly threshold change handler
+  const anomalyThresholdInput = document.getElementById('anomalyThreshold');
+  if (anomalyThresholdInput) {
+    anomalyThresholdInput.addEventListener('change', calculateInsights);
   }
   
   // Calculate initial insights

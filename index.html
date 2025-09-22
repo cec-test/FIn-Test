@@ -537,9 +537,111 @@
             background: #219a52;
         }
         
+        /* Insights Dashboard Styles */
+        .insights-dashboard {
+            padding: 20px 0;
+        }
+        
+        .insights-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .insights-containers {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .insights-period-container {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        
+        .insights-period-container h3 {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            color: white;
+            padding: 15px 20px;
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .insights-sections {
+            padding: 20px;
+        }
+        
+        .insights-sections .insights-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .insights-sections .insights-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .insights-sections .insights-section h4 {
+            color: #2c3e50;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .chart-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .chart-controls select {
+            padding: 6px 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background: white;
+        }
+        
+        .line-chart {
+            height: 200px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .line-chart svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .line-chart .loading {
+            color: #6c757d;
+            font-style: italic;
+        }
+        
         @media (max-width: 1200px) {
             .statements-container {
                 grid-template-columns: 1fr;
+            }
+            
+            .insights-containers {
+                flex-direction: column;
             }
         }
     </style>
@@ -606,25 +708,6 @@
                         </div>
                     </div>
                     
-                    <div class="controls">
-                        <h3>Insights</h3>
-                        <div style="background: blue; color: white; padding: 5px; margin: 5px 0;">DEBUG: Insights container should be visible</div>
-                        <div class="insights-container" id="insightsContainer">
-                            <div class="insights-section">
-                                <h4>Largest Changes</h4>
-                                <div id="largestChanges" class="insights-list">
-                                    <div class="loading">Calculating insights...</div>
-                                </div>
-                            </div>
-                            <div class="insights-section">
-                                <h4>Anomalous Items</h4>
-                                <div id="anomalousItems" class="insights-list">
-                                    <div class="loading">Analyzing patterns...</div>
-                                </div>
-                            </div>
-                            <button class="refresh-insights-btn" id="refreshInsightsBtn">Refresh Insights</button>
-                        </div>
-                    </div>
                 </aside>
                 <div class="main">
                     <div class="tabs">
@@ -670,6 +753,127 @@
                 <div id="yearlyPnlContainer" class="independent-table-container"></div>
                 <div id="yearlyBalanceContainer" class="independent-table-container"></div>
                 <div id="yearlyCashflowContainer" class="independent-table-container"></div>
+                </div>
+            </div>
+            
+            <div id="insights" class="tab-content">
+                <div class="forecast-info">
+                    <strong>Insights Dashboard</strong> - Financial insights across all date ranges
+                </div>
+                <div class="insights-dashboard">
+                    <div class="insights-controls">
+                        <div class="control-item">
+                            <label>Anomaly Threshold (%):</label>
+                            <input type="number" id="anomalyThreshold" value="30" min="1" max="100" step="1">
+                        </div>
+                        <button class="refresh-insights-btn" id="refreshInsightsBtn">Refresh All Insights</button>
+                    </div>
+                    <div class="insights-containers">
+                        <div class="insights-period-container">
+                            <h3>Monthly Insights</h3>
+                            <div class="insights-sections">
+                                <div class="insights-section">
+                                    <h4>Largest Changes</h4>
+                                    <div id="monthlyLargestChanges" class="insights-list">
+                                        <div class="loading">Calculating insights...</div>
+                                    </div>
+                                </div>
+                                <div class="insights-section">
+                                    <h4>Anomalous Items</h4>
+                                    <div id="monthlyAnomalousItems" class="insights-list">
+                                        <div class="loading">Analyzing patterns...</div>
+                                    </div>
+                                </div>
+                                <div class="insights-section">
+                                    <h4>Line Chart</h4>
+                                    <div class="chart-controls">
+                                        <select id="monthlyLineItem1">
+                                            <option value="">Select line item 1</option>
+                                        </select>
+                                        <select id="monthlyLineItem2">
+                                            <option value="">Select line item 2</option>
+                                        </select>
+                                        <select id="monthlyLineItem3">
+                                            <option value="">Select line item 3</option>
+                                        </select>
+                                    </div>
+                                    <div id="monthlyLineChart" class="line-chart">
+                                        <div class="loading">Select line items to display chart</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="insights-period-container">
+                            <h3>Quarterly Insights</h3>
+                            <div class="insights-sections">
+                                <div class="insights-section">
+                                    <h4>Largest Changes</h4>
+                                    <div id="quarterlyLargestChanges" class="insights-list">
+                                        <div class="loading">Calculating insights...</div>
+                                    </div>
+                                </div>
+                                <div class="insights-section">
+                                    <h4>Anomalous Items</h4>
+                                    <div id="quarterlyAnomalousItems" class="insights-list">
+                                        <div class="loading">Analyzing patterns...</div>
+                                    </div>
+                                </div>
+                                <div class="insights-section">
+                                    <h4>Line Chart</h4>
+                                    <div class="chart-controls">
+                                        <select id="quarterlyLineItem1">
+                                            <option value="">Select line item 1</option>
+                                        </select>
+                                        <select id="quarterlyLineItem2">
+                                            <option value="">Select line item 2</option>
+                                        </select>
+                                        <select id="quarterlyLineItem3">
+                                            <option value="">Select line item 3</option>
+                                        </select>
+                                    </div>
+                                    <div id="quarterlyLineChart" class="line-chart">
+                                        <div class="loading">Select line items to display chart</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="insights-period-container">
+                            <h3>Yearly Insights</h3>
+                            <div class="insights-sections">
+                                <div class="insights-section">
+                                    <h4>Largest Changes</h4>
+                                    <div id="yearlyLargestChanges" class="insights-list">
+                                        <div class="loading">Calculating insights...</div>
+                                    </div>
+                                </div>
+                                <div class="insights-section">
+                                    <h4>Anomalous Items</h4>
+                                    <div id="yearlyAnomalousItems" class="insights-list">
+                                        <div class="loading">Analyzing patterns...</div>
+                                    </div>
+                                </div>
+                                <div class="insights-section">
+                                    <h4>Line Chart</h4>
+                                    <div class="chart-controls">
+                                        <select id="yearlyLineItem1">
+                                            <option value="">Select line item 1</option>
+                                        </select>
+                                        <select id="yearlyLineItem2">
+                                            <option value="">Select line item 2</option>
+                                        </select>
+                                        <select id="yearlyLineItem3">
+                                            <option value="">Select line item 3</option>
+                                        </select>
+                                    </div>
+                                    <div id="yearlyLineChart" class="line-chart">
+                                        <div class="loading">Select line items to display chart</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
