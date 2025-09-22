@@ -638,12 +638,15 @@
         }
         
         .anomalous-items-container {
-            height: 200px;
-            overflow-y: auto;
-            border: 1px solid #e9ecef;
+            height: 200px !important;
+            max-height: 200px !important;
+            overflow-y: auto !important;
+            border: 2px solid #e74c3c !important;
             border-radius: 6px;
-            background: white;
+            background: #fff5f5 !important;
             margin-top: 10px;
+            display: block !important;
+            position: relative !important;
         }
         
         .anomalous-items-container::-webkit-scrollbar {
@@ -666,6 +669,12 @@
         
         .anomalous-items-container .insights-list {
             padding: 10px;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .anomalous-items-container .insight-item {
+            margin-bottom: 8px;
         }
         
         .anomaly-controls .control-item {
