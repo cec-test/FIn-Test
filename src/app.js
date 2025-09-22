@@ -885,52 +885,6 @@ function calculateLargestChanges() {
     .slice(0, 3);
 }
 
-function calculateAnomalousItems() {
-  const anomalies = [];
-  
-  ['pnl', 'balance', 'cashflow'].forEach(statementType => {
-    const lineItems = uploadedLineItems[statementType] || [];
-    
-    lineItems.forEach(item => {
-      if (!item.actualValues || item.actualValues.length < 2) return;
-      
-      const values = item.actualValues.filter(v => v !== null && v !== undefined);
-      if (values.length < 2) return;
-      
-      // Check for month-to-month changes > 30%
-      for (let i = 1; i < values.length; i++) {
-        const currentValue = values[i];
-        const previousValue = values[i - 1];
-        
-        if (previousValue === 0) continue; // Avoid division by zero
-        
-        const percentChange = Math.abs((currentValue - previousValue) / Math.abs(previousValue)) * 100;
-        
-        if (percentChange > 30) {
-          // Get the date for this change
-          const dateIndex = i;
-          const dateLabel = dateColumns[dateIndex] || `Period ${dateIndex + 1}`;
-          
-          anomalies.push({
-            name: item.name,
-            statement: statementType,
-            currentValue: currentValue,
-            previousValue: previousValue,
-            percentChange: percentChange,
-            isIncrease: currentValue > previousValue,
-            date: dateLabel,
-            anomalyType: 'monthly_change'
-          });
-        }
-      }
-    });
-  });
-  
-  // Sort by percent change and return top 3
-  return anomalies
-    .sort((a, b) => b.percentChange - a.percentChange)
-    .slice(0, 3);
-}
 
 function calculateTrend(values) {
   if (values.length < 2) return 0;
@@ -974,33 +928,6 @@ function displayLargestChanges(changes) {
   }).join('');
 }
 
-function displayAnomalousItems(anomalies) {
-  const container = document.getElementById('anomalousItems');
-  if (!container) return;
-  
-  if (anomalies.length === 0) {
-    container.innerHTML = '<div class="loading">No anomalies detected</div>';
-    return;
-  }
-  
-  container.innerHTML = anomalies.map(anomaly => {
-    const statementLabel = anomaly.statement === 'pnl' ? 'P&L' : 
-                          anomaly.statement === 'balance' ? 'Balance' : 'Cash Flow';
-    const changeSymbol = anomaly.isIncrease ? '+' : '-';
-    const changeClass = anomaly.isIncrease ? 'positive' : 'negative';
-    
-    return `
-      <div class="insight-item anomaly ${changeClass}">
-        <div class="insight-label">${anomaly.name}</div>
-        <div class="insight-value">
-          ${statementLabel}: ${changeSymbol}${anomaly.percentChange.toFixed(1)}% change
-          <br>Date: ${anomaly.date}
-          <br>From ${formatCurrency(anomaly.previousValue)} to ${formatCurrency(anomaly.currentValue)}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
 
 /**
  * Period-specific insights calculations
@@ -1063,7 +990,9 @@ function calculateLargestChangesForPeriod(periodType) {
         percentChange: percentChange,
         isPositive: percentChange > 0,
         lastActualDate: lastActualDate,
-        forecastDate: forecastDate
+        forecastDate: forecastDate,
+        lastActualDateType: 'Actual',
+        forecastDateType: 'Forecast'
       });
     });
   });
@@ -1113,9 +1042,11 @@ function calculateAnomalousItemsForPeriod(periodType) {
         const percentChange = Math.abs((currentValue - previousValue) / Math.abs(previousValue)) * 100;
         
         if (percentChange >= threshold) {
-          // Get the date for this change
-          const dateIndex = i;
-          const dateLabel = labels[dateIndex] || `Period ${dateIndex + 1}`;
+          // Get the dates for this change
+          const currentDateIndex = i;
+          const previousDateIndex = i - 1;
+          const currentDateLabel = labels[currentDateIndex] || `Period ${currentDateIndex + 1}`;
+          const previousDateLabel = labels[previousDateIndex] || `Period ${previousDateIndex + 1}`;
           
           anomalies.push({
             name: item.name,
@@ -1124,7 +1055,8 @@ function calculateAnomalousItemsForPeriod(periodType) {
             previousValue: previousValue,
             percentChange: percentChange,
             isIncrease: currentValue > previousValue,
-            date: dateLabel,
+            currentDate: currentDateLabel,
+            previousDate: previousDateLabel,
             anomalyType: 'period_change'
           });
         }
@@ -1157,7 +1089,7 @@ function displayLargestChangesForPeriod(periodType, changes) {
         <div class="insight-label">${change.name}</div>
         <div class="insight-value">
           ${statementLabel}: ${changeSymbol}${change.percentChange.toFixed(1)}%
-          <br>From ${formatCurrency(change.lastActual)} (${change.lastActualDate}) to ${formatCurrency(change.furthestForecast)} (${change.forecastDate})
+          <br>From ${formatCurrency(change.lastActual)} on ${change.lastActualDate} (${change.lastActualDateType}) to ${formatCurrency(change.furthestForecast)} on ${change.forecastDate} (${change.forecastDateType})
         </div>
       </div>
     `;
@@ -1184,8 +1116,7 @@ function displayAnomalousItemsForPeriod(periodType, anomalies) {
         <div class="insight-label">${anomaly.name}</div>
         <div class="insight-value">
           ${statementLabel}: ${changeSymbol}${anomaly.percentChange.toFixed(1)}% change
-          <br>Date: ${anomaly.date}
-          <br>From ${formatCurrency(anomaly.previousValue)} to ${formatCurrency(anomaly.currentValue)}
+          <br>From ${formatCurrency(anomaly.previousValue)} on ${anomaly.previousDate} (Actual) to ${formatCurrency(anomaly.currentValue)} on ${anomaly.currentDate} (Actual)
         </div>
       </div>
     `;
