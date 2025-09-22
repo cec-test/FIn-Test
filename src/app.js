@@ -1076,7 +1076,7 @@ function calculateLargestChangesForPeriod(periodType) {
 
 function calculateAnomalousItemsForPeriod(periodType) {
   const anomalies = [];
-  const threshold = parseFloat(document.getElementById('anomalyThreshold')?.value) || 30;
+  const threshold = parseFloat(document.getElementById(`${periodType}AnomalyThreshold`)?.value) || 30;
   
   ['pnl', 'balance', 'cashflow'].forEach(statementType => {
     const lineItems = uploadedLineItems[statementType] || [];
@@ -1132,10 +1132,9 @@ function calculateAnomalousItemsForPeriod(periodType) {
     });
   });
   
-  // Sort by percent change and return top 3
+  // Sort by percent change and return all anomalies
   return anomalies
-    .sort((a, b) => b.percentChange - a.percentChange)
-    .slice(0, 3);
+    .sort((a, b) => b.percentChange - a.percentChange);
 }
 
 function displayLargestChangesForPeriod(periodType, changes) {
@@ -1650,8 +1649,8 @@ document.addEventListener('DOMContentLoaded', function () {
     dateColumns = initializeDefaultDateColumns(6);
     uploadedLineItems = buildDefaultSampleData();
   }
-  // Force monthly tab active by default
-  showTab('monthly', document.querySelector('.tabs .tab[data-tab="monthly"]'));
+  // Force insights tab active by default
+  showTab('insights', document.querySelector('.tabs .tab[data-tab="insights"]'));
   rebuildAllTables();
   updateForecast();
   
@@ -1702,11 +1701,17 @@ document.addEventListener('DOMContentLoaded', function () {
     refreshInsightsBtn.addEventListener('click', calculateInsights);
   }
   
-  // Anomaly threshold change handler
-  const anomalyThresholdInput = document.getElementById('anomalyThreshold');
-  if (anomalyThresholdInput) {
-    anomalyThresholdInput.addEventListener('change', calculateInsights);
-  }
+  // Individual anomaly threshold change handlers
+  ['monthly', 'quarterly', 'yearly'].forEach(periodType => {
+    const thresholdInput = document.getElementById(`${periodType}AnomalyThreshold`);
+    if (thresholdInput) {
+      thresholdInput.addEventListener('change', () => {
+        // Only recalculate anomalies for this specific period
+        const anomalousItems = calculateAnomalousItemsForPeriod(periodType);
+        displayAnomalousItemsForPeriod(periodType, anomalousItems);
+      });
+    }
+  });
   
   // Calculate initial insights
   setTimeout(() => {

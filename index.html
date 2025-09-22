@@ -606,12 +606,49 @@
             margin-bottom: 15px;
         }
         
+        .chart-control-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .color-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid #ccc;
+            flex-shrink: 0;
+        }
+        
         .chart-controls select {
             padding: 6px 10px;
             border: 2px solid #dee2e6;
             border-radius: 6px;
             font-size: 0.85rem;
             background: white;
+            flex: 1;
+        }
+        
+        .anomaly-controls {
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .anomaly-controls .control-item {
+            margin: 0;
+        }
+        
+        .anomaly-controls .control-item label {
+            font-size: 0.8rem;
+            min-width: auto;
+        }
+        
+        .anomaly-controls .control-item input {
+            width: 60px;
+            padding: 4px 6px;
+            font-size: 0.8rem;
         }
         
         .line-chart {
@@ -711,26 +748,178 @@
                 </aside>
                 <div class="main">
                     <div class="tabs">
-                        <button class="tab active" data-tab="monthly">Monthly Forecast</button>
+                        <button class="tab active" data-tab="insights">Insights Dashboard</button>
+                        <button class="tab" data-tab="monthly">Monthly Forecast</button>
                         <button class="tab" data-tab="quarterly">Quarterly Forecast</button>
                         <button class="tab" data-tab="yearly">Yearly Forecast</button>
-                        <button class="tab" data-tab="insights">Insights Dashboard</button>
                     </div>
                     
                 
                     
             
-            <div id="monthly" class="tab-content active">
+            <div id="insights" class="tab-content active">
                 <div class="forecast-info">
-                    <strong>Monthly Forecast</strong> - All three statements with monthly periods
+                    <strong>Insights Dashboard</strong> - Financial insights across all date ranges
                 </div>
-                <button class="export-btn" onclick="exportPeriodData('monthly')">Export Monthly Forecast</button>
-                <div class="statements-container">
-                <div id="monthlyPnlContainer" class="independent-table-container"></div>
-                <div id="monthlyBalanceContainer" class="independent-table-container"></div>
-                <div id="monthlyCashflowContainer" class="independent-table-container"></div>
+                <div class="insights-dashboard">
+                    <div class="insights-controls">
+                        <button class="refresh-insights-btn" id="refreshInsightsBtn">Refresh All Insights</button>
+                    </div>
+                    <div class="insights-containers">
+                        <div class="insights-period-container">
+                            <h3>Monthly Insights</h3>
+                            <div class="insights-sections">
+                                <div class="insights-section">
+                                    <h4>Largest Changes</h4>
+                                    <div id="monthlyLargestChanges" class="insights-list">
+                                        <div class="loading">Calculating insights...</div>
+                                    </div>
+                                </div>
+                                <div class="insights-section">
+                                    <h4>Anomalous Items</h4>
+                                    <div class="anomaly-controls">
+                                        <div class="control-item">
+                                            <label>Threshold (%):</label>
+                                            <input type="number" id="monthlyAnomalyThreshold" value="30" min="1" max="100" step="1">
+                                        </div>
+                                    </div>
+                                    <div id="monthlyAnomalousItems" class="insights-list">
+                                        <div class="loading">Analyzing patterns...</div>
+                                    </div>
+                                </div>
+                                <div class="insights-section">
+                                    <h4>Line Chart</h4>
+                                    <div class="chart-controls">
+                                        <div class="chart-control-item">
+                                            <div class="color-indicator" style="background-color: #3498db;"></div>
+                                            <select id="monthlyLineItem1">
+                                                <option value="">Select line item 1</option>
+                                            </select>
+                                        </div>
+                                        <div class="chart-control-item">
+                                            <div class="color-indicator" style="background-color: #e74c3c;"></div>
+                                            <select id="monthlyLineItem2">
+                                                <option value="">Select line item 2</option>
+                                            </select>
+                                        </div>
+                                        <div class="chart-control-item">
+                                            <div class="color-indicator" style="background-color: #27ae60;"></div>
+                                            <select id="monthlyLineItem3">
+                                                <option value="">Select line item 3</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div id="monthlyLineChart" class="line-chart">
+                                        <div class="loading">Select line items to display chart</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="insights-period-container">
+                            <h3>Quarterly Insights</h3>
+                            <div class="insights-sections">
+                                <div class="insights-section">
+                                    <h4>Largest Changes</h4>
+                                    <div id="quarterlyLargestChanges" class="insights-list">
+                                        <div class="loading">Calculating insights...</div>
+                                    </div>
+                                </div>
+                                <div class="insights-section">
+                                    <h4>Anomalous Items</h4>
+                                    <div class="anomaly-controls">
+                                        <div class="control-item">
+                                            <label>Threshold (%):</label>
+                                            <input type="number" id="quarterlyAnomalyThreshold" value="30" min="1" max="100" step="1">
+                                        </div>
+                                    </div>
+                                    <div id="quarterlyAnomalousItems" class="insights-list">
+                                        <div class="loading">Analyzing patterns...</div>
+                                    </div>
+                                </div>
+                                <div class="insights-section">
+                                    <h4>Line Chart</h4>
+                                    <div class="chart-controls">
+                                        <div class="chart-control-item">
+                                            <div class="color-indicator" style="background-color: #3498db;"></div>
+                                            <select id="quarterlyLineItem1">
+                                                <option value="">Select line item 1</option>
+                                            </select>
+                                        </div>
+                                        <div class="chart-control-item">
+                                            <div class="color-indicator" style="background-color: #e74c3c;"></div>
+                                            <select id="quarterlyLineItem2">
+                                                <option value="">Select line item 2</option>
+                                            </select>
+                                        </div>
+                                        <div class="chart-control-item">
+                                            <div class="color-indicator" style="background-color: #27ae60;"></div>
+                                            <select id="quarterlyLineItem3">
+                                                <option value="">Select line item 3</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div id="quarterlyLineChart" class="line-chart">
+                                        <div class="loading">Select line items to display chart</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="insights-period-container">
+                            <h3>Yearly Insights</h3>
+                            <div class="insights-sections">
+                                <div class="insights-section">
+                                    <h4>Largest Changes</h4>
+                                    <div id="yearlyLargestChanges" class="insights-list">
+                                        <div class="loading">Calculating insights...</div>
+                                    </div>
+                                </div>
+                                <div class="insights-section">
+                                    <h4>Anomalous Items</h4>
+                                    <div class="anomaly-controls">
+                                        <div class="control-item">
+                                            <label>Threshold (%):</label>
+                                            <input type="number" id="yearlyAnomalyThreshold" value="30" min="1" max="100" step="1">
+                                        </div>
+                                    </div>
+                                    <div id="yearlyAnomalousItems" class="insights-list">
+                                        <div class="loading">Analyzing patterns...</div>
+                                    </div>
+                                </div>
+                                <div class="insights-section">
+                                    <h4>Line Chart</h4>
+                                    <div class="chart-controls">
+                                        <div class="chart-control-item">
+                                            <div class="color-indicator" style="background-color: #3498db;"></div>
+                                            <select id="yearlyLineItem1">
+                                                <option value="">Select line item 1</option>
+                                            </select>
+                                        </div>
+                                        <div class="chart-control-item">
+                                            <div class="color-indicator" style="background-color: #e74c3c;"></div>
+                                            <select id="yearlyLineItem2">
+                                                <option value="">Select line item 2</option>
+                                            </select>
+                                        </div>
+                                        <div class="chart-control-item">
+                                            <div class="color-indicator" style="background-color: #27ae60;"></div>
+                                            <select id="yearlyLineItem3">
+                                                <option value="">Select line item 3</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div id="yearlyLineChart" class="line-chart">
+                                        <div class="loading">Select line items to display chart</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+            
+            <div id="monthly" class="tab-content">
             
             <div id="quarterly" class="tab-content">
                 <div class="forecast-info">
@@ -756,126 +945,6 @@
                 </div>
             </div>
             
-            <div id="insights" class="tab-content">
-                <div class="forecast-info">
-                    <strong>Insights Dashboard</strong> - Financial insights across all date ranges
-                </div>
-                <div class="insights-dashboard">
-                    <div class="insights-controls">
-                        <div class="control-item">
-                            <label>Anomaly Threshold (%):</label>
-                            <input type="number" id="anomalyThreshold" value="30" min="1" max="100" step="1">
-                        </div>
-                        <button class="refresh-insights-btn" id="refreshInsightsBtn">Refresh All Insights</button>
-                    </div>
-                    <div class="insights-containers">
-                        <div class="insights-period-container">
-                            <h3>Monthly Insights</h3>
-                            <div class="insights-sections">
-                                <div class="insights-section">
-                                    <h4>Largest Changes</h4>
-                                    <div id="monthlyLargestChanges" class="insights-list">
-                                        <div class="loading">Calculating insights...</div>
-                                    </div>
-                                </div>
-                                <div class="insights-section">
-                                    <h4>Anomalous Items</h4>
-                                    <div id="monthlyAnomalousItems" class="insights-list">
-                                        <div class="loading">Analyzing patterns...</div>
-                                    </div>
-                                </div>
-                                <div class="insights-section">
-                                    <h4>Line Chart</h4>
-                                    <div class="chart-controls">
-                                        <select id="monthlyLineItem1">
-                                            <option value="">Select line item 1</option>
-                                        </select>
-                                        <select id="monthlyLineItem2">
-                                            <option value="">Select line item 2</option>
-                                        </select>
-                                        <select id="monthlyLineItem3">
-                                            <option value="">Select line item 3</option>
-                                        </select>
-                                    </div>
-                                    <div id="monthlyLineChart" class="line-chart">
-                                        <div class="loading">Select line items to display chart</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="insights-period-container">
-                            <h3>Quarterly Insights</h3>
-                            <div class="insights-sections">
-                                <div class="insights-section">
-                                    <h4>Largest Changes</h4>
-                                    <div id="quarterlyLargestChanges" class="insights-list">
-                                        <div class="loading">Calculating insights...</div>
-                                    </div>
-                                </div>
-                                <div class="insights-section">
-                                    <h4>Anomalous Items</h4>
-                                    <div id="quarterlyAnomalousItems" class="insights-list">
-                                        <div class="loading">Analyzing patterns...</div>
-                                    </div>
-                                </div>
-                                <div class="insights-section">
-                                    <h4>Line Chart</h4>
-                                    <div class="chart-controls">
-                                        <select id="quarterlyLineItem1">
-                                            <option value="">Select line item 1</option>
-                                        </select>
-                                        <select id="quarterlyLineItem2">
-                                            <option value="">Select line item 2</option>
-                                        </select>
-                                        <select id="quarterlyLineItem3">
-                                            <option value="">Select line item 3</option>
-                                        </select>
-                                    </div>
-                                    <div id="quarterlyLineChart" class="line-chart">
-                                        <div class="loading">Select line items to display chart</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="insights-period-container">
-                            <h3>Yearly Insights</h3>
-                            <div class="insights-sections">
-                                <div class="insights-section">
-                                    <h4>Largest Changes</h4>
-                                    <div id="yearlyLargestChanges" class="insights-list">
-                                        <div class="loading">Calculating insights...</div>
-                                    </div>
-                                </div>
-                                <div class="insights-section">
-                                    <h4>Anomalous Items</h4>
-                                    <div id="yearlyAnomalousItems" class="insights-list">
-                                        <div class="loading">Analyzing patterns...</div>
-                                    </div>
-                                </div>
-                                <div class="insights-section">
-                                    <h4>Line Chart</h4>
-                                    <div class="chart-controls">
-                                        <select id="yearlyLineItem1">
-                                            <option value="">Select line item 1</option>
-                                        </select>
-                                        <select id="yearlyLineItem2">
-                                            <option value="">Select line item 2</option>
-                                        </select>
-                                        <select id="yearlyLineItem3">
-                                            <option value="">Select line item 3</option>
-                                        </select>
-                                    </div>
-                                    <div id="yearlyLineChart" class="line-chart">
-                                        <div class="loading">Select line items to display chart</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
