@@ -59,6 +59,9 @@ module.exports = async (req, res) => {
     
     console.log('Message received:', message);
     console.log('Financial data length:', financialData ? financialData.length : 'undefined');
+    console.log('Financial data type:', typeof financialData);
+    console.log('Financial data keys:', financialData ? Object.keys(financialData) : 'undefined');
+    console.log('Financial data sample:', JSON.stringify(financialData, null, 2).substring(0, 1000) + '...');
 
     // Prepare the prompt with financial context
     const prompt = `You are a financial analysis assistant. Here is the current financial forecast data from the user's financial statements:

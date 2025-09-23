@@ -1402,6 +1402,7 @@ async function sendChatMessage() {
     const financialContext = prepareFinancialContext();
     
     console.log('Financial context being sent:', financialContext);
+    console.log('Financial context JSON:', JSON.stringify(financialContext, null, 2));
     console.log('Has uploaded data:', Object.keys(uploadedLineItems).length > 0);
     console.log('Uploaded line items:', uploadedLineItems);
     
