@@ -66,16 +66,17 @@ module.exports = async (req, res) => {
     // Prepare the prompt with financial context
     const prompt = `You are a financial analysis assistant. Here is the current financial forecast data from the user's financial statements:
 
-${financialData}
+${JSON.stringify(financialData, null, 2)}
 
 User Question: ${message}
 
 Instructions:
-- For specific value requests (like "revenue for December 2025"), provide the exact number from the data
-- For trend analysis, provide insights and patterns
+- For specific value requests (like "revenue for December 2025"), look in the dateValues object for each line item
+- Each line item has a "dateValues" object that maps dates to values (e.g., "Dec 31, 2025": 125000)
+- For trend analysis, analyze the forecastValues array over time
 - Be concise and direct - don't ask for additional data
 - If you can't find a specific value, say "Value not found in the data"
-- Focus on analyzing the provided forecast data only
+- Format currency values properly (e.g., $125,000)
 
 Please provide a helpful response based on the financial forecast data provided.`;
 

@@ -1484,10 +1484,19 @@ function prepareFinancialContext() {
           });
           
           if (itemName && values.length > 0) {
+            // Create a mapping of dates to values for easier AI understanding
+            const dateValueMap = {};
+            context.dateColumns.forEach((date, index) => {
+              if (values[index] !== undefined) {
+                dateValueMap[date] = values[index];
+              }
+            });
+            
             tableData.push({
               name: itemName,
               forecastValues: values,
-              lastValue: values[values.length - 1] || 0
+              lastValue: values[values.length - 1] || 0,
+              dateValues: dateValueMap
             });
           }
         }
@@ -1512,10 +1521,19 @@ function prepareFinancialContext() {
         
         const allValues = [...actualValues, ...forecastValues];
         
+        // Create date-value mapping for AI
+        const dateValueMap = {};
+        context.dateColumns.forEach((date, index) => {
+          if (allValues[index] !== undefined) {
+            dateValueMap[date] = allValues[index];
+          }
+        });
+        
         tableData.push({
           name: item.name,
           forecastValues: allValues,
-          lastValue: allValues[allValues.length - 1] || 0
+          lastValue: allValues[allValues.length - 1] || 0,
+          dateValues: dateValueMap
         });
       });
     }
@@ -1528,6 +1546,10 @@ function prepareFinancialContext() {
   console.log('P&L items:', context.statements.pnl?.length || 0);
   console.log('Balance items:', context.statements.balance?.length || 0);
   console.log('Cashflow items:', context.statements.cashflow?.length || 0);
+  
+  // Debug: Show actual data being sent
+  console.log('Sample P&L data:', context.statements.pnl?.slice(0, 3));
+  console.log('Date columns:', context.dateColumns);
   
   return context;
 }
