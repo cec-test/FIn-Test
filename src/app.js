@@ -1432,8 +1432,13 @@ function addChatMessage(sender, content) {
   messageDiv.appendChild(contentDiv);
   messagesContainer.appendChild(messageDiv);
   
-  // Scroll to bottom
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  // Smooth scroll to bottom
+  setTimeout(() => {
+    messagesContainer.scrollTo({
+      top: messagesContainer.scrollHeight,
+      behavior: 'smooth'
+    });
+  }, 100);
   
   // Store in history
   chatHistory.push({ sender, content });
