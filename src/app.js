@@ -1450,9 +1450,14 @@ function addChatMessage(sender, content) {
 }
 
 function prepareFinancialContext() {
+  // Determine which tab is currently active
+  const activeTab = getActiveTab();
+  console.log('Active tab for chat analysis:', activeTab);
+  
   const context = {
     statements: {},
     dateColumns: dateColumns || [],
+    activeTab: activeTab,
     forecastSettings: {
       method: document.getElementById('forecastMethod')?.value || 'custom',
       growthRate: parseFloat(document.getElementById('customGrowthRate')?.value) || 5,
@@ -1464,13 +1469,13 @@ function prepareFinancialContext() {
   ['pnl', 'balance', 'cashflow'].forEach(statementType => {
     const tableData = [];
     
-    // Try to find the table in Monthly tab
-    const monthlyTable = document.querySelector(`#monthly .${statementType}-table tbody`) || 
-                        document.querySelector(`#monthly .${statementType}-table`);
+    // Try to find the table in the currently active tab
+    const activeTable = document.querySelector(`#${activeTab} .${statementType}-table tbody`) || 
+                       document.querySelector(`#${activeTab} .${statementType}-table`);
     
-    if (monthlyTable) {
-      console.log(`Reading ${statementType} data from forecast table`);
-      const rows = monthlyTable.querySelectorAll('tr');
+    if (activeTable) {
+      console.log(`Reading ${statementType} data from ${activeTab} forecast table`);
+      const rows = activeTable.querySelectorAll('tr');
       
       rows.forEach(row => {
         const cells = row.querySelectorAll('td');
@@ -1552,6 +1557,28 @@ function prepareFinancialContext() {
   console.log('Date columns:', context.dateColumns);
   
   return context;
+}
+
+function getActiveTab() {
+  // Check which tab is currently active
+  const tabs = ['monthly', 'quarterly', 'yearly', 'insights'];
+  
+  for (const tab of tabs) {
+    const tabElement = document.querySelector(`#${tab}.tab-content.active`);
+    if (tabElement) {
+      return tab;
+    }
+  }
+  
+  // Fallback: check tab buttons
+  const activeTabButton = document.querySelector('.tab.active');
+  if (activeTabButton) {
+    const tabId = activeTabButton.getAttribute('data-tab');
+    return tabId || 'monthly';
+  }
+  
+  // Default to monthly if nothing found
+  return 'monthly';
 }
 
 async function callOpenAI(question, financialContext) {

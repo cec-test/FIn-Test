@@ -151,6 +151,8 @@ ${JSON.stringify(dataToSend, null, 2)}
 
 User Question: ${message}
 
+IMPORTANT: The user is currently viewing the ${dataToSend.activeTab || 'monthly'} tab. All data provided corresponds to this view.
+
 Instructions:
 - For specific value requests (like "revenue for December 2025"), look in the dateValues object for each line item
 - Each line item has a "dateValues" object that maps dates to values (e.g., "Dec 31, 2025": 125000)
@@ -158,6 +160,7 @@ Instructions:
 - Be concise and direct - don't ask for additional data
 - If you can't find a specific value, say "Value not found in the data"
 - Format currency values properly (e.g., $125,000)
+- Remember: You're analyzing ${dataToSend.activeTab || 'monthly'} data
 
 Please provide a helpful response based on the financial forecast data provided.`;
 
