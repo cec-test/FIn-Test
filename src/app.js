@@ -1464,11 +1464,32 @@ function prepareFinancialContext() {
   ['pnl', 'balance', 'cashflow'].forEach(statementType => {
     const tableData = [];
     
-    // Get data from Monthly tab
-    const monthlyTable = document.querySelector(`#monthly .${statementType}-table tbody`);
+    // Try different possible selectors for the tables
+    const possibleSelectors = [
+      `#monthly .${statementType}-table tbody`,
+      `#monthly .${statementType}-table`,
+      `#monthly table.${statementType}`,
+      `#monthly .${statementType}`,
+      `#monthly [class*="${statementType}"]`
+    ];
+    
+    let monthlyTable = null;
+    for (const selector of possibleSelectors) {
+      monthlyTable = document.querySelector(selector);
+      if (monthlyTable) {
+        console.log(`Found ${statementType} table with selector: ${selector}`);
+        break;
+      }
+    }
+    
     if (monthlyTable) {
-      const rows = monthlyTable.querySelectorAll('tr');
-      rows.forEach(row => {
+      // Try to find tbody, or use the table itself
+      const tbody = monthlyTable.querySelector('tbody') || monthlyTable;
+      const rows = tbody.querySelectorAll('tr');
+      
+      console.log(`Found ${rows.length} rows in ${statementType} table`);
+      
+      rows.forEach((row, index) => {
         const cells = row.querySelectorAll('td');
         if (cells.length > 0) {
           const itemName = cells[0].textContent.trim();
@@ -1488,6 +1509,8 @@ function prepareFinancialContext() {
           }
         }
       });
+    } else {
+      console.log(`No table found for ${statementType}`);
     }
     
     context.statements[statementType] = tableData;
