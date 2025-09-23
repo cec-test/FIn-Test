@@ -332,28 +332,59 @@ function isMixedPeriodForIndex(index, periodType, actualLabels) {
 }
 
 /**
- * Generate tooltip text for mixed periods
+ * Generate comprehensive tooltip text for mixed periods
  */
 function generateMixedPeriodTooltip(index, periodType, actualLabels) {
+  const forecastMethod = document.getElementById('forecastMethod')?.value || 'custom';
+  const growthRate = parseFloat(document.getElementById('customGrowthRate')?.value) || 5;
+  
+  let tooltip = '';
+  
   if (periodType === 'quarterly') {
     const quarterMonths = getQuarterMonths(index, actualLabels);
-    const tooltipParts = quarterMonths.map(month => {
-      const isActual = actualLabels.includes(month);
-      return `${month}: ${isActual ? 'Actual' : 'Forecast'}`;
-    });
-    return tooltipParts.join(', ');
+    const actualMonths = quarterMonths.filter(month => actualLabels.includes(month));
+    const forecastMonths = quarterMonths.filter(month => !actualLabels.includes(month));
+    
+    tooltip = `MIXED PERIOD BREAKDOWN:\n`;
+    tooltip += `Actual Months: ${actualMonths.join(', ')}\n`;
+    tooltip += `Forecast Months: ${forecastMonths.join(', ')}\n`;
+    tooltip += `\nCALCULATION METHOD:\n`;
+    tooltip += `Method: ${getMethodDisplayName(forecastMethod)}\n`;
+    if (forecastMethod === 'custom') {
+      tooltip += `Growth Rate: ${growthRate}%\n`;
+    }
+    tooltip += `\nNOTE: This hybrid total is used as the baseline for subsequent forecasts.`;
   }
   
   if (periodType === 'yearly') {
     const yearMonths = getYearMonths(index, actualLabels);
-    const tooltipParts = yearMonths.map(month => {
-      const isActual = actualLabels.includes(month);
-      return `${month}: ${isActual ? 'Actual' : 'Forecast'}`;
-    });
-    return tooltipParts.join(', ');
+    const actualMonths = yearMonths.filter(month => actualLabels.includes(month));
+    const forecastMonths = yearMonths.filter(month => !actualLabels.includes(month));
+    
+    tooltip = `MIXED PERIOD BREAKDOWN:\n`;
+    tooltip += `Actual Months: ${actualMonths.join(', ')}\n`;
+    tooltip += `Forecast Months: ${forecastMonths.join(', ')}\n`;
+    tooltip += `\nCALCULATION METHOD:\n`;
+    tooltip += `Method: ${getMethodDisplayName(forecastMethod)}\n`;
+    if (forecastMethod === 'custom') {
+      tooltip += `Growth Rate: ${growthRate}%\n`;
+    }
+    tooltip += `\nNOTE: This hybrid total is used as the baseline for subsequent forecasts.`;
   }
   
-  return '';
+  return tooltip;
+}
+
+/**
+ * Get display name for forecast method
+ */
+function getMethodDisplayName(method) {
+  switch (method) {
+    case 'custom': return 'Custom Growth Rate';
+    case 'rolling': return 'Rolling Average';
+    case 'threemonth': return '3-Month Average';
+    default: return 'Custom Growth Rate';
+  }
 }
 
 /**
@@ -395,13 +426,33 @@ function getYearMonths(yearIndex, actualLabels) {
  */
 function getForecastValuesForItem(item, periods) {
   const actualValues = item.actualValues || [];
-  const lastActual = actualValues[actualValues.length - 1] || 0;
+  const forecastMethod = document.getElementById('forecastMethod')?.value || 'custom';
   const growthRate = parseFloat(document.getElementById('customGrowthRate')?.value) || 5;
-  const growthDecimal = growthRate / 100;
   
   const forecastValues = [];
+  
+  // Calculate growth rates based on method
+  let revGrowth, expGrowth;
+  if (forecastMethod === 'rolling') {
+    revGrowth = 0.03;
+    expGrowth = 0.02;
+  } else if (forecastMethod === 'threemonth') {
+    revGrowth = 0.02;
+    expGrowth = 0.015;
+  } else {
+    // Custom growth
+    revGrowth = growthRate / 100;
+    expGrowth = (growthRate * 0.8) / 100;
+  }
+  
+  // Determine if this is revenue or expense item
+  const isRevenueItem = /\b(revenue|sales|income)\b/i.test(item.name);
+  const growthRateToUse = isRevenueItem ? revGrowth : expGrowth;
+  
+  const lastActual = actualValues[actualValues.length - 1] || 0;
+  
   for (let i = 0; i < periods; i++) {
-    const forecastValue = lastActual * Math.pow(1 + growthDecimal, i + 1);
+    const forecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
     forecastValues.push(forecastValue);
   }
   
