@@ -70,7 +70,14 @@ ${financialData}
 
 User Question: ${message}
 
-Please provide a helpful response based on the financial forecast data provided. Focus on analyzing the trends, patterns, and insights from the forecasted financial statements. Do not ask for additional data - analyze what has been provided.`;
+Instructions:
+- For specific value requests (like "revenue for December 2025"), provide the exact number from the data
+- For trend analysis, provide insights and patterns
+- Be concise and direct - don't ask for additional data
+- If you can't find a specific value, say "Value not found in the data"
+- Focus on analyzing the provided forecast data only
+
+Please provide a helpful response based on the financial forecast data provided.`;
 
     // Call OpenAI API
     console.log('Making OpenAI API call...');
@@ -81,7 +88,7 @@ Please provide a helpful response based on the financial forecast data provided.
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful financial analysis assistant. Provide clear, actionable insights based on the provided financial data.'
+          content: 'You are a direct financial analysis assistant. When users ask for specific values, provide the exact number from the data. Be concise and factual. For example: "Services revenue for December 2025: $125,000" or "Value not found in the data".'
         },
         {
           role: 'user',
