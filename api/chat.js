@@ -61,13 +61,13 @@ module.exports = async (req, res) => {
     console.log('Financial data length:', financialData ? financialData.length : 'undefined');
 
     // Prepare the prompt with financial context
-    const prompt = `You are a financial analysis assistant. Here is the current financial data:
+    const prompt = `You are a financial analysis assistant. Here is the current financial forecast data from the user's financial statements:
 
 ${financialData}
 
 User Question: ${message}
 
-Please provide a helpful response based on the financial data provided.`;
+Please provide a helpful response based on the financial forecast data provided. Focus on analyzing the trends, patterns, and insights from the forecasted financial statements. Do not ask for additional data - analyze what has been provided.`;
 
     // Call OpenAI API
     console.log('Making OpenAI API call...');

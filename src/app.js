@@ -1459,17 +1459,40 @@ function prepareFinancialContext() {
     }
   };
   
-  // Add all statement data
+  // Extract data from the actual forecast tables (Monthly, Quarterly, Yearly)
   ['pnl', 'balance', 'cashflow'].forEach(statementType => {
-    const lineItems = uploadedLineItems[statementType] || [];
-    context.statements[statementType] = lineItems.map(item => ({
-      name: item.name,
-      actualValues: item.actualValues || [],
-      lastActual: item.actual || 0
-    }));
+    const tableData = [];
+    
+    // Get data from Monthly tab
+    const monthlyTable = document.querySelector(`#monthly .${statementType}-table tbody`);
+    if (monthlyTable) {
+      const rows = monthlyTable.querySelectorAll('tr');
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length > 0) {
+          const itemName = cells[0].textContent.trim();
+          const values = Array.from(cells).slice(1).map(cell => {
+            const text = cell.textContent.trim();
+            // Parse numbers, handling currency symbols and commas
+            const num = parseFloat(text.replace(/[$,]/g, ''));
+            return isNaN(num) ? 0 : num;
+          });
+          
+          if (itemName && values.length > 0) {
+            tableData.push({
+              name: itemName,
+              monthlyValues: values,
+              lastActual: values[values.length - 1] || 0
+            });
+          }
+        }
+      });
+    }
+    
+    context.statements[statementType] = tableData;
   });
   
-  console.log('Prepared financial context:', context);
+  console.log('Prepared financial context from forecast tables:', context);
   console.log('Statement types:', Object.keys(context.statements));
   console.log('P&L items:', context.statements.pnl?.length || 0);
   console.log('Balance items:', context.statements.balance?.length || 0);
