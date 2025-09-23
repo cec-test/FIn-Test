@@ -1401,6 +1401,10 @@ async function sendChatMessage() {
     // Prepare financial data context
     const financialContext = prepareFinancialContext();
     
+    console.log('Financial context being sent:', financialContext);
+    console.log('Has uploaded data:', Object.keys(uploadedLineItems).length > 0);
+    console.log('Uploaded line items:', uploadedLineItems);
+    
     // Call OpenAI API
     const response = await callOpenAI(message, financialContext);
     
@@ -1464,6 +1468,12 @@ function prepareFinancialContext() {
       lastActual: item.actual || 0
     }));
   });
+  
+  console.log('Prepared financial context:', context);
+  console.log('Statement types:', Object.keys(context.statements));
+  console.log('P&L items:', context.statements.pnl?.length || 0);
+  console.log('Balance items:', context.statements.balance?.length || 0);
+  console.log('Cashflow items:', context.statements.cashflow?.length || 0);
   
   return context;
 }
