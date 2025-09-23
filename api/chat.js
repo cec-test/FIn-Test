@@ -164,7 +164,7 @@ Instructions:
 
 Please provide a helpful response based on the financial forecast data provided.`;
 
-    // Call OpenAI API
+    // Call OpenAI API with retry logic for rate limiting
     console.log('Making OpenAI API call...');
     console.log('API Key (first 10 chars):', OPENAI_API_KEY.substring(0, 10) + '...');
     
@@ -172,26 +172,44 @@ Please provide a helpful response based on the financial forecast data provided.
     const modelToUse = JSON.stringify(dataToSend).length > 20000 ? 'gpt-4' : 'gpt-3.5-turbo';
     console.log('Using model:', modelToUse);
     
-    const openaiResponse = await axios.post(OPENAI_API_URL, {
-      model: modelToUse,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a direct financial analysis assistant. When users ask for specific values, provide the exact number from the data. Be concise and factual. For example: "Services revenue for December 2025: $125,000" or "Value not found in the data".'
-        },
-        {
-          role: 'user',
-          content: prompt
+    let openaiResponse;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        openaiResponse = await axios.post(OPENAI_API_URL, {
+          model: modelToUse,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a direct financial analysis assistant. When users ask for specific values, provide the exact number from the data. Be concise and factual. For example: "Services revenue for December 2025: $125,000" or "Value not found in the data".'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 1000,
+          temperature: 0.7
+        }, {
+          headers: {
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        break; // Success, exit retry loop
+      } catch (error) {
+        if (error.response?.status === 429 && retryCount < maxRetries - 1) {
+          retryCount++;
+          const waitTime = Math.pow(2, retryCount) * 1000; // Exponential backoff
+          console.log(`Rate limited, retrying in ${waitTime}ms (attempt ${retryCount}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        } else {
+          throw error; // Re-throw if not rate limit or max retries reached
         }
-      ],
-      max_tokens: 1000,
-      temperature: 0.7
-    }, {
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
       }
-    });
+    }
     
     console.log('OpenAI API response received');
 
