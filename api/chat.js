@@ -26,14 +26,22 @@ module.exports = async (req, res) => {
   }
 
   try {
+    console.log('Request method:', req.method);
+    console.log('Request body:', req.body);
+    console.log('Request headers:', req.headers);
+    
     const { message, financialData } = req.body;
     
     if (!message) {
+      console.log('No message provided');
       return res.status(400).json({ 
         success: false, 
         error: 'Message is required' 
       });
     }
+    
+    console.log('Message received:', message);
+    console.log('Financial data length:', financialData ? financialData.length : 'undefined');
 
     // Prepare the prompt with financial context
     const prompt = `You are a financial analysis assistant. Here is the current financial data:
@@ -75,9 +83,14 @@ Please provide a helpful response based on the financial data provided.`;
 
   } catch (error) {
     console.error('OpenAI API error:', error.response?.data || error.message);
+    console.error('Full error:', error);
+    
+    // Return more detailed error information
     res.status(500).json({
       success: false,
-      error: 'Failed to process request with OpenAI API'
+      error: 'Failed to process request with OpenAI API',
+      details: error.message,
+      type: error.name
     });
   }
 };

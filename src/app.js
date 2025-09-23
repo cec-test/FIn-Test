@@ -1493,7 +1493,9 @@ async function callOpenAI(question, financialContext) {
     console.log('Response ok:', response.ok);
 
     if (!response.ok) {
-      throw new Error(`Backend API error: ${response.status}`);
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('Backend error response:', errorData);
+      throw new Error(`Backend API error: ${response.status} - ${errorData.details || errorData.error || 'Unknown error'}`);
     }
 
     const data = await response.json();
