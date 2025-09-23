@@ -31,11 +31,19 @@ module.exports = async (req, res) => {
     console.log('Request headers:', req.headers);
     
     // Check if API key is available
+    console.log('Environment variables available:', Object.keys(process.env));
+    console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
+    console.log('OPENAI_API_KEY length:', process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 'undefined');
+    
     if (!OPENAI_API_KEY) {
       console.error('OpenAI API key not found in environment variables');
       return res.status(500).json({
         success: false,
-        error: 'OpenAI API key not configured'
+        error: 'OpenAI API key not configured',
+        debug: {
+          envKeys: Object.keys(process.env).filter(key => key.includes('OPENAI')),
+          hasKey: !!process.env.OPENAI_API_KEY
+        }
       });
     }
     
