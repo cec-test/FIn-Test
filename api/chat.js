@@ -53,6 +53,9 @@ User Question: ${message}
 Please provide a helpful response based on the financial data provided.`;
 
     // Call OpenAI API
+    console.log('Making OpenAI API call...');
+    console.log('API Key (first 10 chars):', OPENAI_API_KEY.substring(0, 10) + '...');
+    
     const openaiResponse = await axios.post(OPENAI_API_URL, {
       model: 'gpt-3.5-turbo',
       messages: [
@@ -73,6 +76,8 @@ Please provide a helpful response based on the financial data provided.`;
         'Content-Type': 'application/json'
       }
     });
+    
+    console.log('OpenAI API response received');
 
     const aiResponse = openaiResponse.data.choices[0].message.content;
 
