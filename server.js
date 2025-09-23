@@ -11,10 +11,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
 
-// RapidAPI configuration
-const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
-const RAPIDAPI_HOST = 'openai-api.p.rapidapi.com';
-const RAPIDAPI_URL = 'https://openai-api.p.rapidapi.com/v1/chat/completions';
+// OpenAI API configuration
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 // Chat endpoint
 app.post('/api/chat', async (req, res) => {
@@ -34,8 +33,8 @@ app.post('/api/chat', async (req, res) => {
     // Create the prompt for OpenAI
     const systemPrompt = `You are a financial analysis assistant. You help users understand their financial data, including actuals and forecasts. You can answer questions about trends, patterns, and provide insights based on the financial data provided.${financialContext}`;
 
-    // Call RapidAPI OpenAI proxy
-    const response = await axios.post(RAPIDAPI_URL, {
+    // Call OpenAI API
+    const response = await axios.post(OPENAI_API_URL, {
       model: 'gpt-3.5-turbo',
       messages: [
         {
@@ -51,8 +50,7 @@ app.post('/api/chat', async (req, res) => {
       temperature: 0.7
     }, {
       headers: {
-        'X-RapidAPI-Key': RAPIDAPI_KEY,
-        'X-RapidAPI-Host': RAPIDAPI_HOST,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json'
       }
     });
@@ -65,12 +63,12 @@ app.post('/api/chat', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error calling RapidAPI OpenAI proxy:', error);
+    console.error('Error calling OpenAI API:', error);
     
     if (error.response) {
-      console.error('RapidAPI Error:', error.response.data);
+      console.error('OpenAI API Error:', error.response.data);
       res.status(500).json({ 
-        error: 'RapidAPI OpenAI proxy error', 
+        error: 'OpenAI API error', 
         details: error.response.data 
       });
     } else {
