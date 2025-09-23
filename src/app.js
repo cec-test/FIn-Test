@@ -1469,8 +1469,10 @@ function prepareFinancialContext() {
 }
 
 async function callOpenAI(question, financialContext) {
-  // Backend API endpoint - update this URL when you deploy your backend
-  const BACKEND_URL = 'http://localhost:3001/api/chat';
+  // Backend API endpoint - automatically detect if running locally or on Vercel
+  const BACKEND_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3001/api/chat'
+    : `${window.location.origin}/api/chat`;
   
   try {
     const response = await fetch(BACKEND_URL, {
