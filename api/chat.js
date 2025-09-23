@@ -78,21 +78,55 @@ module.exports = async (req, res) => {
     const questionLower = message.toLowerCase();
     const relevantStatements = {};
     
-    // Determine which statements are relevant based on question
+    // Check for specific line item mentions
+    const allLineItems = [
+      ...(financialData.statements?.pnl || []),
+      ...(financialData.statements?.balance || []),
+      ...(financialData.statements?.cashflow || [])
+    ];
+    
+    const mentionedItems = allLineItems.filter(item => 
+      questionLower.includes(item.name.toLowerCase())
+    );
+    
+    // If specific line items mentioned, include their full data
+    if (mentionedItems.length > 0) {
+      console.log('Specific line items mentioned:', mentionedItems.map(item => item.name));
+      
+      // Group mentioned items by statement type
+      mentionedItems.forEach(item => {
+        if (financialData.statements?.pnl?.some(pnlItem => pnlItem.name === item.name)) {
+          if (!relevantStatements.pnl) relevantStatements.pnl = [];
+          relevantStatements.pnl.push(item);
+        }
+        if (financialData.statements?.balance?.some(balItem => balItem.name === item.name)) {
+          if (!relevantStatements.balance) relevantStatements.balance = [];
+          relevantStatements.balance.push(item);
+        }
+        if (financialData.statements?.cashflow?.some(cfItem => cfItem.name === item.name)) {
+          if (!relevantStatements.cashflow) relevantStatements.cashflow = [];
+          relevantStatements.cashflow.push(item);
+        }
+      });
+    }
+    
+    // Determine which statements are relevant based on question keywords
     if (questionLower.includes('revenue') || questionLower.includes('sales') || 
         questionLower.includes('income') || questionLower.includes('profit') ||
-        questionLower.includes('expense') || questionLower.includes('cost')) {
+        questionLower.includes('expense') || questionLower.includes('cost') ||
+        questionLower.includes('p&l') || questionLower.includes('profit and loss')) {
       relevantStatements.pnl = financialData.statements?.pnl || [];
     }
     
     if (questionLower.includes('asset') || questionLower.includes('liability') || 
-        questionLower.includes('equity') || questionLower.includes('balance')) {
+        questionLower.includes('equity') || questionLower.includes('balance sheet') ||
+        questionLower.includes('balance')) {
       relevantStatements.balance = financialData.statements?.balance || [];
     }
     
     if (questionLower.includes('cash') || questionLower.includes('flow') ||
         questionLower.includes('operating') || questionLower.includes('investing') ||
-        questionLower.includes('financing')) {
+        questionLower.includes('financing') || questionLower.includes('cash flow')) {
       relevantStatements.cashflow = financialData.statements?.cashflow || [];
     }
     
