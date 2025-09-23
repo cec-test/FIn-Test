@@ -1460,13 +1460,7 @@ function prepareFinancialContext() {
     }
   };
   
-  // Force generation of forecast tables if they don't exist
-  if (!document.querySelector('#monthly .pnl-table')) {
-    console.log('Generating forecast tables for chat analysis...');
-    rebuildAllTables();
-  }
-  
-  // Extract data from the actual forecast tables
+  // Extract data from forecast tables if they exist, otherwise use uploaded data
   ['pnl', 'balance', 'cashflow'].forEach(statementType => {
     const tableData = [];
     
@@ -1499,14 +1493,29 @@ function prepareFinancialContext() {
         }
       });
     } else {
-      console.log(`No forecast table found for ${statementType}, using uploaded data as fallback`);
-      // Fallback to uploaded data if tables don't exist
+      console.log(`No forecast table found for ${statementType}, using uploaded data`);
+      // Use uploaded data with forecast calculations
       const lineItems = uploadedLineItems[statementType] || [];
       lineItems.forEach(item => {
+        // Calculate forecast values using current settings
+        const actualValues = item.actualValues || [];
+        const lastActual = actualValues[actualValues.length - 1] || 0;
+        const growthRate = context.forecastSettings.growthRate / 100;
+        const periods = context.forecastSettings.periods;
+        
+        // Simple forecast calculation
+        const forecastValues = [];
+        for (let i = 0; i < periods; i++) {
+          const forecastValue = lastActual * Math.pow(1 + growthRate, i + 1);
+          forecastValues.push(forecastValue);
+        }
+        
+        const allValues = [...actualValues, ...forecastValues];
+        
         tableData.push({
           name: item.name,
-          forecastValues: [...(item.actualValues || []), ...(item.forecastValues || [])],
-          lastValue: item.actual || 0
+          forecastValues: allValues,
+          lastValue: allValues[allValues.length - 1] || 0
         });
       });
     }
