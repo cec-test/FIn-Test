@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 // OpenAI API configuration
-const OPENAI_API_KEY = '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';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 module.exports = async (req, res) => {
@@ -29,6 +29,15 @@ module.exports = async (req, res) => {
     console.log('Request method:', req.method);
     console.log('Request body:', req.body);
     console.log('Request headers:', req.headers);
+    
+    // Check if API key is available
+    if (!OPENAI_API_KEY) {
+      console.error('OpenAI API key not found in environment variables');
+      return res.status(500).json({
+        success: false,
+        error: 'OpenAI API key not configured'
+      });
+    }
     
     const { message, financialData } = req.body;
     
