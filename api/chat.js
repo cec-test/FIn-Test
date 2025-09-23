@@ -1,19 +1,30 @@
-const express = require('express');
-const cors = require('cors');
 const axios = require('axios');
-
-const app = express();
-
-// Middleware
-app.use(cors());
-app.use(express.json());
 
 // OpenAI API configuration
 const OPENAI_API_KEY = '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';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-// Chat endpoint
-app.post('/api/chat', async (req, res) => {
+module.exports = async (req, res) => {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    return res.status(405).json({ 
+      success: false, 
+      error: 'Method not allowed' 
+    });
+  }
+
   try {
     const { message, financialData } = req.body;
     
@@ -57,7 +68,7 @@ Please provide a helpful response based on the financial data provided.`;
 
     const aiResponse = openaiResponse.data.choices[0].message.content;
 
-    res.json({
+    res.status(200).json({
       success: true,
       response: aiResponse
     });
@@ -69,11 +80,4 @@ Please provide a helpful response based on the financial data provided.`;
       error: 'Failed to process request with OpenAI API'
     });
   }
-});
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Backend server is running' });
-});
-
-module.exports = app;
+};
