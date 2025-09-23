@@ -1474,6 +1474,9 @@ async function callOpenAI(question, financialContext) {
     ? 'http://localhost:3001/api/chat'
     : `${window.location.origin}/api/chat`;
   
+  console.log('Calling API at:', BACKEND_URL);
+  console.log('Current location:', window.location.href);
+  
   try {
     const response = await fetch(BACKEND_URL, {
       method: 'POST',
@@ -1485,6 +1488,9 @@ async function callOpenAI(question, financialContext) {
         financialData: financialContext
       })
     });
+    
+    console.log('Response status:', response.status);
+    console.log('Response ok:', response.ok);
 
     if (!response.ok) {
       throw new Error(`Backend API error: ${response.status}`);
