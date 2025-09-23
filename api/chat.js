@@ -71,23 +71,45 @@ module.exports = async (req, res) => {
     
     console.log('Financial data sample:', dataString.substring(0, 2000) + '...');
 
-    // Prepare the prompt with financial context
+    // Smart data filtering based on question content
     let dataToSend = financialData;
     
-    // If data is too large, truncate it
-    if (dataString.length > 30000) {
-      console.log('Data too large, truncating...');
-      // Keep only essential data
-      dataToSend = {
-        statements: {
-          pnl: financialData.statements?.pnl?.slice(0, 10) || [],
-          balance: financialData.statements?.balance?.slice(0, 10) || [],
-          cashflow: financialData.statements?.cashflow?.slice(0, 10) || []
-        },
-        dateColumns: financialData.dateColumns || [],
-        forecastSettings: financialData.forecastSettings || {}
-      };
+    // Analyze question to determine which statement types are relevant
+    const questionLower = message.toLowerCase();
+    const relevantStatements = {};
+    
+    // Determine which statements are relevant based on question
+    if (questionLower.includes('revenue') || questionLower.includes('sales') || 
+        questionLower.includes('income') || questionLower.includes('profit') ||
+        questionLower.includes('expense') || questionLower.includes('cost')) {
+      relevantStatements.pnl = financialData.statements?.pnl || [];
     }
+    
+    if (questionLower.includes('asset') || questionLower.includes('liability') || 
+        questionLower.includes('equity') || questionLower.includes('balance')) {
+      relevantStatements.balance = financialData.statements?.balance || [];
+    }
+    
+    if (questionLower.includes('cash') || questionLower.includes('flow') ||
+        questionLower.includes('operating') || questionLower.includes('investing') ||
+        questionLower.includes('financing')) {
+      relevantStatements.cashflow = financialData.statements?.cashflow || [];
+    }
+    
+    // If no specific statements identified, include all
+    if (Object.keys(relevantStatements).length === 0) {
+      relevantStatements.pnl = financialData.statements?.pnl || [];
+      relevantStatements.balance = financialData.statements?.balance || [];
+      relevantStatements.cashflow = financialData.statements?.cashflow || [];
+    }
+    
+    dataToSend = {
+      statements: relevantStatements,
+      dateColumns: financialData.dateColumns || [],
+      forecastSettings: financialData.forecastSettings || {}
+    };
+    
+    console.log('Relevant statements for question:', Object.keys(relevantStatements));
     
     const prompt = `You are a financial analysis assistant. Here is the current financial forecast data from the user's financial statements:
 
@@ -109,8 +131,12 @@ Please provide a helpful response based on the financial forecast data provided.
     console.log('Making OpenAI API call...');
     console.log('API Key (first 10 chars):', OPENAI_API_KEY.substring(0, 10) + '...');
     
+    // Use GPT-4 for larger datasets (better context handling)
+    const modelToUse = JSON.stringify(dataToSend).length > 20000 ? 'gpt-4' : 'gpt-3.5-turbo';
+    console.log('Using model:', modelToUse);
+    
     const openaiResponse = await axios.post(OPENAI_API_URL, {
-      model: 'gpt-3.5-turbo',
+      model: modelToUse,
       messages: [
         {
           role: 'system',
