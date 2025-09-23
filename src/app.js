@@ -1460,21 +1460,61 @@ function prepareFinancialContext() {
     }
   };
   
-  // Use uploaded data directly since tables might not be generated yet
+  // Force generation of forecast tables if they don't exist
+  if (!document.querySelector('#monthly .pnl-table')) {
+    console.log('Generating forecast tables for chat analysis...');
+    rebuildAllTables();
+  }
+  
+  // Extract data from the actual forecast tables
   ['pnl', 'balance', 'cashflow'].forEach(statementType => {
-    const lineItems = uploadedLineItems[statementType] || [];
-    console.log(`Using uploaded ${statementType} data: ${lineItems.length} items`);
+    const tableData = [];
     
-    context.statements[statementType] = lineItems.map(item => ({
-      name: item.name,
-      actualValues: item.actualValues || [],
-      forecastValues: item.forecastValues || [],
-      lastActual: item.actual || 0,
-      allValues: [...(item.actualValues || []), ...(item.forecastValues || [])]
-    }));
+    // Try to find the table in Monthly tab
+    const monthlyTable = document.querySelector(`#monthly .${statementType}-table tbody`) || 
+                        document.querySelector(`#monthly .${statementType}-table`);
+    
+    if (monthlyTable) {
+      console.log(`Reading ${statementType} data from forecast table`);
+      const rows = monthlyTable.querySelectorAll('tr');
+      
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length > 0) {
+          const itemName = cells[0].textContent.trim();
+          const values = Array.from(cells).slice(1).map(cell => {
+            const text = cell.textContent.trim();
+            // Parse numbers, handling currency symbols and commas
+            const num = parseFloat(text.replace(/[$,]/g, ''));
+            return isNaN(num) ? 0 : num;
+          });
+          
+          if (itemName && values.length > 0) {
+            tableData.push({
+              name: itemName,
+              forecastValues: values,
+              lastValue: values[values.length - 1] || 0
+            });
+          }
+        }
+      });
+    } else {
+      console.log(`No forecast table found for ${statementType}, using uploaded data as fallback`);
+      // Fallback to uploaded data if tables don't exist
+      const lineItems = uploadedLineItems[statementType] || [];
+      lineItems.forEach(item => {
+        tableData.push({
+          name: item.name,
+          forecastValues: [...(item.actualValues || []), ...(item.forecastValues || [])],
+          lastValue: item.actual || 0
+        });
+      });
+    }
+    
+    context.statements[statementType] = tableData;
   });
   
-  console.log('Prepared financial context from forecast tables:', context);
+  console.log('Prepared financial context from forecast data:', context);
   console.log('Statement types:', Object.keys(context.statements));
   console.log('P&L items:', context.statements.pnl?.length || 0);
   console.log('Balance items:', context.statements.balance?.length || 0);
@@ -1583,6 +1623,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Periods change handler - always rebuild tables when periods change
   periodsEl?.addEventListener('change', function() {
+    rebuildAllTables();
+    updateForecast();
+  });
+  
+  // Growth rate change handler - rebuild tables for updated forecasts
+  const growthRateEl = document.getElementById('customGrowthRate');
+  growthRateEl?.addEventListener('change', function() {
     rebuildAllTables();
     updateForecast();
   });
