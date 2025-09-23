@@ -1460,60 +1460,18 @@ function prepareFinancialContext() {
     }
   };
   
-  // Extract data from the actual forecast tables (Monthly, Quarterly, Yearly)
+  // Use uploaded data directly since tables might not be generated yet
   ['pnl', 'balance', 'cashflow'].forEach(statementType => {
-    const tableData = [];
+    const lineItems = uploadedLineItems[statementType] || [];
+    console.log(`Using uploaded ${statementType} data: ${lineItems.length} items`);
     
-    // Try different possible selectors for the tables
-    const possibleSelectors = [
-      `#monthly .${statementType}-table tbody`,
-      `#monthly .${statementType}-table`,
-      `#monthly table.${statementType}`,
-      `#monthly .${statementType}`,
-      `#monthly [class*="${statementType}"]`
-    ];
-    
-    let monthlyTable = null;
-    for (const selector of possibleSelectors) {
-      monthlyTable = document.querySelector(selector);
-      if (monthlyTable) {
-        console.log(`Found ${statementType} table with selector: ${selector}`);
-        break;
-      }
-    }
-    
-    if (monthlyTable) {
-      // Try to find tbody, or use the table itself
-      const tbody = monthlyTable.querySelector('tbody') || monthlyTable;
-      const rows = tbody.querySelectorAll('tr');
-      
-      console.log(`Found ${rows.length} rows in ${statementType} table`);
-      
-      rows.forEach((row, index) => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length > 0) {
-          const itemName = cells[0].textContent.trim();
-          const values = Array.from(cells).slice(1).map(cell => {
-            const text = cell.textContent.trim();
-            // Parse numbers, handling currency symbols and commas
-            const num = parseFloat(text.replace(/[$,]/g, ''));
-            return isNaN(num) ? 0 : num;
-          });
-          
-          if (itemName && values.length > 0) {
-            tableData.push({
-              name: itemName,
-              monthlyValues: values,
-              lastActual: values[values.length - 1] || 0
-            });
-          }
-        }
-      });
-    } else {
-      console.log(`No table found for ${statementType}`);
-    }
-    
-    context.statements[statementType] = tableData;
+    context.statements[statementType] = lineItems.map(item => ({
+      name: item.name,
+      actualValues: item.actualValues || [],
+      forecastValues: item.forecastValues || [],
+      lastActual: item.actual || 0,
+      allValues: [...(item.actualValues || []), ...(item.forecastValues || [])]
+    }));
   });
   
   console.log('Prepared financial context from forecast tables:', context);
