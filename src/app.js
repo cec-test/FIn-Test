@@ -115,27 +115,19 @@ function aggregateActuals(statementKey, actualValues) {
       const label = `${MONTHS_SHORT[endMonth]} ${entry.year}`;
       labels.push(label);
       
-      // Check if this is a mixed period (has both actuals and forecasts)
-      const isMixedPeriod = entry.actuals.length > 0 && entry.forecasts.length > 0;
-      
       let val;
       if (statementKey === 'balance') {
         // Balance sheet: take last available month in quarter
         const lastIdx = entry.months.reduce((acc, m, idx) => (m > entry.months[acc] ? idx : acc), 0);
         val = entry.values[lastIdx] ?? 0;
       } else {
-        // P&L, Cashflow: sum (hybrid calculation for mixed periods)
+        // P&L, Cashflow: sum
         val = entry.values.reduce((s, v) => s + (Number(v) || 0), 0);
       }
       values.push(val);
       
-      // Generate note for mixed periods
       let note = '';
-      if (isMixedPeriod) {
-        const actualMonths = entry.actuals.length;
-        const forecastMonths = entry.forecasts.length;
-        note = `Mixed period (${actualMonths} actual + ${forecastMonths} forecast)`;
-      } else if (monthsInQ < 3) {
+      if (monthsInQ < 3) {
         note = `Partial actuals (${monthsInQ}/3 months)`;
       }
       notes.push(note);
@@ -152,27 +144,19 @@ function aggregateActuals(statementKey, actualValues) {
       const label = `Dec ${entry.year}`;
       labels.push(label);
       
-      // Check if this is a mixed period (has both actuals and forecasts)
-      const isMixedPeriod = entry.actuals.length > 0 && entry.forecasts.length > 0;
-      
       let val;
       if (statementKey === 'balance') {
         // take last available month in year
         const lastIdx = entry.months.reduce((acc, m, idx) => (m > entry.months[acc] ? idx : acc), 0);
         val = entry.values[lastIdx] ?? 0;
       } else {
-        // Hybrid calculation for mixed periods
+        // sum all months
         val = entry.values.reduce((s, v) => s + (Number(v) || 0), 0);
       }
       values.push(val);
       
-      // Generate note for mixed periods
       let note = '';
-      if (isMixedPeriod) {
-        const actualMonths = entry.actuals.length;
-        const forecastMonths = entry.forecasts.length;
-        note = `Mixed period (${actualMonths} actual + ${forecastMonths} forecast)`;
-      } else if (monthsInY < 12) {
+      if (monthsInY < 12) {
         note = `Partial actuals (${monthsInY}/12 months)`;
       }
       notes.push(note);
