@@ -58,15 +58,40 @@ module.exports = async (req, res) => {
     }
     
     console.log('Message received:', message);
-    console.log('Financial data length:', financialData ? financialData.length : 'undefined');
+    console.log('Financial data length:', financialData ? JSON.stringify(financialData).length : 'undefined');
     console.log('Financial data type:', typeof financialData);
     console.log('Financial data keys:', financialData ? Object.keys(financialData) : 'undefined');
-    console.log('Financial data sample:', JSON.stringify(financialData, null, 2).substring(0, 1000) + '...');
+    
+    // Check if financial data is too large
+    const dataString = JSON.stringify(financialData);
+    if (dataString.length > 50000) {
+      console.log('Financial data is very large:', dataString.length, 'characters');
+      console.log('Truncating for debugging...');
+    }
+    
+    console.log('Financial data sample:', dataString.substring(0, 2000) + '...');
 
     // Prepare the prompt with financial context
+    let dataToSend = financialData;
+    
+    // If data is too large, truncate it
+    if (dataString.length > 30000) {
+      console.log('Data too large, truncating...');
+      // Keep only essential data
+      dataToSend = {
+        statements: {
+          pnl: financialData.statements?.pnl?.slice(0, 10) || [],
+          balance: financialData.statements?.balance?.slice(0, 10) || [],
+          cashflow: financialData.statements?.cashflow?.slice(0, 10) || []
+        },
+        dateColumns: financialData.dateColumns || [],
+        forecastSettings: financialData.forecastSettings || {}
+      };
+    }
+    
     const prompt = `You are a financial analysis assistant. Here is the current financial forecast data from the user's financial statements:
 
-${JSON.stringify(financialData, null, 2)}
+${JSON.stringify(dataToSend, null, 2)}
 
 User Question: ${message}
 
