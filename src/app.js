@@ -91,10 +91,13 @@ function aggregateActuals(statementKey, actualValues, forecastValues = []) {
   const allParsed = [...parsed];
   
   // Add forecast periods to parsed data
-  if (forecastValues.length > 0) {
+  if (forecastValues.length > 0 && parsed.length > 0) {
     const lastActualDate = parsed[parsed.length - 1];
+    // Create a proper date from the last actual period
+    const lastDate = new Date(lastActualDate.ym.year, lastActualDate.ym.month, 1);
+    
     for (let i = 0; i < forecastValues.length; i++) {
-      const forecastDate = new Date(lastActualDate.date);
+      const forecastDate = new Date(lastDate);
       forecastDate.setMonth(forecastDate.getMonth() + i + 1);
       allParsed.push({
         date: forecastDate,
