@@ -205,13 +205,15 @@ Please provide a helpful response based on the financial forecast data provided.
   } catch (error) {
     console.error('OpenAI API error:', error.response?.data || error.message);
     console.error('Full error:', error);
+    console.error('Error stack:', error.stack);
     
     // Return more detailed error information
     res.status(500).json({
       success: false,
       error: 'Failed to process request with OpenAI API',
       details: error.message,
-      type: error.name
+      type: error.name,
+      stack: error.stack?.substring(0, 500) // Truncate stack trace
     });
   }
 };

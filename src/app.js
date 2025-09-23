@@ -1450,20 +1450,21 @@ function addChatMessage(sender, content) {
 }
 
 function prepareFinancialContext() {
-  // Determine which tab is currently active
-  const activeTab = getActiveTab();
-  console.log('Active tab for chat analysis:', activeTab);
-  
-  const context = {
-    statements: {},
-    dateColumns: dateColumns || [],
-    activeTab: activeTab,
-    forecastSettings: {
-      method: document.getElementById('forecastMethod')?.value || 'custom',
-      growthRate: parseFloat(document.getElementById('customGrowthRate')?.value) || 5,
-      periods: parseInt(document.getElementById('forecastPeriods')?.value) || 12
-    }
-  };
+  try {
+    // Determine which tab is currently active
+    const activeTab = getActiveTab();
+    console.log('Active tab for chat analysis:', activeTab);
+    
+    const context = {
+      statements: {},
+      dateColumns: dateColumns || [],
+      activeTab: activeTab,
+      forecastSettings: {
+        method: document.getElementById('forecastMethod')?.value || 'custom',
+        growthRate: parseFloat(document.getElementById('customGrowthRate')?.value) || 5,
+        periods: parseInt(document.getElementById('forecastPeriods')?.value) || 12
+      }
+    };
   
   // Extract data from forecast tables if they exist, otherwise use uploaded data
   ['pnl', 'balance', 'cashflow'].forEach(statementType => {
@@ -1557,28 +1558,46 @@ function prepareFinancialContext() {
   console.log('Date columns:', context.dateColumns);
   
   return context;
+  } catch (error) {
+    console.error('Error in prepareFinancialContext:', error);
+    // Return minimal context to prevent complete failure
+    return {
+      statements: { pnl: [], balance: [], cashflow: [] },
+      dateColumns: [],
+      activeTab: 'monthly',
+      forecastSettings: { method: 'custom', growthRate: 5, periods: 12 }
+    };
+  }
 }
 
 function getActiveTab() {
-  // Check which tab is currently active
-  const tabs = ['monthly', 'quarterly', 'yearly', 'insights'];
-  
-  for (const tab of tabs) {
-    const tabElement = document.querySelector(`#${tab}.tab-content.active`);
-    if (tabElement) {
-      return tab;
+  try {
+    // Check which tab is currently active
+    const tabs = ['monthly', 'quarterly', 'yearly', 'insights'];
+    
+    for (const tab of tabs) {
+      const tabElement = document.querySelector(`#${tab}.tab-content.active`);
+      if (tabElement) {
+        console.log(`Found active tab: ${tab}`);
+        return tab;
+      }
     }
+    
+    // Fallback: check tab buttons
+    const activeTabButton = document.querySelector('.tab.active');
+    if (activeTabButton) {
+      const tabId = activeTabButton.getAttribute('data-tab');
+      console.log(`Found active tab from button: ${tabId}`);
+      return tabId || 'monthly';
+    }
+    
+    // Default to monthly if nothing found
+    console.log('No active tab found, defaulting to monthly');
+    return 'monthly';
+  } catch (error) {
+    console.error('Error in getActiveTab:', error);
+    return 'monthly';
   }
-  
-  // Fallback: check tab buttons
-  const activeTabButton = document.querySelector('.tab.active');
-  if (activeTabButton) {
-    const tabId = activeTabButton.getAttribute('data-tab');
-    return tabId || 'monthly';
-  }
-  
-  // Default to monthly if nothing found
-  return 'monthly';
 }
 
 async function callOpenAI(question, financialContext) {
