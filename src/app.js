@@ -81,27 +81,66 @@ function buildParsedDateColumns() {
   return (dateColumns || []).map(h => ({ header: h, ym: parseHeaderToYearMonth(h) })).filter(x => !!x.ym);
 }
 
-function aggregateActuals(statementKey, actualValues) {
+function aggregateActuals(statementKey, actualValues, forecastValues = []) {
   const parsed = buildParsedDateColumns();
   const byQuarter = new Map();
   const byYear = new Map();
 
-  parsed.forEach((d, idx) => {
+  // Combine actuals and forecasts for hybrid aggregation
+  const allValues = [...actualValues, ...forecastValues];
+  const allParsed = [...parsed];
+  
+  // Add forecast periods to parsed data
+  if (forecastValues.length > 0 && parsed.length > 0) {
+    const lastActualDate = parsed[parsed.length - 1];
+    // Create a proper date from the last actual period
+    const lastDate = new Date(lastActualDate.ym.year, lastActualDate.ym.month, 1);
+    
+    for (let i = 0; i < forecastValues.length; i++) {
+      const forecastDate = new Date(lastDate);
+      // Properly handle month/year transitions
+      forecastDate.setMonth(forecastDate.getMonth() + i + 1);
+      
+      // Ensure we have the correct year and month
+      const year = forecastDate.getFullYear();
+      const month = forecastDate.getMonth();
+      
+      allParsed.push({
+        date: forecastDate,
+        ym: { year, month }
+      });
+    }
+  }
+
+  allParsed.forEach((d, idx) => {
     const { year, month } = d.ym;
     const q = Math.floor(month / 3) + 1; // 1..4
     const qKey = `${year}-Q${q}`;
     const yKey = `${year}`;
-    const value = Number(actualValues[idx] ?? 0);
+    const value = Number(allValues[idx] ?? 0);
+    const isActual = idx < actualValues.length;
+    
     // Quarterly aggregate
-    if (!byQuarter.has(qKey)) byQuarter.set(qKey, { year, q, months: [], values: [] });
+    if (!byQuarter.has(qKey)) byQuarter.set(qKey, { year, q, months: [], values: [], actuals: [], forecasts: [] });
     const qEntry = byQuarter.get(qKey);
     qEntry.months.push(month);
     qEntry.values.push(value);
+    if (isActual) {
+      qEntry.actuals.push(value);
+    } else {
+      qEntry.forecasts.push(value);
+    }
+    
     // Yearly aggregate
-    if (!byYear.has(yKey)) byYear.set(yKey, { year, months: [], values: [] });
+    if (!byYear.has(yKey)) byYear.set(yKey, { year, months: [], values: [], actuals: [], forecasts: [] });
     const yEntry = byYear.get(yKey);
     yEntry.months.push(month);
     yEntry.values.push(value);
+    if (isActual) {
+      yEntry.actuals.push(value);
+    } else {
+      yEntry.forecasts.push(value);
+    }
   });
 
   // Build outputs
@@ -115,19 +154,30 @@ function aggregateActuals(statementKey, actualValues) {
       const label = `${MONTHS_SHORT[endMonth]} ${entry.year}`;
       labels.push(label);
       
+      // Check if this is a mixed period (has both actuals and forecasts)
+      const isMixedPeriod = entry.actuals.length > 0 && entry.forecasts.length > 0;
+      
       let val;
       if (statementKey === 'balance') {
         // Balance sheet: take last available month in quarter
         const lastIdx = entry.months.reduce((acc, m, idx) => (m > entry.months[acc] ? idx : acc), 0);
         val = entry.values[lastIdx] ?? 0;
       } else {
-        // P&L, Cashflow: sum
+        // P&L, Cashflow: sum (hybrid calculation for mixed periods)
         val = entry.values.reduce((s, v) => s + (Number(v) || 0), 0);
       }
       values.push(val);
       
+      // Generate note for mixed periods
       let note = '';
-      if (monthsInQ < 3) {
+      if (isMixedPeriod) {
+        const actualMonths = entry.actuals.length;
+        const forecastMonths = entry.forecasts.length;
+        note = `Mixed period (${actualMonths} actual + ${forecastMonths} forecast)`;
+      } else if (entry.forecasts.length > 0 && entry.actuals.length === 0) {
+        // Pure forecast period
+        note = `Pure forecast (${entry.forecasts.length} months)`;
+      } else if (monthsInQ < 3) {
         note = `Partial actuals (${monthsInQ}/3 months)`;
       }
       notes.push(note);
@@ -144,19 +194,30 @@ function aggregateActuals(statementKey, actualValues) {
       const label = `Dec ${entry.year}`;
       labels.push(label);
       
+      // Check if this is a mixed period (has both actuals and forecasts)
+      const isMixedPeriod = entry.actuals.length > 0 && entry.forecasts.length > 0;
+      
       let val;
       if (statementKey === 'balance') {
         // take last available month in year
         const lastIdx = entry.months.reduce((acc, m, idx) => (m > entry.months[acc] ? idx : acc), 0);
         val = entry.values[lastIdx] ?? 0;
       } else {
-        // sum all months
+        // Hybrid calculation for mixed periods
         val = entry.values.reduce((s, v) => s + (Number(v) || 0), 0);
       }
       values.push(val);
       
+      // Generate note for mixed periods
       let note = '';
-      if (monthsInY < 12) {
+      if (isMixedPeriod) {
+        const actualMonths = entry.actuals.length;
+        const forecastMonths = entry.forecasts.length;
+        note = `Mixed period (${actualMonths} actual + ${forecastMonths} forecast)`;
+      } else if (entry.forecasts.length > 0 && entry.actuals.length === 0) {
+        // Pure forecast period
+        note = `Pure forecast (${entry.forecasts.length} months)`;
+      } else if (monthsInY < 12) {
         note = `Partial actuals (${monthsInY}/12 months)`;
       }
       notes.push(note);
@@ -508,7 +569,9 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     });
   } else if (periodType === 'quarterly' || periodType === 'yearly') {
     sampleItems.forEach(item => {
-      const agg = aggregateActuals(statementKey, item.actualValues || []);
+      // Get forecast values for this item
+      const forecastValues = getForecastValuesForItem(item, periods);
+      const agg = aggregateActuals(statementKey, item.actualValues || [], forecastValues);
       const out = periodType === 'quarterly' ? agg.toQuarterOutputs() : agg.toYearOutputs();
       aggregatedPerItem.set(item.name, { actuals: out.values, notes: out.notes, labels: out.labels });
     });
@@ -564,9 +627,10 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     }
     let noteHtml = '';
     if (className === 'actual' && noteByIndex[index - 1]) {
-      // Only show indicators for partial actuals, not for mixed periods (since we reverted that)
       const note = noteByIndex[index - 1];
-      if (note.includes('Partial actuals')) {
+      if (note.includes('Mixed period')) {
+        noteHtml = ` <span class="note-badge" title="${note}">?</span>`;
+      } else if (note.includes('Partial actuals')) {
         noteHtml = ` <span class="note-badge" title="${note}">•</span>`;
       }
     }
@@ -635,10 +699,18 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     }
             actualsForItem.forEach((value, index) => {
               const display = isSubheader ? '' : formatCurrency(value);
-              const tooltip = '';
+              const isMixedPeriod = noteByIndex[index] && noteByIndex[index].includes('Mixed period');
+              const tooltip = isMixedPeriod ? generateMixedPeriodTooltip(index, periodType, actualLabels) : '';
               
-              // For quarterly/yearly, all aggregated columns are actuals
+              // Determine if this column should be labeled as actual or forecast
               let columnClass = 'number actual';
+              if (periodType === 'quarterly' || periodType === 'yearly') {
+                const note = noteByIndex[index] || '';
+                if (note.includes('Mixed period') || note.includes('Pure forecast')) {
+                  // Mixed periods and pure forecasts should be labeled as forecast
+                  columnClass = 'number forecast';
+                }
+              }
               
               tableHTML += `<td class="${columnClass}" title="${tooltip}">${display}</td>`;
             });
