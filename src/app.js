@@ -305,10 +305,10 @@ function generateMixedPeriodTooltip(index, periodType, actualLabels) {
 
 function getMethodDisplayName(method) {
   switch (method) {
-    case 'custom': return 'Custom Growth Rate';
+    case 'custom': return 'Linear Growth';
     case 'rolling': return 'Rolling Average';
     case 'threemonth': return '3-Month Average';
-    default: return 'Custom Growth Rate';
+    default: return 'Linear Growth';
   }
 }
 
@@ -345,10 +345,10 @@ function getYearMonths(yearIndex, actualLabels) {
  */
 function getMethodDisplayName(method) {
   switch (method) {
-    case 'custom': return 'Custom Growth Rate';
+    case 'custom': return 'Linear Growth';
     case 'rolling': return 'Rolling Average';
     case 'threemonth': return '3-Month Average';
-    default: return 'Custom Growth Rate';
+    default: return 'Linear Growth';
   }
 }
 
