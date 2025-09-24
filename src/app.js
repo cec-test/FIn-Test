@@ -251,10 +251,10 @@ function toggleGrowthRateInput() {
   const growthRateInput = document.getElementById('customGrowthRate');
 
   if (growthRateInput) {
-    if (method === 'custom' || method === 'exponential') {
-      growthRateInput.disabled = false;  // Enable for both linear and exponential
+    if (method === 'custom' || method === 'exponential' || method === 'logarithmic') {
+      growthRateInput.disabled = false;  // Enable for user-controlled methods
     } else {
-      growthRateInput.disabled = true;   // Disable for rolling/threemonth
+      growthRateInput.disabled = true;   // Disable for automatic methods
     }
   }
 }
@@ -307,6 +307,7 @@ function getMethodDisplayName(method) {
   switch (method) {
     case 'custom': return 'Linear Growth';
     case 'exponential': return 'Exponential Growth';
+    case 'logarithmic': return 'Logarithmic Growth';
     case 'rolling': return 'Rolling Average';
     case 'threemonth': return '3-Month Average';
     default: return 'Linear Growth';
@@ -348,6 +349,7 @@ function getMethodDisplayName(method) {
   switch (method) {
     case 'custom': return 'Linear Growth';
     case 'exponential': return 'Exponential Growth';
+    case 'logarithmic': return 'Logarithmic Growth';
     case 'rolling': return 'Rolling Average';
     case 'threemonth': return '3-Month Average';
     default: return 'Linear Growth';
@@ -428,6 +430,9 @@ function getForecastValuesForItem(item, periods) {
     if (forecastMethod === 'exponential') {
       // Exponential growth: Value = Previous × (1 + Monthly Rate)^periods
       forecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
+    } else if (forecastMethod === 'logarithmic') {
+      // Logarithmic growth: Value = Base × ln(periods + 1) × Monthly Rate
+      forecastValue = lastActual * Math.log(i + 2) * growthRateToUse;
     } else if (forecastMethod === 'custom') {
       // Linear growth: Value = Previous + (Previous × Monthly Rate × Period)
       forecastValue = lastActual + (lastActual * growthRateToUse * (i + 1));
@@ -1801,6 +1806,9 @@ function prepareFinancialContext() {
           if (method === 'exponential') {
             // Exponential growth: Value = Previous × (1 + Monthly Rate)^periods
             forecastValue = lastActual * Math.pow(1 + monthlyGrowthRate, i + 1);
+          } else if (method === 'logarithmic') {
+            // Logarithmic growth: Value = Base × ln(periods + 1) × Monthly Rate
+            forecastValue = lastActual * Math.log(i + 2) * monthlyGrowthRate;
           } else if (method === 'custom') {
             // Linear growth: Value = Previous + (Previous × Monthly Rate × Period)
             forecastValue = lastActual + (lastActual * monthlyGrowthRate * (i + 1));
