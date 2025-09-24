@@ -808,12 +808,25 @@
                                     <option value="custom">Linear Growth</option>
                                     <option value="exponential">Exponential Growth</option>
                                     <option value="logarithmic">Logarithmic Growth</option>
+                                    <option value="scurve">S-Curve Growth</option>
                                     <option value="rolling">Rolling Average</option>
                                 </select>
                             </div>
                             <div class="control-item">
                                 <label>Annual Growth Rate (%):</label>
                                 <input type="number" id="customGrowthRate" value="5.0" step="0.1" title="Enter annual growth rate (e.g., 5% = 5% per year)">
+                            </div>
+                            
+                            <!-- S-Curve Specific Controls -->
+                            <div id="scurve-controls" style="display: none;">
+                                <div class="control-item">
+                                    <label>Max Value ($):</label>
+                                    <input type="number" id="scurveMaxValue" step="1000" title="Maximum possible value (market ceiling)">
+                                </div>
+                                <div class="control-item">
+                                    <label>Midpoint (Month):</label>
+                                    <input type="number" id="scurveMidpoint" min="1" max="60" title="Month when growth peaks (inflection point)">
+                                </div>
                             </div>
                             <div class="control-item">
                                 <label>Periods:</label>

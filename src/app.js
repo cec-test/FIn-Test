@@ -249,13 +249,55 @@ function showTab(tabName, clickedBtn) {
 function toggleGrowthRateInput() {
   const method = document.getElementById('forecastMethod')?.value;
   const growthRateInput = document.getElementById('customGrowthRate');
+  const scurveControls = document.getElementById('scurve-controls');
 
   if (growthRateInput) {
-    if (method === 'custom' || method === 'exponential' || method === 'logarithmic' || method === 'rolling') {
+    if (method === 'custom' || method === 'exponential' || method === 'logarithmic' || method === 'rolling' || method === 'scurve') {
       growthRateInput.disabled = false;  // Enable for all user-controlled methods
     } else {
       growthRateInput.disabled = true;   // Disable for any remaining automatic methods
     }
+  }
+
+  // Show/hide S-curve specific controls
+  if (scurveControls) {
+    if (method === 'scurve') {
+      scurveControls.style.display = 'block';
+      calculateSCurveDefaults(); // Calculate smart defaults when shown
+    } else {
+      scurveControls.style.display = 'none';
+    }
+  }
+}
+
+/**
+ * Calculate smart defaults for S-curve parameters
+ */
+function calculateSCurveDefaults() {
+  const growthRate = parseFloat(document.getElementById('customGrowthRate')?.value) || 5;
+  const periods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+  
+  // Calculate Max Value: Last Actual × (1 + Growth Rate)^Total Periods
+  const annualRate = growthRate / 100;
+  const maxValueMultiplier = Math.pow(1 + annualRate, periods);
+  
+  // Get last actual value (we'll use a reasonable default if not available)
+  const lastActual = 100000; // Default for calculation
+  const calculatedMaxValue = lastActual * maxValueMultiplier;
+  
+  // Calculate Midpoint: Total Forecast Periods × 0.4
+  const calculatedMidpoint = Math.round(periods * 0.4);
+  
+  // Set the default values
+  const maxValueInput = document.getElementById('scurveMaxValue');
+  const midpointInput = document.getElementById('scurveMidpoint');
+  
+  if (maxValueInput && !maxValueInput.value) {
+    maxValueInput.value = Math.round(calculatedMaxValue);
+  }
+  
+  if (midpointInput && !midpointInput.value) {
+    midpointInput.value = calculatedMidpoint;
   }
 }
 
@@ -308,6 +350,7 @@ function getMethodDisplayName(method) {
     case 'custom': return 'Linear Growth';
     case 'exponential': return 'Exponential Growth';
     case 'logarithmic': return 'Logarithmic Growth';
+    case 'scurve': return 'S-Curve Growth';
     case 'rolling': return 'Rolling Average';
     default: return 'Linear Growth';
   }
@@ -349,6 +392,7 @@ function getMethodDisplayName(method) {
     case 'custom': return 'Linear Growth';
     case 'exponential': return 'Exponential Growth';
     case 'logarithmic': return 'Logarithmic Growth';
+    case 'scurve': return 'S-Curve Growth';
     case 'rolling': return 'Rolling Average';
     default: return 'Linear Growth';
   }
@@ -424,6 +468,13 @@ function getForecastValuesForItem(item, periods) {
     } else if (forecastMethod === 'logarithmic') {
       // Logarithmic growth: Value = Base × ln(periods + 1) × Monthly Rate
       forecastValue = lastActual * Math.log(i + 2) * growthRateToUse;
+    } else if (forecastMethod === 'scurve') {
+      // S-curve growth: Value = Max × (1 / (1 + e^(-k × (periods - midpoint))))
+      const maxValue = parseFloat(document.getElementById('scurveMaxValue')?.value) || (lastActual * Math.pow(1 + growthRateToUse * 12, periods));
+      const midpoint = parseFloat(document.getElementById('scurveMidpoint')?.value) || Math.round(periods * 0.4);
+      const k = growthRateToUse * 2; // Growth constant derived from growth rate
+      const exponent = -k * ((i + 1) - midpoint);
+      forecastValue = maxValue * (1 / (1 + Math.exp(exponent)));
     } else if (forecastMethod === 'rolling') {
       // Rolling average + growth: Historical Average + (Historical Average × Monthly Rate × Period)
       const historicalAverage = actualValues.reduce((sum, val) => sum + val, 0) / actualValues.length;
@@ -1794,6 +1845,13 @@ function prepareFinancialContext() {
           } else if (method === 'logarithmic') {
             // Logarithmic growth: Value = Base × ln(periods + 1) × Monthly Rate
             forecastValue = lastActual * Math.log(i + 2) * monthlyGrowthRate;
+          } else if (method === 'scurve') {
+            // S-curve growth: Value = Max × (1 / (1 + e^(-k × (periods - midpoint))))
+            const maxValue = parseFloat(document.getElementById('scurveMaxValue')?.value) || (lastActual * Math.pow(1 + monthlyGrowthRate * 12, periods));
+            const midpoint = parseFloat(document.getElementById('scurveMidpoint')?.value) || Math.round(periods * 0.4);
+            const k = monthlyGrowthRate * 2; // Growth constant derived from growth rate
+            const exponent = -k * ((i + 1) - midpoint);
+            forecastValue = maxValue * (1 / (1 + Math.exp(exponent)));
           } else if (method === 'rolling') {
             // Rolling average + growth: Historical Average + (Historical Average × Monthly Rate × Period)
             const historicalAverage = actualValues.reduce((sum, val) => sum + val, 0) / actualValues.length;
@@ -2042,6 +2100,20 @@ document.addEventListener('DOMContentLoaded', function () {
   // Growth rate change handler - rebuild tables for updated forecasts
   const growthRateEl = document.getElementById('customGrowthRate');
   growthRateEl?.addEventListener('change', function() {
+    rebuildAllTables();
+    updateForecast();
+  });
+
+  // S-curve controls change handlers
+  const scurveMaxValueEl = document.getElementById('scurveMaxValue');
+  const scurveMidpointEl = document.getElementById('scurveMidpoint');
+  
+  scurveMaxValueEl?.addEventListener('change', function() {
+    rebuildAllTables();
+    updateForecast();
+  });
+  
+  scurveMidpointEl?.addEventListener('change', function() {
     rebuildAllTables();
     updateForecast();
   });
