@@ -271,9 +271,9 @@ function toggleGrowthRateInput() {
 }
 
 /**
- * Get seasonal multiplier for a given month and pattern
+ * Get seasonal multiplier for a given month and pattern, adjusted for time period
  */
-function getSeasonalMultiplier(month, pattern, strength) {
+function getSeasonalMultiplier(month, pattern, strength, periodType = 'monthly') {
   if (pattern === 'none') return 1.0;
   
   const strengthFactor = strength / 100;
@@ -301,8 +301,19 @@ function getSeasonalMultiplier(month, pattern, strength) {
   
   const baseMultiplier = patterns[pattern] ? patterns[pattern][month] : 1.0;
   
-  // Apply strength factor (0% = no seasonality, 100% = full seasonality)
-  return 1.0 + (baseMultiplier - 1.0) * strengthFactor;
+  // Apply period-specific seasonality reduction
+  let periodMultiplier = 1.0;
+  if (periodType === 'monthly') {
+    periodMultiplier = 1.0; // Full seasonality for monthly
+  } else if (periodType === 'quarterly') {
+    periodMultiplier = 0.5; // Reduced seasonality for quarterly (averages out over 3 months)
+  } else if (periodType === 'yearly') {
+    periodMultiplier = 0.0; // No seasonality for annual (averages out over 12 months)
+  }
+  
+  // Apply strength factor and period multiplier
+  const seasonalEffect = (baseMultiplier - 1.0) * strengthFactor * periodMultiplier;
+  return 1.0 + seasonalEffect;
 }
 
 /**
@@ -535,7 +546,7 @@ function getForecastValuesForItem(item, periods) {
     
     // Apply seasonality
     const forecastMonth = (i + 1) % 12; // Month index (0-11)
-    const seasonalMultiplier = getSeasonalMultiplier(forecastMonth, seasonalPattern, seasonalStrength);
+    const seasonalMultiplier = getSeasonalMultiplier(forecastMonth, seasonalPattern, seasonalStrength, 'monthly');
     const forecastValue = baseForecastValue * seasonalMultiplier;
     
     forecastValues.push(forecastValue);
@@ -855,22 +866,39 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
         const forecastKeyMonthly = `monthly-${statementType}-${safeName}-${i}`;
         const forecastKeyQuarterly = `quarterly-${statementType}-${safeName}-${i}`;
         const forecastKeyYearly = `yearly-${statementType}-${safeName}-${i}`;
-        // Non-negative constraints: totals/expenses shouldn't flip sign unintentionally
+        
+        // Get seasonality settings
+        const seasonalPattern = document.getElementById('seasonalPattern')?.value || 'none';
+        const seasonalStrength = parseFloat(document.getElementById('seasonalStrength')?.value) || 50;
+        
+        // Calculate base forecasts
+        const mForecast = baseValue * Math.pow(1 + itemGrowth, i + 1);
+        const qForecast = baseQuarterly * Math.pow(1 + itemGrowth, i + 1);
+        const yForecast = baseYearly * Math.pow(1 + itemGrowth, i + 1);
+        
+        // Apply seasonality based on period type
+        const forecastMonth = (i + 1) % 12; // Month index (0-11)
+        const seasonalMultiplierMonthly = getSeasonalMultiplier(forecastMonth, seasonalPattern, seasonalStrength, 'monthly');
+        const seasonalMultiplierQuarterly = getSeasonalMultiplier(forecastMonth, seasonalPattern, seasonalStrength, 'quarterly');
+        const seasonalMultiplierYearly = getSeasonalMultiplier(forecastMonth, seasonalPattern, seasonalStrength, 'yearly');
+        
+        // Apply seasonality and clamp for non-negative constraints
         const clamp = (v) => (/total/i.test(item.name) ? Math.max(v, 0) : v);
-        const mForecast = clamp(baseValue * Math.pow(1 + itemGrowth, i + 1));
-        const qForecast = clamp(baseQuarterly * Math.pow(1 + itemGrowth, i + 1));
-        const yForecast = clamp(baseYearly * Math.pow(1 + itemGrowth, i + 1));
+        const mForecastSeasonal = clamp(mForecast * seasonalMultiplierMonthly);
+        const qForecastSeasonal = clamp(qForecast * seasonalMultiplierQuarterly);
+        const yForecastSeasonal = clamp(yForecast * seasonalMultiplierYearly);
+        
         // Update monthly
         document.querySelectorAll(`[data-forecast-key="${forecastKeyMonthly}"]`).forEach(cell => {
-          updateElement(cell.id, formatCurrency(mForecast, !hasUploadedData));
+          updateElement(cell.id, formatCurrency(mForecastSeasonal, !hasUploadedData));
         });
         // Update quarterly based on base of rolled-up last quarter
         document.querySelectorAll(`[data-forecast-key="${forecastKeyQuarterly}"]`).forEach(cell => {
-          updateElement(cell.id, formatCurrency(qForecast, !hasUploadedData));
+          updateElement(cell.id, formatCurrency(qForecastSeasonal, !hasUploadedData));
         });
         // Update yearly based on base of rolled-up last year
         document.querySelectorAll(`[data-forecast-key="${forecastKeyYearly}"]`).forEach(cell => {
-          updateElement(cell.id, formatCurrency(yForecast, !hasUploadedData));
+          updateElement(cell.id, formatCurrency(yForecastSeasonal, !hasUploadedData));
         });
       }
     });
@@ -1932,7 +1960,7 @@ function prepareFinancialContext() {
           
           // Apply seasonality
           const forecastMonth = (i + 1) % 12; // Month index (0-11)
-          const seasonalMultiplier = getSeasonalMultiplier(forecastMonth, seasonalPattern, seasonalStrength);
+          const seasonalMultiplier = getSeasonalMultiplier(forecastMonth, seasonalPattern, seasonalStrength, activeTab);
           const forecastValue = baseForecastValue * seasonalMultiplier;
           
           forecastValues.push(forecastValue);
