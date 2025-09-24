@@ -584,7 +584,9 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     }
     let noteHtml = '';
     if (className === 'actual' && noteByIndex[index - 1]) {
-      noteHtml = ` <span class="note-badge" title="${noteByIndex[index - 1]}">•</span>`;
+      const isMixedPeriod = noteByIndex[index - 1].includes('Mixed period');
+      const indicator = isMixedPeriod ? '?' : '•';
+      noteHtml = ` <span class="note-badge" title="${noteByIndex[index - 1]}">${indicator}</span>`;
     }
     tableHTML += `<th class="${className}">${header}${noteHtml}</th>`;
   });
@@ -625,9 +627,19 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
             actualsForItem.forEach((value, index) => {
               const display = isSubheader ? '' : formatCurrency(value);
               const isMixedPeriod = noteByIndex[index] && noteByIndex[index].includes('Mixed period');
-              const indicator = isMixedPeriod ? '?' : '';
               const tooltip = isMixedPeriod ? generateMixedPeriodTooltip(index, periodType, actualLabels) : '';
-              tableHTML += `<td class="number actual" title="${tooltip}">${display} ${indicator}</td>`;
+              
+              // Determine if this column should be labeled as actual or forecast
+              let columnClass = 'number actual';
+              if (periodType === 'quarterly' || periodType === 'yearly') {
+                // For aggregated periods, check if this period contains forecasts
+                const hasForecasts = noteByIndex[index] && noteByIndex[index].includes('forecast');
+                if (hasForecasts) {
+                  columnClass = 'number forecast';
+                }
+              }
+              
+              tableHTML += `<td class="${columnClass}" title="${tooltip}">${display}</td>`;
             });
 
     // Add forecast columns
