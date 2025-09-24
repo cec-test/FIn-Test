@@ -49,24 +49,6 @@ const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct
 function parseHeaderToYearMonth(header) {
   if (!header) return null;
   const trimmed = String(header).trim();
-  
-  // Try Q1 YYYY format
-  let match = trimmed.match(/^Q(\d)\s+(\d{4})$/i);
-  if (match) {
-    const quarter = Number(match[1]);
-    const year = Number(match[2]);
-    const month = (quarter - 1) * 3; // Q1=0, Q2=3, Q3=6, Q4=9
-    return { year, month };
-  }
-  
-  // Try FY YYYY format
-  match = trimmed.match(/^FY\s+(\d{4})$/i);
-  if (match) {
-    const year = Number(match[1]);
-    const month = 11; // December (month 11)
-    return { year, month };
-  }
-  
   // Try MMM YYYY
   const mmm = MONTHS_SHORT.findIndex(m => new RegExp(`^${m}\\s+\\d{4}$`, 'i').test(trimmed));
   if (mmm >= 0) {
@@ -130,7 +112,7 @@ function aggregateActuals(statementKey, actualValues) {
     Array.from(byQuarter.values()).sort((a,b) => a.year - b.year || a.q - b.q).forEach(entry => {
       const monthsInQ = entry.months.length;
       const endMonth = (entry.q * 3) - 1; // 2,5,8,11
-      const label = `Q${entry.q} ${entry.year}`; // Quarterly format
+      const label = `${MONTHS_SHORT[endMonth]} ${entry.year}`;
       labels.push(label);
       
       let val;
@@ -159,7 +141,7 @@ function aggregateActuals(statementKey, actualValues) {
     const notes = [];
     Array.from(byYear.values()).sort((a,b) => a.year - b.year).forEach(entry => {
       const monthsInY = entry.months.length;
-      const label = `FY ${entry.year}`; // Fiscal year format
+      const label = `Dec ${entry.year}`;
       labels.push(label);
       
       let val;
@@ -450,19 +432,19 @@ function generateForecastHeaders(periods, periodType, forecastStartFrom) {
   const startDate = new Date(forecastStartFrom);
   
   if (periodType === 'quarterly') {
-    // forecast headers as quarters
+    // forecast headers as quarter-end months
     let d = new Date(startDate);
     for (let i = 0; i < periods; i++) {
       const month = d.getMonth();
-      const quarter = Math.floor(month / 3) + 1;
-      const year = d.getFullYear();
-      headers.push(`Q${quarter} ${year}`);
-      d = new Date(year, month + 3, 1); // Move to next quarter
+      const qEndMonth = month + (2 - (month % 3)); // move to end of this quarter
+      const qEnd = new Date(d.getFullYear(), qEndMonth, 1);
+      headers.push(`${MONTHS_SHORT[qEnd.getMonth()]} ${qEnd.getFullYear()}`);
+      d = new Date(qEnd.getFullYear(), qEnd.getMonth() + 1, 1);
     }
   } else if (periodType === 'yearly') {
     let y = startDate.getFullYear();
     for (let i = 0; i < periods; i++) {
-      headers.push(`FY ${y + i}`);
+      headers.push(`Dec ${y + i}`);
     }
   }
   
@@ -495,7 +477,7 @@ function generateTableHeaders(periods, periodType, actualLabels, forecastStartFr
   } else if (periodType === 'yearly') {
     let y = startDate.getFullYear();
     for (let i = 0; i < periods; i++) {
-      headers.push(`FY ${y + i}`);
+      headers.push(`Dec ${y + i}`);
     }
   }
   return headers;
