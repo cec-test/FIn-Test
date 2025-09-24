@@ -621,15 +621,22 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     if (index === 0) {
       className = '';
     } else if (index <= actualLabels.length) {
-      className = 'actual';
+      // Check if this is a mixed period - if so, classify as forecast
+      const note = noteByIndex[index - 1] || '';
+      if (note.includes('Mixed period') || note.includes('Pure forecast')) {
+        className = 'forecast';
+      } else {
+        className = 'actual';
+      }
     } else {
       className = 'forecast';
     }
     let noteHtml = '';
-    if (className === 'actual' && noteByIndex[index - 1]) {
+    if (noteByIndex[index - 1]) {
       const note = noteByIndex[index - 1];
       if (note.includes('Mixed period')) {
-        noteHtml = ` <span class="note-badge" title="${note}">?</span>`;
+        const tooltipContent = generateMixedPeriodTooltip(index - 1, periodType, actualLabels);
+        noteHtml = ` <span class="note-badge mixed-period-indicator" data-tooltip="${tooltipContent.replace(/"/g, '&quot;')}">?</span>`;
       } else if (note.includes('Partial actuals')) {
         noteHtml = ` <span class="note-badge" title="${note}">•</span>`;
       }
@@ -1963,9 +1970,60 @@ async function callOpenAI(question, financialContext) {
 /**
  * Boot
  */
+// Custom tooltip functionality
+function initializeCustomTooltips() {
+  document.addEventListener('mouseover', function(e) {
+    if (e.target.classList.contains('mixed-period-indicator')) {
+      showCustomTooltip(e.target);
+    }
+  });
+  
+  document.addEventListener('mouseout', function(e) {
+    if (e.target.classList.contains('mixed-period-indicator')) {
+      hideCustomTooltip();
+    }
+  });
+}
+
+function showCustomTooltip(element) {
+  // Remove any existing tooltip
+  hideCustomTooltip();
+  
+  const tooltipContent = element.getAttribute('data-tooltip');
+  if (!tooltipContent) return;
+  
+  const tooltip = document.createElement('div');
+  tooltip.className = 'custom-tooltip';
+  tooltip.textContent = tooltipContent;
+  
+  document.body.appendChild(tooltip);
+  
+  // Position the tooltip
+  const rect = element.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+  
+  tooltip.style.left = (rect.left + rect.width / 2 - tooltipRect.width / 2) + 'px';
+  tooltip.style.top = (rect.bottom + 10) + 'px';
+  
+  // Show with animation
+  setTimeout(() => {
+    tooltip.classList.add('show');
+  }, 10);
+}
+
+function hideCustomTooltip() {
+  const existingTooltip = document.querySelector('.custom-tooltip');
+  if (existingTooltip) {
+    existingTooltip.remove();
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   console.log('DOM loaded, initializing...');
   console.log('JavaScript is running!');
+  
+  // Initialize custom tooltips
+  initializeCustomTooltips();
   
   // Simple test - count all elements
   const allElements = document.querySelectorAll('*');

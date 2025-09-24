@@ -296,6 +296,46 @@
             margin-left: 6px;
             font-size: 0.7rem;
             vertical-align: middle;
+            cursor: help;
+        }
+        
+        .mixed-period-indicator {
+            background: #dc3545;
+            color: white;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .custom-tooltip {
+            position: absolute;
+            background: #2c3e50;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            max-width: 300px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            white-space: pre-line;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .custom-tooltip.show {
+            opacity: 1;
+        }
+        
+        .custom-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #2c3e50 transparent transparent transparent;
         }
         
         .number {
