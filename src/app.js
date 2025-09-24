@@ -407,9 +407,13 @@ function getForecastValuesForItem(item, periods) {
     revGrowth = 0.02;
     expGrowth = 0.015;
   } else {
-    // Custom growth (linear) or exponential growth
-    revGrowth = growthRate / 100;
-    expGrowth = (growthRate * 0.8) / 100;
+    // Convert annual growth rate to period-specific rates
+    const annualRate = growthRate / 100;
+    const annualExpRate = (growthRate * 0.8) / 100;
+    
+    // For monthly calculations, convert annual to monthly
+    revGrowth = annualRate / 12;  // Monthly rate
+    expGrowth = annualExpRate / 12;  // Monthly rate
   }
   
   // Determine if this is revenue or expense item
@@ -422,10 +426,10 @@ function getForecastValuesForItem(item, periods) {
     let forecastValue;
     
     if (forecastMethod === 'exponential') {
-      // Exponential growth: Value = Previous × (1 + Growth Rate)^periods
+      // Exponential growth: Value = Previous × (1 + Monthly Rate)^periods
       forecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
     } else if (forecastMethod === 'custom') {
-      // Linear growth: Value = Previous + (Previous × Growth Rate)
+      // Linear growth: Value = Previous + (Previous × Monthly Rate × Period)
       forecastValue = lastActual + (lastActual * growthRateToUse * (i + 1));
     } else {
       // Rolling average or 3-month average - use exponential for now
@@ -696,8 +700,12 @@ function updateForecast() {
   const settingsEl = document.getElementById('currentSettings');
   if (settingsEl) settingsEl.textContent = `${methodLabel} at ${growthRate}% for ${periods} periods`;
 
-  let revGrowth = growthRate / 100;
-  let expGrowth = (growthRate * 0.8) / 100;
+  let revGrowth = growthRate / 100;  // Annual rate
+  let expGrowth = (growthRate * 0.8) / 100;  // Annual rate
+  
+  // Convert to monthly rates for calculations
+  revGrowth = revGrowth / 12;
+  expGrowth = expGrowth / 12;
 
   if (method === 'rolling') {
     revGrowth = 0.03;
@@ -1109,10 +1117,13 @@ function calculateLargestChanges() {
       const growthRate = parseFloat(document.getElementById('customGrowthRate')?.value) || 5;
       
       // Calculate forecast value
-      let itemGrowth = growthRate / 100;
+      let itemGrowth = growthRate / 100;  // Annual rate
       if (statementType === 'pnl' && item.name.toLowerCase().includes('expense')) {
-        itemGrowth = (growthRate * 0.8) / 100;
+        itemGrowth = (growthRate * 0.8) / 100;  // Annual rate
       }
+      
+      // Convert to monthly rate for calculation
+      itemGrowth = itemGrowth / 12;
       
       const furthestForecast = lastActual * Math.pow(1 + itemGrowth, periods);
       const percentChange = ((furthestForecast - lastActual) / Math.abs(lastActual)) * 100;
@@ -1225,10 +1236,13 @@ function calculateLargestChangesForPeriod(periodType) {
       const growthRate = parseFloat(document.getElementById('customGrowthRate')?.value) || 5;
       
       // Calculate forecast value
-      let itemGrowth = growthRate / 100;
+      let itemGrowth = growthRate / 100;  // Annual rate
       if (statementType === 'pnl' && item.name.toLowerCase().includes('expense')) {
-        itemGrowth = (growthRate * 0.8) / 100;
+        itemGrowth = (growthRate * 0.8) / 100;  // Annual rate
       }
+      
+      // Convert to monthly rate for calculation
+      itemGrowth = itemGrowth / 12;
       
       const furthestForecast = lastActual * Math.pow(1 + itemGrowth, periods);
       const percentChange = ((furthestForecast - lastActual) / Math.abs(lastActual)) * 100;
@@ -1773,7 +1787,8 @@ function prepareFinancialContext() {
         // Calculate forecast values using current settings
         const actualValues = item.actualValues || [];
         const lastActual = actualValues[actualValues.length - 1] || 0;
-        const growthRate = context.forecastSettings.growthRate / 100;
+        const annualGrowthRate = context.forecastSettings.growthRate / 100;
+        const monthlyGrowthRate = annualGrowthRate / 12;  // Convert annual to monthly
         const periods = context.forecastSettings.periods;
         
         // Forecast calculation based on method
@@ -1784,14 +1799,14 @@ function prepareFinancialContext() {
           let forecastValue;
           
           if (method === 'exponential') {
-            // Exponential growth: Value = Previous × (1 + Growth Rate)^periods
-            forecastValue = lastActual * Math.pow(1 + growthRate, i + 1);
+            // Exponential growth: Value = Previous × (1 + Monthly Rate)^periods
+            forecastValue = lastActual * Math.pow(1 + monthlyGrowthRate, i + 1);
           } else if (method === 'custom') {
-            // Linear growth: Value = Previous + (Previous × Growth Rate)
-            forecastValue = lastActual + (lastActual * growthRate * (i + 1));
+            // Linear growth: Value = Previous + (Previous × Monthly Rate × Period)
+            forecastValue = lastActual + (lastActual * monthlyGrowthRate * (i + 1));
           } else {
             // Rolling average or 3-month average - use exponential for now
-            forecastValue = lastActual * Math.pow(1 + growthRate, i + 1);
+            forecastValue = lastActual * Math.pow(1 + monthlyGrowthRate, i + 1);
           }
           
           forecastValues.push(forecastValue);
