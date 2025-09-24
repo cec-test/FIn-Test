@@ -575,7 +575,26 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
   
   // Add forecast headers for quarterly/yearly tabs
   if (periodType === 'quarterly' || periodType === 'yearly') {
-    const forecastHeaders = generateForecastHeaders(periods, periodType, forecastStartFrom);
+    // Calculate forecast start date based on the last aggregated period
+    let forecastStartFromAggregated = new Date();
+    if (actualLabels.length > 0) {
+      const lastActualLabel = actualLabels[actualLabels.length - 1];
+      // Parse the last actual label to get the date
+      const lastDate = parseHeaderToYearMonth(lastActualLabel);
+      if (lastDate) {
+        if (periodType === 'quarterly') {
+          // Start forecast from the next quarter
+          const nextQuarterMonth = lastDate.month + 3;
+          const nextQuarterYear = lastDate.year + Math.floor(nextQuarterMonth / 12);
+          forecastStartFromAggregated = new Date(nextQuarterYear, nextQuarterMonth % 12, 1);
+        } else if (periodType === 'yearly') {
+          // Start forecast from the next year
+          forecastStartFromAggregated = new Date(lastDate.year + 1, 0, 1);
+        }
+      }
+    }
+    
+    const forecastHeaders = generateForecastHeaders(periods, periodType, forecastStartFromAggregated);
     forecastHeaders.forEach(header => {
       tableHTML += `<th class="forecast">${header}</th>`;
     });
