@@ -306,6 +306,7 @@ function generateMixedPeriodTooltip(index, periodType, actualLabels) {
 function getMethodDisplayName(method) {
   switch (method) {
     case 'custom': return 'Linear Growth';
+    case 'exponential': return 'Exponential Growth';
     case 'rolling': return 'Rolling Average';
     case 'threemonth': return '3-Month Average';
     default: return 'Linear Growth';
@@ -346,6 +347,7 @@ function getYearMonths(yearIndex, actualLabels) {
 function getMethodDisplayName(method) {
   switch (method) {
     case 'custom': return 'Linear Growth';
+    case 'exponential': return 'Exponential Growth';
     case 'rolling': return 'Rolling Average';
     case 'threemonth': return '3-Month Average';
     default: return 'Linear Growth';
@@ -405,7 +407,7 @@ function getForecastValuesForItem(item, periods) {
     revGrowth = 0.02;
     expGrowth = 0.015;
   } else {
-    // Custom growth
+    // Custom growth (linear) or exponential growth
     revGrowth = growthRate / 100;
     expGrowth = (growthRate * 0.8) / 100;
   }
@@ -417,7 +419,19 @@ function getForecastValuesForItem(item, periods) {
   const lastActual = actualValues[actualValues.length - 1] || 0;
   
   for (let i = 0; i < periods; i++) {
-    const forecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
+    let forecastValue;
+    
+    if (forecastMethod === 'exponential') {
+      // Exponential growth: Value = Previous × (1 + Growth Rate)^periods
+      forecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
+    } else if (forecastMethod === 'custom') {
+      // Linear growth: Value = Previous + (Previous × Growth Rate)
+      forecastValue = lastActual + (lastActual * growthRateToUse * (i + 1));
+    } else {
+      // Rolling average or 3-month average - use exponential for now
+      forecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
+    }
+    
     forecastValues.push(forecastValue);
   }
   
@@ -1762,10 +1776,24 @@ function prepareFinancialContext() {
         const growthRate = context.forecastSettings.growthRate / 100;
         const periods = context.forecastSettings.periods;
         
-        // Simple forecast calculation
+        // Forecast calculation based on method
         const forecastValues = [];
+        const method = context.forecastSettings.method || 'custom';
+        
         for (let i = 0; i < periods; i++) {
-          const forecastValue = lastActual * Math.pow(1 + growthRate, i + 1);
+          let forecastValue;
+          
+          if (method === 'exponential') {
+            // Exponential growth: Value = Previous × (1 + Growth Rate)^periods
+            forecastValue = lastActual * Math.pow(1 + growthRate, i + 1);
+          } else if (method === 'custom') {
+            // Linear growth: Value = Previous + (Previous × Growth Rate)
+            forecastValue = lastActual + (lastActual * growthRate * (i + 1));
+          } else {
+            // Rolling average or 3-month average - use exponential for now
+            forecastValue = lastActual * Math.pow(1 + growthRate, i + 1);
+          }
+          
           forecastValues.push(forecastValue);
         }
         
