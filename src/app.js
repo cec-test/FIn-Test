@@ -249,12 +249,12 @@ function showTab(tabName, clickedBtn) {
 function toggleGrowthRateInput() {
   const method = document.getElementById('forecastMethod')?.value;
   const growthRateInput = document.getElementById('customGrowthRate');
-  
+
   if (growthRateInput) {
-    if (method === 'custom') {
-      growthRateInput.disabled = false;
+    if (method === 'custom' || method === 'exponential') {
+      growthRateInput.disabled = false;  // Enable for both linear and exponential
     } else {
-      growthRateInput.disabled = true;
+      growthRateInput.disabled = true;   // Disable for rolling/threemonth
     }
   }
 }
