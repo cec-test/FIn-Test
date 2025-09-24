@@ -271,6 +271,41 @@ function toggleGrowthRateInput() {
 }
 
 /**
+ * Get seasonal multiplier for a given month and pattern
+ */
+function getSeasonalMultiplier(month, pattern, strength) {
+  if (pattern === 'none') return 1.0;
+  
+  const strengthFactor = strength / 100;
+  
+  // Define seasonal patterns (base multipliers)
+  const patterns = {
+    retail: [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.2, 1.1, 1.0, 1.2, 1.4, 1.8], // Q4 peak
+    saas: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], // Steady
+    construction: [0.5, 0.6, 0.8, 1.0, 1.2, 1.4, 1.3, 1.2, 1.0, 0.8, 0.6, 0.5], // Summer peak
+    custom: [
+      parseFloat(document.getElementById('jan-mult')?.value) || 0.8,
+      parseFloat(document.getElementById('feb-mult')?.value) || 0.9,
+      parseFloat(document.getElementById('mar-mult')?.value) || 1.0,
+      parseFloat(document.getElementById('apr-mult')?.value) || 1.1,
+      parseFloat(document.getElementById('may-mult')?.value) || 1.2,
+      parseFloat(document.getElementById('jun-mult')?.value) || 1.3,
+      parseFloat(document.getElementById('jul-mult')?.value) || 1.2,
+      parseFloat(document.getElementById('aug-mult')?.value) || 1.1,
+      parseFloat(document.getElementById('sep-mult')?.value) || 1.0,
+      parseFloat(document.getElementById('oct-mult')?.value) || 0.9,
+      parseFloat(document.getElementById('nov-mult')?.value) || 1.1,
+      parseFloat(document.getElementById('dec-mult')?.value) || 1.5
+    ]
+  };
+  
+  const baseMultiplier = patterns[pattern] ? patterns[pattern][month] : 1.0;
+  
+  // Apply strength factor (0% = no seasonality, 100% = full seasonality)
+  return 1.0 + (baseMultiplier - 1.0) * strengthFactor;
+}
+
+/**
  * Calculate smart defaults for S-curve parameters
  */
 function calculateSCurveDefaults() {
@@ -459,15 +494,19 @@ function getForecastValuesForItem(item, periods) {
   
   const lastActual = actualValues[actualValues.length - 1] || 0;
   
+  // Get seasonality settings
+  const seasonalPattern = document.getElementById('seasonalPattern')?.value || 'none';
+  const seasonalStrength = parseFloat(document.getElementById('seasonalStrength')?.value) || 50;
+  
   for (let i = 0; i < periods; i++) {
-    let forecastValue;
+    let baseForecastValue;
     
     if (forecastMethod === 'exponential') {
       // Exponential growth: Value = Previous × (1 + Monthly Rate)^periods
-      forecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
+      baseForecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
     } else if (forecastMethod === 'logarithmic') {
       // Logarithmic growth: Value = Base × ln(periods + 1) × Monthly Rate
-      forecastValue = lastActual * Math.log(i + 2) * growthRateToUse;
+      baseForecastValue = lastActual * Math.log(i + 2) * growthRateToUse;
     } else if (forecastMethod === 'scurve') {
       // S-curve growth: Only apply to "Total Revenue" items
       const isTotalRevenue = /\btotal.*revenue\b/i.test(item.name);
@@ -477,22 +516,27 @@ function getForecastValuesForItem(item, periods) {
         const midpoint = parseFloat(document.getElementById('scurveMidpoint')?.value) || Math.round(periods * 0.4);
         const k = growthRateToUse * 2; // Growth constant derived from growth rate
         const exponent = -k * ((i + 1) - midpoint);
-        forecastValue = maxValue * (1 / (1 + Math.exp(exponent)));
+        baseForecastValue = maxValue * (1 / (1 + Math.exp(exponent)));
       } else {
         // For non-total revenue items, use linear growth
-        forecastValue = lastActual + (lastActual * growthRateToUse * (i + 1));
+        baseForecastValue = lastActual + (lastActual * growthRateToUse * (i + 1));
       }
     } else if (forecastMethod === 'rolling') {
       // Rolling average + growth: Historical Average + (Historical Average × Monthly Rate × Period)
       const historicalAverage = actualValues.reduce((sum, val) => sum + val, 0) / actualValues.length;
-      forecastValue = historicalAverage + (historicalAverage * growthRateToUse * (i + 1));
+      baseForecastValue = historicalAverage + (historicalAverage * growthRateToUse * (i + 1));
     } else if (forecastMethod === 'custom') {
       // Linear growth: Value = Previous + (Previous × Monthly Rate × Period)
-      forecastValue = lastActual + (lastActual * growthRateToUse * (i + 1));
+      baseForecastValue = lastActual + (lastActual * growthRateToUse * (i + 1));
     } else {
       // Fallback to exponential
-      forecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
+      baseForecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
     }
+    
+    // Apply seasonality
+    const forecastMonth = (i + 1) % 12; // Month index (0-11)
+    const seasonalMultiplier = getSeasonalMultiplier(forecastMonth, seasonalPattern, seasonalStrength);
+    const forecastValue = baseForecastValue * seasonalMultiplier;
     
     forecastValues.push(forecastValue);
   }
@@ -1782,7 +1826,11 @@ function prepareFinancialContext() {
       forecastSettings: {
         method: document.getElementById('forecastMethod')?.value || 'custom',
         growthRate: parseFloat(document.getElementById('customGrowthRate')?.value) || 5,
-        periods: parseInt(document.getElementById('forecastPeriods')?.value) || 12
+        periods: parseInt(document.getElementById('forecastPeriods')?.value) || 12,
+        scurveMaxValue: parseFloat(document.getElementById('scurveMaxValue')?.value) || 0,
+        scurveMidpoint: parseFloat(document.getElementById('scurveMidpoint')?.value) || 0,
+        seasonalPattern: document.getElementById('seasonalPattern')?.value || 'none',
+        seasonalStrength: parseFloat(document.getElementById('seasonalStrength')?.value) || 50
       }
     };
   
@@ -1843,15 +1891,19 @@ function prepareFinancialContext() {
         const forecastValues = [];
         const method = context.forecastSettings.method || 'custom';
         
+        // Get seasonality settings
+        const seasonalPattern = context.forecastSettings.seasonalPattern || 'none';
+        const seasonalStrength = context.forecastSettings.seasonalStrength || 50;
+        
         for (let i = 0; i < periods; i++) {
-          let forecastValue;
+          let baseForecastValue;
           
           if (method === 'exponential') {
             // Exponential growth: Value = Previous × (1 + Monthly Rate)^periods
-            forecastValue = lastActual * Math.pow(1 + monthlyGrowthRate, i + 1);
+            baseForecastValue = lastActual * Math.pow(1 + monthlyGrowthRate, i + 1);
           } else if (method === 'logarithmic') {
             // Logarithmic growth: Value = Base × ln(periods + 1) × Monthly Rate
-            forecastValue = lastActual * Math.log(i + 2) * monthlyGrowthRate;
+            baseForecastValue = lastActual * Math.log(i + 2) * monthlyGrowthRate;
           } else if (method === 'scurve') {
             // S-curve growth: Only apply to "Total Revenue" items
             const isTotalRevenue = /\btotal.*revenue\b/i.test(item.name);
@@ -1861,22 +1913,27 @@ function prepareFinancialContext() {
               const midpoint = parseFloat(document.getElementById('scurveMidpoint')?.value) || Math.round(periods * 0.4);
               const k = monthlyGrowthRate * 2; // Growth constant derived from growth rate
               const exponent = -k * ((i + 1) - midpoint);
-              forecastValue = maxValue * (1 / (1 + Math.exp(exponent)));
+              baseForecastValue = maxValue * (1 / (1 + Math.exp(exponent)));
             } else {
               // For non-total revenue items, use linear growth
-              forecastValue = lastActual + (lastActual * monthlyGrowthRate * (i + 1));
+              baseForecastValue = lastActual + (lastActual * monthlyGrowthRate * (i + 1));
             }
           } else if (method === 'rolling') {
             // Rolling average + growth: Historical Average + (Historical Average × Monthly Rate × Period)
             const historicalAverage = actualValues.reduce((sum, val) => sum + val, 0) / actualValues.length;
-            forecastValue = historicalAverage + (historicalAverage * monthlyGrowthRate * (i + 1));
+            baseForecastValue = historicalAverage + (historicalAverage * monthlyGrowthRate * (i + 1));
           } else if (method === 'custom') {
             // Linear growth: Value = Previous + (Previous × Monthly Rate × Period)
-            forecastValue = lastActual + (lastActual * monthlyGrowthRate * (i + 1));
+            baseForecastValue = lastActual + (lastActual * monthlyGrowthRate * (i + 1));
           } else {
             // Fallback to exponential
-            forecastValue = lastActual * Math.pow(1 + monthlyGrowthRate, i + 1);
+            baseForecastValue = lastActual * Math.pow(1 + monthlyGrowthRate, i + 1);
           }
+          
+          // Apply seasonality
+          const forecastMonth = (i + 1) % 12; // Month index (0-11)
+          const seasonalMultiplier = getSeasonalMultiplier(forecastMonth, seasonalPattern, seasonalStrength);
+          const forecastValue = baseForecastValue * seasonalMultiplier;
           
           forecastValues.push(forecastValue);
         }
@@ -1921,7 +1978,15 @@ function prepareFinancialContext() {
       statements: { pnl: [], balance: [], cashflow: [] },
       dateColumns: [],
       activeTab: 'monthly',
-      forecastSettings: { method: 'custom', growthRate: 5, periods: 12 }
+      forecastSettings: { 
+        method: 'custom', 
+        growthRate: 5, 
+        periods: 12,
+        scurveMaxValue: 0,
+        scurveMidpoint: 0,
+        seasonalPattern: 'none',
+        seasonalStrength: 50
+      }
     };
   }
 }
@@ -2130,6 +2195,40 @@ document.addEventListener('DOMContentLoaded', function () {
   scurveMidpointEl?.addEventListener('change', function() {
     rebuildAllTables();
     updateForecast();
+  });
+
+  // Seasonality controls change handlers
+  const seasonalPatternEl = document.getElementById('seasonalPattern');
+  const seasonalStrengthEl = document.getElementById('seasonalStrength');
+  const seasonalStrengthValueEl = document.getElementById('seasonalStrengthValue');
+  const customSeasonalEl = document.getElementById('custom-seasonal');
+  
+  seasonalPatternEl?.addEventListener('change', function() {
+    // Show/hide custom seasonal controls
+    if (customSeasonalEl) {
+      customSeasonalEl.style.display = this.value === 'custom' ? 'block' : 'none';
+    }
+    rebuildAllTables();
+    updateForecast();
+  });
+  
+  seasonalStrengthEl?.addEventListener('input', function() {
+    if (seasonalStrengthValueEl) {
+      seasonalStrengthValueEl.textContent = this.value + '%';
+    }
+    rebuildAllTables();
+    updateForecast();
+  });
+  
+  // Custom seasonal multiplier change handlers
+  const seasonalInputs = ['jan-mult', 'feb-mult', 'mar-mult', 'apr-mult', 'may-mult', 'jun-mult', 
+                         'jul-mult', 'aug-mult', 'sep-mult', 'oct-mult', 'nov-mult', 'dec-mult'];
+  seasonalInputs.forEach(id => {
+    const input = document.getElementById(id);
+    input?.addEventListener('change', function() {
+      rebuildAllTables();
+      updateForecast();
+    });
   });
 
   // Run forecast button
