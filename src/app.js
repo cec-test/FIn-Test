@@ -251,10 +251,10 @@ function toggleGrowthRateInput() {
   const growthRateInput = document.getElementById('customGrowthRate');
 
   if (growthRateInput) {
-    if (method === 'custom' || method === 'exponential' || method === 'logarithmic') {
-      growthRateInput.disabled = false;  // Enable for user-controlled methods
+    if (method === 'custom' || method === 'exponential' || method === 'logarithmic' || method === 'rolling') {
+      growthRateInput.disabled = false;  // Enable for all user-controlled methods
     } else {
-      growthRateInput.disabled = true;   // Disable for automatic methods
+      growthRateInput.disabled = true;   // Disable for any remaining automatic methods
     }
   }
 }
@@ -309,7 +309,6 @@ function getMethodDisplayName(method) {
     case 'exponential': return 'Exponential Growth';
     case 'logarithmic': return 'Logarithmic Growth';
     case 'rolling': return 'Rolling Average';
-    case 'threemonth': return '3-Month Average';
     default: return 'Linear Growth';
   }
 }
@@ -351,7 +350,6 @@ function getMethodDisplayName(method) {
     case 'exponential': return 'Exponential Growth';
     case 'logarithmic': return 'Logarithmic Growth';
     case 'rolling': return 'Rolling Average';
-    case 'threemonth': return '3-Month Average';
     default: return 'Linear Growth';
   }
 }
@@ -402,21 +400,14 @@ function getForecastValuesForItem(item, periods) {
   
   // Calculate growth rates based on method
   let revGrowth, expGrowth;
-  if (forecastMethod === 'rolling') {
-    revGrowth = 0.03;
-    expGrowth = 0.02;
-  } else if (forecastMethod === 'threemonth') {
-    revGrowth = 0.02;
-    expGrowth = 0.015;
-  } else {
-    // Convert annual growth rate to period-specific rates
-    const annualRate = growthRate / 100;
-    const annualExpRate = (growthRate * 0.8) / 100;
-    
-    // For monthly calculations, convert annual to monthly
-    revGrowth = annualRate / 12;  // Monthly rate
-    expGrowth = annualExpRate / 12;  // Monthly rate
-  }
+  
+  // Convert annual growth rate to period-specific rates for all methods
+  const annualRate = growthRate / 100;
+  const annualExpRate = (growthRate * 0.8) / 100;
+  
+  // For monthly calculations, convert annual to monthly
+  revGrowth = annualRate / 12;  // Monthly rate
+  expGrowth = annualExpRate / 12;  // Monthly rate
   
   // Determine if this is revenue or expense item
   const isRevenueItem = /\b(revenue|sales|income)\b/i.test(item.name);
@@ -433,11 +424,15 @@ function getForecastValuesForItem(item, periods) {
     } else if (forecastMethod === 'logarithmic') {
       // Logarithmic growth: Value = Base × ln(periods + 1) × Monthly Rate
       forecastValue = lastActual * Math.log(i + 2) * growthRateToUse;
+    } else if (forecastMethod === 'rolling') {
+      // Rolling average + growth: Historical Average + (Historical Average × Monthly Rate × Period)
+      const historicalAverage = actualValues.reduce((sum, val) => sum + val, 0) / actualValues.length;
+      forecastValue = historicalAverage + (historicalAverage * growthRateToUse * (i + 1));
     } else if (forecastMethod === 'custom') {
       // Linear growth: Value = Previous + (Previous × Monthly Rate × Period)
       forecastValue = lastActual + (lastActual * growthRateToUse * (i + 1));
     } else {
-      // Rolling average or 3-month average - use exponential for now
+      // Fallback to exponential
       forecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
     }
     
@@ -708,17 +703,7 @@ function updateForecast() {
   let revGrowth = growthRate / 100;  // Annual rate
   let expGrowth = (growthRate * 0.8) / 100;  // Annual rate
   
-  // Convert to monthly rates for calculations
-  revGrowth = revGrowth / 12;
-  expGrowth = expGrowth / 12;
-
-  if (method === 'rolling') {
-    revGrowth = 0.03;
-    expGrowth = 0.02;
-  } else if (method === 'threemonth') {
-    revGrowth = 0.02;
-    expGrowth = 0.015;
-  }
+  // All methods now use the user's growth rate input
 
   // Update all forecast views with dynamic periods
   updateDynamicForecasts(revGrowth, expGrowth, periods);
@@ -1809,11 +1794,15 @@ function prepareFinancialContext() {
           } else if (method === 'logarithmic') {
             // Logarithmic growth: Value = Base × ln(periods + 1) × Monthly Rate
             forecastValue = lastActual * Math.log(i + 2) * monthlyGrowthRate;
+          } else if (method === 'rolling') {
+            // Rolling average + growth: Historical Average + (Historical Average × Monthly Rate × Period)
+            const historicalAverage = actualValues.reduce((sum, val) => sum + val, 0) / actualValues.length;
+            forecastValue = historicalAverage + (historicalAverage * monthlyGrowthRate * (i + 1));
           } else if (method === 'custom') {
             // Linear growth: Value = Previous + (Previous × Monthly Rate × Period)
             forecastValue = lastActual + (lastActual * monthlyGrowthRate * (i + 1));
           } else {
-            // Rolling average or 3-month average - use exponential for now
+            // Fallback to exponential
             forecastValue = lastActual * Math.pow(1 + monthlyGrowthRate, i + 1);
           }
           
