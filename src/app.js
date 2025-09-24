@@ -112,7 +112,7 @@ function aggregateActuals(statementKey, actualValues) {
     Array.from(byQuarter.values()).sort((a,b) => a.year - b.year || a.q - b.q).forEach(entry => {
       const monthsInQ = entry.months.length;
       const endMonth = (entry.q * 3) - 1; // 2,5,8,11
-      const label = `${MONTHS_SHORT[endMonth]} ${entry.year}`;
+      const label = `Q${entry.q} ${entry.year}`;
       labels.push(label);
       
       let val;
@@ -141,7 +141,7 @@ function aggregateActuals(statementKey, actualValues) {
     const notes = [];
     Array.from(byYear.values()).sort((a,b) => a.year - b.year).forEach(entry => {
       const monthsInY = entry.months.length;
-      const label = `Dec ${entry.year}`;
+      const label = `FY ${entry.year}`;
       labels.push(label);
       
       let val;
@@ -432,19 +432,19 @@ function generateForecastHeaders(periods, periodType, forecastStartFrom) {
   const startDate = new Date(forecastStartFrom);
   
   if (periodType === 'quarterly') {
-    // forecast headers as quarter-end months
+    // forecast headers as quarters
     let d = new Date(startDate);
     for (let i = 0; i < periods; i++) {
       const month = d.getMonth();
-      const qEndMonth = month + (2 - (month % 3)); // move to end of this quarter
-      const qEnd = new Date(d.getFullYear(), qEndMonth, 1);
-      headers.push(`${MONTHS_SHORT[qEnd.getMonth()]} ${qEnd.getFullYear()}`);
-      d = new Date(qEnd.getFullYear(), qEnd.getMonth() + 1, 1);
+      const quarter = Math.floor(month / 3) + 1;
+      const year = d.getFullYear();
+      headers.push(`Q${quarter} ${year}`);
+      d = new Date(year, month + 3, 1); // Move to next quarter
     }
   } else if (periodType === 'yearly') {
     let y = startDate.getFullYear();
     for (let i = 0; i < periods; i++) {
-      headers.push(`Dec ${y + i}`);
+      headers.push(`FY ${y + i}`);
     }
   }
   
@@ -477,7 +477,7 @@ function generateTableHeaders(periods, periodType, actualLabels, forecastStartFr
   } else if (periodType === 'yearly') {
     let y = startDate.getFullYear();
     for (let i = 0; i < periods; i++) {
-      headers.push(`Dec ${y + i}`);
+      headers.push(`FY ${y + i}`);
     }
   }
   return headers;
