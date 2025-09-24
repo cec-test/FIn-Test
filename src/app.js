@@ -526,16 +526,18 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     let className = '';
     if (index === 0) {
       className = '';
-    } else if (index <= (actualLabels.length)) {
+    } else if (index <= actualLabels.length) {
       className = 'actual';
     } else {
       className = 'forecast';
     }
     let noteHtml = '';
     if (className === 'actual' && noteByIndex[index - 1]) {
-      const isMixedPeriod = noteByIndex[index - 1].includes('Mixed period');
-      const indicator = isMixedPeriod ? '?' : '•';
-      noteHtml = ` <span class="note-badge" title="${noteByIndex[index - 1]}">${indicator}</span>`;
+      // Only show indicators for partial actuals, not for mixed periods (since we reverted that)
+      const note = noteByIndex[index - 1];
+      if (note.includes('Partial actuals')) {
+        noteHtml = ` <span class="note-badge" title="${note}">•</span>`;
+      }
     }
     tableHTML += `<th class="${className}">${header}${noteHtml}</th>`;
   });
@@ -575,18 +577,10 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     }
             actualsForItem.forEach((value, index) => {
               const display = isSubheader ? '' : formatCurrency(value);
-              const isMixedPeriod = noteByIndex[index] && noteByIndex[index].includes('Mixed period');
-              const tooltip = isMixedPeriod ? generateMixedPeriodTooltip(index, periodType, actualLabels) : '';
+              const tooltip = '';
               
-              // Determine if this column should be labeled as actual or forecast
+              // For quarterly/yearly, all aggregated columns are actuals
               let columnClass = 'number actual';
-              if (periodType === 'quarterly' || periodType === 'yearly') {
-                const note = noteByIndex[index] || '';
-                if (note.includes('Mixed period') || note.includes('Pure forecast')) {
-                  // Mixed periods and pure forecasts should be labeled as forecast
-                  columnClass = 'number forecast';
-                }
-              }
               
               tableHTML += `<td class="${columnClass}" title="${tooltip}">${display}</td>`;
             });
