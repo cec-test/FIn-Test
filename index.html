@@ -917,6 +917,7 @@
                             <!-- Seasonality Controls -->
                             <div class="control-item">
                                 <label>Seasonal Pattern:</label>
+                                <span class="help-button" id="seasonalPatternHelp" title="Click for seasonal pattern explanations">?</span>
                                 <select id="seasonalPattern">
                                     <option value="none">No Seasonality</option>
                                     <option value="retail">Retail (Q4 peak)</option>
@@ -1223,6 +1224,31 @@
             </div>
             <div class="method-explanation">
                 <strong>Rolling Average:</strong> Based on historical average plus growth - great for cyclical businesses or when you want to smooth out volatility.
+            </div>
+        </div>
+    </div>
+
+    <!-- Seasonal Pattern Help Modal -->
+    <div id="seasonalPatternModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Seasonal Pattern Explanations</h3>
+                <span class="close" id="closeSeasonalModal">&times;</span>
+            </div>
+            <div class="method-explanation">
+                <strong>No Seasonality:</strong> Consistent performance year-round - perfect for subscription services, utilities, or businesses with steady demand.
+            </div>
+            <div class="method-explanation">
+                <strong>Retail (Q4 Peak):</strong> Major holiday spikes in Nov/Dec, dips in Jan/Feb - ideal for e-commerce, retail stores, gift businesses, and consumer goods.
+            </div>
+            <div class="method-explanation">
+                <strong>SaaS (Steady):</strong> Minimal seasonal variation - perfect for software subscriptions, cloud services, and recurring revenue businesses.
+            </div>
+            <div class="method-explanation">
+                <strong>Construction (Summer Peak):</strong> Peak activity in Jun/Aug, low periods in winter months - great for construction, landscaping, outdoor services, and seasonal contractors.
+            </div>
+            <div class="method-explanation">
+                <strong>Custom Pattern:</strong> Define your own monthly multipliers - use this for unique business cycles, event-driven businesses, or when you have specific seasonal data.
             </div>
         </div>
     </div>

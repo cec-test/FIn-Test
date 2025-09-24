@@ -2279,6 +2279,26 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
+  // Seasonal pattern help modal handlers
+  const seasonalHelpButton = document.getElementById('seasonalPatternHelp');
+  const seasonalModal = document.getElementById('seasonalPatternModal');
+  const closeSeasonalModal = document.getElementById('closeSeasonalModal');
+
+  seasonalHelpButton?.addEventListener('click', function() {
+    seasonalModal.style.display = 'block';
+  });
+
+  closeSeasonalModal?.addEventListener('click', function() {
+    seasonalModal.style.display = 'none';
+  });
+
+  // Close seasonal modal when clicking outside of it
+  window.addEventListener('click', function(event) {
+    if (event.target === seasonalModal) {
+      seasonalModal.style.display = 'none';
+    }
+  });
+
   // Run forecast button
   runBtn?.addEventListener('click', function() {
     console.log('Run Forecast clicked');
