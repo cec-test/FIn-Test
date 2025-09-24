@@ -112,7 +112,7 @@ function aggregateActuals(statementKey, actualValues) {
     Array.from(byQuarter.values()).sort((a,b) => a.year - b.year || a.q - b.q).forEach(entry => {
       const monthsInQ = entry.months.length;
       const endMonth = (entry.q * 3) - 1; // 2,5,8,11
-      const label = `Q${entry.q} ${entry.year}`;
+      const label = `Q${entry.q} ${entry.year}`; // Quarterly format
       labels.push(label);
       
       let val;
@@ -141,7 +141,7 @@ function aggregateActuals(statementKey, actualValues) {
     const notes = [];
     Array.from(byYear.values()).sort((a,b) => a.year - b.year).forEach(entry => {
       const monthsInY = entry.months.length;
-      const label = `FY ${entry.year}`;
+      const label = `FY ${entry.year}`; // Fiscal year format
       labels.push(label);
       
       let val;
