@@ -427,6 +427,30 @@ function getForecastValuesForItem(item, periods) {
 /**
  * Generate dynamic table headers based on periods
  */
+function generateForecastHeaders(periods, periodType, forecastStartFrom) {
+  const headers = [];
+  const startDate = new Date(forecastStartFrom);
+  
+  if (periodType === 'quarterly') {
+    // forecast headers as quarter-end months
+    let d = new Date(startDate);
+    for (let i = 0; i < periods; i++) {
+      const month = d.getMonth();
+      const qEndMonth = month + (2 - (month % 3)); // move to end of this quarter
+      const qEnd = new Date(d.getFullYear(), qEndMonth, 1);
+      headers.push(`${MONTHS_SHORT[qEnd.getMonth()]} ${qEnd.getFullYear()}`);
+      d = new Date(qEnd.getFullYear(), qEnd.getMonth() + 1, 1);
+    }
+  } else if (periodType === 'yearly') {
+    let y = startDate.getFullYear();
+    for (let i = 0; i < periods; i++) {
+      headers.push(`Dec ${y + i}`);
+    }
+  }
+  
+  return headers;
+}
+
 function generateTableHeaders(periods, periodType, actualLabels, forecastStartFrom) {
   const headers = ['Item'];
   // Add actual labels
@@ -503,7 +527,14 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     const last = parsedActuals[parsedActuals.length - 1].ym;
     forecastStartFrom = new Date(last.year, last.month + 1, 1);
   }
-  const headers = generateTableHeaders(periods, periodType, actualLabels, forecastStartFrom);
+  
+  // For quarterly/yearly, don't add forecast headers here - they're handled by aggregation
+  let headers;
+  if (periodType === 'quarterly' || periodType === 'yearly') {
+    headers = ['Item', ...actualLabels];
+  } else {
+    headers = generateTableHeaders(periods, periodType, actualLabels, forecastStartFrom);
+  }
 
   const statementHeaderLabel =
     statementKey === 'pnl' ? 'P&L' :
@@ -541,6 +572,14 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     }
     tableHTML += `<th class="${className}">${header}${noteHtml}</th>`;
   });
+  
+  // Add forecast headers for quarterly/yearly tabs
+  if (periodType === 'quarterly' || periodType === 'yearly') {
+    const forecastHeaders = generateForecastHeaders(periods, periodType, forecastStartFrom);
+    forecastHeaders.forEach(header => {
+      tableHTML += `<th class="forecast">${header}</th>`;
+    });
+  }
 
   tableHTML += `
             </tr>
