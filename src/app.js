@@ -49,6 +49,24 @@ const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct
 function parseHeaderToYearMonth(header) {
   if (!header) return null;
   const trimmed = String(header).trim();
+  
+  // Try Q1 YYYY format
+  let match = trimmed.match(/^Q(\d)\s+(\d{4})$/i);
+  if (match) {
+    const quarter = Number(match[1]);
+    const year = Number(match[2]);
+    const month = (quarter - 1) * 3; // Q1=0, Q2=3, Q3=6, Q4=9
+    return { year, month };
+  }
+  
+  // Try FY YYYY format
+  match = trimmed.match(/^FY\s+(\d{4})$/i);
+  if (match) {
+    const year = Number(match[1]);
+    const month = 11; // December (month 11)
+    return { year, month };
+  }
+  
   // Try MMM YYYY
   const mmm = MONTHS_SHORT.findIndex(m => new RegExp(`^${m}\\s+\\d{4}$`, 'i').test(trimmed));
   if (mmm >= 0) {
