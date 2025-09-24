@@ -168,6 +168,9 @@ function aggregateActuals(statementKey, actualValues, forecastValues = []) {
         const actualMonths = entry.actuals.length;
         const forecastMonths = entry.forecasts.length;
         note = `Mixed period (${actualMonths} actual + ${forecastMonths} forecast)`;
+      } else if (entry.forecasts.length > 0 && entry.actuals.length === 0) {
+        // Pure forecast period
+        note = `Pure forecast (${entry.forecasts.length} months)`;
       } else if (monthsInQ < 3) {
         note = `Partial actuals (${monthsInQ}/3 months)`;
       }
@@ -205,6 +208,9 @@ function aggregateActuals(statementKey, actualValues, forecastValues = []) {
         const actualMonths = entry.actuals.length;
         const forecastMonths = entry.forecasts.length;
         note = `Mixed period (${actualMonths} actual + ${forecastMonths} forecast)`;
+      } else if (entry.forecasts.length > 0 && entry.actuals.length === 0) {
+        // Pure forecast period
+        note = `Pure forecast (${entry.forecasts.length} months)`;
       } else if (monthsInY < 12) {
         note = `Partial actuals (${monthsInY}/12 months)`;
       }
@@ -632,9 +638,9 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
               // Determine if this column should be labeled as actual or forecast
               let columnClass = 'number actual';
               if (periodType === 'quarterly' || periodType === 'yearly') {
-                // For aggregated periods, check if this period contains forecasts
-                const hasForecasts = noteByIndex[index] && noteByIndex[index].includes('forecast');
-                if (hasForecasts) {
+                const note = noteByIndex[index] || '';
+                if (note.includes('Mixed period') || note.includes('Pure forecast')) {
+                  // Mixed periods and pure forecasts should be labeled as forecast
                   columnClass = 'number forecast';
                 }
               }
