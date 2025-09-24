@@ -469,12 +469,19 @@ function getForecastValuesForItem(item, periods) {
       // Logarithmic growth: Value = Base × ln(periods + 1) × Monthly Rate
       forecastValue = lastActual * Math.log(i + 2) * growthRateToUse;
     } else if (forecastMethod === 'scurve') {
-      // S-curve growth: Value = Max × (1 / (1 + e^(-k × (periods - midpoint))))
-      const maxValue = parseFloat(document.getElementById('scurveMaxValue')?.value) || (lastActual * Math.pow(1 + growthRateToUse * 12, periods));
-      const midpoint = parseFloat(document.getElementById('scurveMidpoint')?.value) || Math.round(periods * 0.4);
-      const k = growthRateToUse * 2; // Growth constant derived from growth rate
-      const exponent = -k * ((i + 1) - midpoint);
-      forecastValue = maxValue * (1 / (1 + Math.exp(exponent)));
+      // S-curve growth: Only apply to "Total Revenue" items
+      const isTotalRevenue = /\btotal.*revenue\b/i.test(item.name);
+      if (isTotalRevenue) {
+        // S-curve growth: Value = Max × (1 / (1 + e^(-k × (periods - midpoint))))
+        const maxValue = parseFloat(document.getElementById('scurveMaxValue')?.value) || (lastActual * Math.pow(1 + growthRateToUse * 12, periods));
+        const midpoint = parseFloat(document.getElementById('scurveMidpoint')?.value) || Math.round(periods * 0.4);
+        const k = growthRateToUse * 2; // Growth constant derived from growth rate
+        const exponent = -k * ((i + 1) - midpoint);
+        forecastValue = maxValue * (1 / (1 + Math.exp(exponent)));
+      } else {
+        // For non-total revenue items, use linear growth
+        forecastValue = lastActual + (lastActual * growthRateToUse * (i + 1));
+      }
     } else if (forecastMethod === 'rolling') {
       // Rolling average + growth: Historical Average + (Historical Average × Monthly Rate × Period)
       const historicalAverage = actualValues.reduce((sum, val) => sum + val, 0) / actualValues.length;
@@ -1846,12 +1853,19 @@ function prepareFinancialContext() {
             // Logarithmic growth: Value = Base × ln(periods + 1) × Monthly Rate
             forecastValue = lastActual * Math.log(i + 2) * monthlyGrowthRate;
           } else if (method === 'scurve') {
-            // S-curve growth: Value = Max × (1 / (1 + e^(-k × (periods - midpoint))))
-            const maxValue = parseFloat(document.getElementById('scurveMaxValue')?.value) || (lastActual * Math.pow(1 + monthlyGrowthRate * 12, periods));
-            const midpoint = parseFloat(document.getElementById('scurveMidpoint')?.value) || Math.round(periods * 0.4);
-            const k = monthlyGrowthRate * 2; // Growth constant derived from growth rate
-            const exponent = -k * ((i + 1) - midpoint);
-            forecastValue = maxValue * (1 / (1 + Math.exp(exponent)));
+            // S-curve growth: Only apply to "Total Revenue" items
+            const isTotalRevenue = /\btotal.*revenue\b/i.test(item.name);
+            if (isTotalRevenue) {
+              // S-curve growth: Value = Max × (1 / (1 + e^(-k × (periods - midpoint))))
+              const maxValue = parseFloat(document.getElementById('scurveMaxValue')?.value) || (lastActual * Math.pow(1 + monthlyGrowthRate * 12, periods));
+              const midpoint = parseFloat(document.getElementById('scurveMidpoint')?.value) || Math.round(periods * 0.4);
+              const k = monthlyGrowthRate * 2; // Growth constant derived from growth rate
+              const exponent = -k * ((i + 1) - midpoint);
+              forecastValue = maxValue * (1 / (1 + Math.exp(exponent)));
+            } else {
+              // For non-total revenue items, use linear growth
+              forecastValue = lastActual + (lastActual * monthlyGrowthRate * (i + 1));
+            }
           } else if (method === 'rolling') {
             // Rolling average + growth: Historical Average + (Historical Average × Monthly Rate × Period)
             const historicalAverage = actualValues.reduce((sum, val) => sum + val, 0) / actualValues.length;
