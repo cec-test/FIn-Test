@@ -2259,6 +2259,26 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // Forecast method help modal handlers
+  const helpButton = document.getElementById('forecastMethodHelp');
+  const modal = document.getElementById('forecastMethodModal');
+  const closeModal = document.getElementById('closeModal');
+
+  helpButton?.addEventListener('click', function() {
+    modal.style.display = 'block';
+  });
+
+  closeModal?.addEventListener('click', function() {
+    modal.style.display = 'none';
+  });
+
+  // Close modal when clicking outside of it
+  window.addEventListener('click', function(event) {
+    if (event.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+
   // Run forecast button
   runBtn?.addEventListener('click', function() {
     console.log('Run Forecast clicked');

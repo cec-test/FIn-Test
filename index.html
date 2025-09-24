@@ -451,6 +451,86 @@
         .chat-messages::-webkit-scrollbar-thumb:hover {
             background: #a8a8a8;
         }
+
+        /* Help Button Styles */
+        .help-button {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            background: #3498db;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 18px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 5px;
+            margin-right: 5px;
+            vertical-align: middle;
+            transition: background-color 0.2s;
+        }
+
+        .help-button:hover {
+            background: #2980b9;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .method-explanation {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            border-radius: 4px;
+        }
+
+        .method-explanation strong {
+            color: #2c3e50;
+        }
         
         .chat-message {
             margin-bottom: 10px;
@@ -804,6 +884,7 @@
                         <div class="control-group">
                             <div class="control-item">
                                 <label>Method:</label>
+                                <span class="help-button" id="forecastMethodHelp" title="Click for forecast method explanations">?</span>
                                 <select id="forecastMethod">
                                     <option value="custom">Linear Growth</option>
                                     <option value="exponential">Exponential Growth</option>
@@ -1118,6 +1199,31 @@
                 </div>
             </div>
             
+        </div>
+    </div>
+
+    <!-- Forecast Method Help Modal -->
+    <div id="forecastMethodModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Forecast Method Explanations</h3>
+                <span class="close" id="closeModal">&times;</span>
+            </div>
+            <div class="method-explanation">
+                <strong>Linear Growth:</strong> Constant dollar growth each period - best for steady, predictable businesses with consistent performance.
+            </div>
+            <div class="method-explanation">
+                <strong>Exponential Growth:</strong> Percentage-based growth that compounds over time - ideal for high-growth startups or expanding markets.
+            </div>
+            <div class="method-explanation">
+                <strong>Logarithmic Growth:</strong> Growth that starts fast then slows down - perfect for businesses reaching market saturation or maturity.
+            </div>
+            <div class="method-explanation">
+                <strong>S-Curve Growth:</strong> Slow start, rapid growth, then plateau - excellent for new products, market penetration, or adoption curves.
+            </div>
+            <div class="method-explanation">
+                <strong>Rolling Average:</strong> Based on historical average plus growth - great for cyclical businesses or when you want to smooth out volatility.
+            </div>
         </div>
     </div>
 
