@@ -1863,6 +1863,54 @@ window.testBalanceSheetClassification = testBalanceSheetClassification;
 let balanceSheetClassifications = {};
 
 /**
+ * Storage for P&L to Balance Sheet mappings
+ */
+let pnlMappings = {};
+
+/**
+ * P&L Pattern Recognition for Smart Mapping
+ */
+const PNL_MAPPING_PATTERNS = {
+  revenue_drivers: [
+    'total revenue', 'net revenue', 'total sales', 'net sales', 
+    'gross revenue', 'revenue total', 'sales total', 'total income',
+    'gross sales', 'service revenue total', 'product revenue total'
+  ],
+  cogs_drivers: [
+    'total cost of goods sold', 'total cogs', 'cost of goods sold',
+    'total cost of sales', 'cost of sales', 'cogs total',
+    'total product costs', 'direct costs total'
+  ],
+  expense_drivers: [
+    'total operating expenses', 'operating expenses', 'total opex',
+    'total expenses', 'operational expenses', 'total overhead',
+    'administrative expenses', 'selling expenses'
+  ],
+  net_income_drivers: [
+    'net income', 'net profit', 'profit after tax', 'bottom line',
+    'net earnings', 'profit/loss', 'total profit', 'earnings'
+  ],
+  depreciation_drivers: [
+    'depreciation', 'depreciation expense', 'amortization',
+    'depreciation and amortization', 'total depreciation'
+  ]
+};
+
+/**
+ * Balance Sheet to P&L Driver Requirements
+ */
+const BALANCE_SHEET_DRIVER_REQUIREMENTS = {
+  'accounts_receivable': 'revenue_drivers',
+  'inventory': 'cogs_drivers', 
+  'prepaid_expenses': 'revenue_drivers',
+  'accounts_payable': 'expense_drivers',
+  'accrued_expenses': 'expense_drivers',
+  'deferred_revenue': 'revenue_drivers',
+  'retained_earnings': 'net_income_drivers',
+  'property_plant_equipment': 'depreciation_drivers'
+};
+
+/**
  * Auto-detect special balance sheet item types
  */
 function autoDetectSpecialTypes(balanceSheetItems) {
@@ -1882,6 +1930,148 @@ function autoDetectSpecialTypes(balanceSheetItems) {
       hasValues: hasValues
     };
   });
+}
+
+/**
+ * Smart P&L Structure Analysis and Mapping
+ */
+function analyzePnLStructure(pnlItems) {
+  console.log('Analyzing P&L structure for mapping...', pnlItems);
+  
+  const analysis = {
+    totals: [],
+    lineItems: [],
+    mappings: {}
+  };
+  
+  // Identify totals vs line items in P&L
+  pnlItems.forEach(item => {
+    const name = item.name.toLowerCase();
+    const hasValues = item.actualValues && item.actualValues.some(val => val !== null && val !== undefined && val !== '');
+    const isTotal = /\btotal\b/i.test(item.name);
+    
+    if (isTotal || hasValues) {
+      analysis.totals.push({
+        ...item,
+        normalizedName: name,
+        isTotal: isTotal
+      });
+    } else {
+      analysis.lineItems.push(item);
+    }
+  });
+  
+  console.log('P&L Analysis:', analysis);
+  return analysis;
+}
+
+/**
+ * Find best P&L driver match for balance sheet item
+ */
+function findPnLDriverMatch(balanceSheetCategory, pnlAnalysis) {
+  const requiredDriverType = BALANCE_SHEET_DRIVER_REQUIREMENTS[balanceSheetCategory];
+  if (!requiredDriverType) {
+    return { match: null, confidence: 0, alternatives: [] };
+  }
+  
+  const patterns = PNL_MAPPING_PATTERNS[requiredDriverType];
+  if (!patterns) {
+    return { match: null, confidence: 0, alternatives: [] };
+  }
+  
+  let bestMatch = null;
+  let bestConfidence = 0;
+  const alternatives = [];
+  
+  // Search through P&L totals for best match
+  pnlAnalysis.totals.forEach(pnlItem => {
+    const itemName = pnlItem.normalizedName;
+    
+    // Calculate confidence based on pattern matching
+    let confidence = 0;
+    
+    patterns.forEach((pattern, index) => {
+      const patternScore = 1.0 - (index * 0.1); // Prefer earlier patterns
+      
+      if (itemName.includes(pattern)) {
+        // Exact substring match
+        confidence = Math.max(confidence, patternScore * 0.9);
+      } else {
+        // Fuzzy matching for partial matches
+        const words = pattern.split(' ');
+        const matchedWords = words.filter(word => itemName.includes(word));
+        if (matchedWords.length > 0) {
+          const wordMatchRatio = matchedWords.length / words.length;
+          confidence = Math.max(confidence, patternScore * wordMatchRatio * 0.7);
+        }
+      }
+    });
+    
+    // Boost confidence for "total" items
+    if (pnlItem.isTotal) {
+      confidence *= 1.2;
+    }
+    
+    // Add to alternatives if confidence > 0.3
+    if (confidence > 0.3) {
+      alternatives.push({
+        item: pnlItem,
+        confidence: confidence
+      });
+    }
+    
+    // Track best match
+    if (confidence > bestConfidence) {
+      bestMatch = pnlItem;
+      bestConfidence = confidence;
+    }
+  });
+  
+  // Sort alternatives by confidence
+  alternatives.sort((a, b) => b.confidence - a.confidence);
+  
+  return {
+    match: bestMatch,
+    confidence: bestConfidence,
+    alternatives: alternatives.slice(0, 5) // Top 5 alternatives
+  };
+}
+
+/**
+ * Generate P&L mappings for all balance sheet items
+ */
+function generatePnLMappings(balanceSheetClassifications, pnlItems) {
+  console.log('Generating P&L mappings...');
+  
+  const pnlAnalysis = analyzePnLStructure(pnlItems);
+  const mappings = {};
+  
+  Object.keys(balanceSheetClassifications).forEach(itemName => {
+    const classification = balanceSheetClassifications[itemName];
+    
+    // Skip non-forecastable items
+    if (classification.category === 'subheader' || classification.category === 'calculated_total') {
+      return;
+    }
+    
+    // Find best P&L driver match
+    const matchResult = findPnLDriverMatch(classification.category, pnlAnalysis);
+    
+    mappings[itemName] = {
+      balanceSheetItem: itemName,
+      balanceSheetCategory: classification.category,
+      pnlDriver: matchResult.match ? matchResult.match.name : null,
+      pnlDriverOriginal: matchResult.match || null,
+      confidence: matchResult.confidence,
+      alternatives: matchResult.alternatives,
+      method: classification.method,
+      userOverride: false
+    };
+    
+    console.log(`Mapped "${itemName}" → "${matchResult.match?.name}" (${(matchResult.confidence * 100).toFixed(0)}% confidence)`);
+  });
+  
+  return mappings;
 }
 
 /**
@@ -1970,6 +2160,15 @@ async function processBalanceSheetClassification(data) {
       
       // Show classification review UI
       await showClassificationReview(allClassifications);
+      
+      // Generate P&L mappings after classification is complete
+      if (Object.keys(balanceSheetClassifications).length > 0 && data.pnl) {
+        console.log('Generating P&L mappings...');
+        pnlMappings = generatePnLMappings(balanceSheetClassifications, data.pnl);
+        
+        // Show P&L mapping review UI
+        await showPnLMappingReview(pnlMappings, data.pnl);
+      }
       
     } catch (error) {
       console.error('Classification failed:', error);
@@ -2204,6 +2403,148 @@ function getCategoryInfo(category) {
   };
   
   return categoryMap[category];
+}
+
+/**
+ * Show P&L mapping review UI for user confirmation
+ */
+async function showPnLMappingReview(mappings, pnlItems) {
+  return new Promise((resolve) => {
+    // Create overlay if it doesn't exist
+    let overlay = document.getElementById('classificationOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'classificationOverlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      `;
+      document.body.appendChild(overlay);
+    }
+    
+    const mappingEntries = Object.values(mappings);
+    const highConfidenceMappings = mappingEntries.filter(m => m.confidence >= 0.7);
+    const lowConfidenceMappings = mappingEntries.filter(m => m.confidence < 0.7);
+    
+    // Create dropdown options from P&L items
+    const pnlOptions = pnlItems
+      .filter(item => item.actualValues && item.actualValues.some(val => val !== null && val !== undefined && val !== ''))
+      .map(item => `<option value="${item.name}">${item.name}</option>`)
+      .join('');
+    
+    overlay.innerHTML = `
+      <div style="background: white; padding: 30px; border-radius: 10px; max-width: 1000px; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <div style="font-size: 1.5rem; color: #2c3e50; margin-bottom: 10px;">🔗 P&L Driver Mapping</div>
+        <div style="color: #6c757d; margin-bottom: 20px;">
+          Review how balance sheet items connect to P&L drivers for forecasting calculations.
+        </div>
+        
+        ${highConfidenceMappings.length > 0 ? `
+          <div style="margin-bottom: 25px;">
+            <h4 style="color: #27ae60; margin-bottom: 10px;">✅ High Confidence Mappings</h4>
+            <div style="background: #f8fff8; padding: 15px; border-radius: 6px; border-left: 4px solid #27ae60;">
+              ${highConfidenceMappings.map(mapping => `
+                <div style="margin-bottom: 12px; padding: 8px; background: white; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+                  <div style="flex: 1;">
+                    <strong>"${mapping.balanceSheetItem}"</strong> → <strong style="color: #27ae60;">"${mapping.pnlDriver}"</strong>
+                    <span style="color: #27ae60; font-size: 0.9rem;">(${(mapping.confidence * 100).toFixed(0)}% confidence)</span>
+                    <br><span style="color: #6c757d; font-size: 0.8rem;">Method: ${mapping.method}</span>
+                  </div>
+                  <select id="mapping_${mapping.balanceSheetItem.replace(/[^a-zA-Z0-9]/g, '_')}" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; min-width: 250px;">
+                    <option value="${mapping.pnlDriver}" selected>${mapping.pnlDriver} (${(mapping.confidence * 100).toFixed(0)}%)</option>
+                    ${pnlOptions}
+                    <option value="">❌ No P&L Driver (Manual Entry)</option>
+                  </select>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        ${lowConfidenceMappings.length > 0 ? `
+          <div style="margin-bottom: 25px;">
+            <h4 style="color: #f39c12; margin-bottom: 10px;">⚠️ Lower Confidence Mappings (Please Review)</h4>
+            <div style="background: #fffaf0; padding: 15px; border-radius: 6px; border-left: 4px solid #f39c12;">
+              ${lowConfidenceMappings.map(mapping => `
+                <div style="margin-bottom: 15px; padding: 10px; background: white; border-radius: 4px; border: 1px solid #e9ecef;">
+                  <div style="margin-bottom: 8px;">
+                    <strong>"${mapping.balanceSheetItem}"</strong> → 
+                    ${mapping.pnlDriver ? `<strong style="color: #f39c12;">"${mapping.pnlDriver}"</strong> <span style="color: #f39c12;">(${(mapping.confidence * 100).toFixed(0)}% confidence)</span>` : '<span style="color: #e74c3c;">No Match Found</span>'}
+                    <br><span style="color: #6c757d; font-size: 0.8rem;">
+                      Method: ${mapping.method}
+                      ${mapping.alternatives.length > 0 ? ` | Alternatives: ${mapping.alternatives.slice(0, 2).map(alt => alt.item.name).join(', ')}` : ''}
+                    </span>
+                  </div>
+                  <select id="mapping_${mapping.balanceSheetItem.replace(/[^a-zA-Z0-9]/g, '_')}" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                    ${mapping.pnlDriver ? `<option value="${mapping.pnlDriver}" selected>${mapping.pnlDriver} (${(mapping.confidence * 100).toFixed(0)}%)</option>` : ''}
+                    ${mapping.alternatives.map(alt => `
+                      <option value="${alt.item.name}">${alt.item.name} (${(alt.confidence * 100).toFixed(0)}%)</option>
+                    `).join('')}
+                    ${pnlOptions}
+                    <option value="">❌ No P&L Driver (Manual Entry)</option>
+                  </select>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        ${mappingEntries.length === 0 ? `
+          <div style="text-align: center; color: #6c757d; padding: 20px;">
+            <div style="font-size: 1.1rem; margin-bottom: 10px;">No Balance Sheet Items to Map</div>
+            <div style="font-size: 0.9rem;">All items are subheaders or totals.</div>
+          </div>
+        ` : ''}
+        
+        <div style="text-align: center; margin-top: 25px;">
+          <button id="acceptMappings" style="background: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1rem; margin-right: 10px;">
+            Accept P&L Mappings
+          </button>
+          <button id="skipMappings" style="background: #95a5a6; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1rem;">
+            Skip P&L Mapping
+          </button>
+        </div>
+      </div>
+    `;
+    
+    // Add event listeners
+    document.getElementById('acceptMappings').addEventListener('click', () => {
+      // Update mappings based on user changes
+      mappingEntries.forEach(mapping => {
+        const selectId = `mapping_${mapping.balanceSheetItem.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const select = document.getElementById(selectId);
+        if (select) {
+          const newPnLDriver = select.value;
+          if (newPnLDriver !== mapping.pnlDriver) {
+            console.log(`User changed P&L mapping for "${mapping.balanceSheetItem}" from "${mapping.pnlDriver}" to "${newPnLDriver}"`);
+            pnlMappings[mapping.balanceSheetItem].pnlDriver = newPnLDriver;
+            pnlMappings[mapping.balanceSheetItem].confidence = 1.0; // User override = 100% confidence
+            pnlMappings[mapping.balanceSheetItem].userOverride = true;
+          }
+        }
+      });
+      
+      overlay.remove();
+      console.log('Final P&L mappings:', pnlMappings);
+      resolve();
+    });
+    
+    document.getElementById('skipMappings').addEventListener('click', () => {
+      pnlMappings = {}; // Clear mappings
+      overlay.remove();
+      console.log('User skipped P&L mapping');
+      resolve();
+    });
+  });
 }
 
 /**
