@@ -80,6 +80,9 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// Balance sheet classification endpoint
+app.post('/api/classify-balance-sheet', require('./api/classify-balance-sheet'));
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Financial Analysis Backend is running' });
