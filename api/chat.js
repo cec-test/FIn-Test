@@ -4,6 +4,160 @@ const axios = require('axios');
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
+// Smart question analysis functions
+function analyzeQuestion(question) {
+  const q = question.toLowerCase();
+  
+  return {
+    type: getQuestionType(q),
+    intent: getQuestionIntent(q),
+    entities: extractEntities(q),
+    timeframe: extractTimeframe(q),
+    comparison: getComparisonType(q),
+    aggregation: getAggregationType(q)
+  };
+}
+
+function getQuestionType(q) {
+  if (q.includes('trend') || q.includes('trending') || q.includes('over time')) return 'trend';
+  if (q.includes('biggest') || q.includes('largest') || q.includes('highest')) return 'max';
+  if (q.includes('smallest') || q.includes('lowest') || q.includes('minimum')) return 'min';
+  if (q.includes('compare') || q.includes('vs') || q.includes('versus')) return 'compare';
+  if (q.includes('what is') || q.includes('what\'s') || q.includes('value')) return 'value';
+  if (q.includes('how much') || q.includes('total') || q.includes('sum')) return 'sum';
+  if (q.includes('average') || q.includes('mean')) return 'average';
+  return 'general';
+}
+
+function getQuestionIntent(q) {
+  if (q.includes('revenue') || q.includes('sales') || q.includes('income')) return 'revenue';
+  if (q.includes('expense') || q.includes('cost') || q.includes('operating')) return 'expense';
+  if (q.includes('profit') || q.includes('net income')) return 'profit';
+  if (q.includes('asset') || q.includes('liability') || q.includes('equity')) return 'balance';
+  if (q.includes('cash') || q.includes('flow')) return 'cashflow';
+  return 'general';
+}
+
+function extractEntities(q) {
+  const entities = [];
+  const words = q.split(/\s+/);
+  
+  // Look for specific line item names
+  words.forEach(word => {
+    if (word.length > 3 && !['what', 'how', 'when', 'where', 'which', 'the', 'and', 'or', 'for', 'in', 'at', 'to'].includes(word)) {
+      entities.push(word);
+    }
+  });
+  
+  return entities;
+}
+
+function extractTimeframe(q) {
+  if (q.includes('2024') || q.includes('2025') || q.includes('2026')) return 'specific_year';
+  if (q.includes('january') || q.includes('february') || q.includes('march') || 
+      q.includes('april') || q.includes('may') || q.includes('june') ||
+      q.includes('july') || q.includes('august') || q.includes('september') ||
+      q.includes('october') || q.includes('november') || q.includes('december')) return 'specific_month';
+  if (q.includes('q1') || q.includes('q2') || q.includes('q3') || q.includes('q4')) return 'quarter';
+  if (q.includes('monthly') || q.includes('month')) return 'monthly';
+  if (q.includes('quarterly') || q.includes('quarter')) return 'quarterly';
+  if (q.includes('annual') || q.includes('yearly') || q.includes('year')) return 'yearly';
+  return 'all';
+}
+
+function getComparisonType(q) {
+  if (q.includes('vs') || q.includes('versus') || q.includes('compared to')) return 'comparison';
+  if (q.includes('bigger') || q.includes('smaller') || q.includes('higher') || q.includes('lower')) return 'relative';
+  return 'none';
+}
+
+function getAggregationType(q) {
+  if (q.includes('total') || q.includes('sum')) return 'sum';
+  if (q.includes('average') || q.includes('mean')) return 'average';
+  if (q.includes('biggest') || q.includes('largest')) return 'max';
+  if (q.includes('smallest') || q.includes('lowest')) return 'min';
+  return 'none';
+}
+
+function selectRelevantData(financialData, analysis) {
+  const result = {
+    statements: {},
+    dateColumns: financialData.dateColumns || [],
+    forecastSettings: financialData.forecastSettings || {},
+    analysis: analysis
+  };
+  
+  // Determine which statement types are needed
+  const neededStatements = new Set();
+  
+  if (analysis.intent === 'revenue' || analysis.intent === 'expense' || analysis.intent === 'profit') {
+    neededStatements.add('pnl');
+  }
+  if (analysis.intent === 'balance') {
+    neededStatements.add('balance');
+  }
+  if (analysis.intent === 'cashflow') {
+    neededStatements.add('cashflow');
+  }
+  if (analysis.intent === 'general') {
+    neededStatements.add('pnl'); // Default to P&L for general questions
+  }
+  
+  // Select relevant data based on question type
+  neededStatements.forEach(statementType => {
+    const allItems = financialData.statements?.[statementType] || [];
+    
+    if (analysis.type === 'value' && analysis.entities.length > 0) {
+      // For specific value questions, find exact matches
+      result.statements[statementType] = allItems.filter(item => 
+        analysis.entities.some(entity => 
+          item.name.toLowerCase().includes(entity.toLowerCase())
+        )
+      );
+    } else if (analysis.type === 'trend' && analysis.intent !== 'general') {
+      // For trend questions, include items related to the intent
+      result.statements[statementType] = allItems.filter(item => {
+        const name = item.name.toLowerCase();
+        if (analysis.intent === 'revenue') {
+          return name.includes('revenue') || name.includes('sales') || name.includes('income');
+        } else if (analysis.intent === 'expense') {
+          return name.includes('expense') || name.includes('cost') || name.includes('operating');
+        } else if (analysis.intent === 'profit') {
+          return name.includes('profit') || name.includes('income') || name.includes('net');
+        }
+        return true;
+      });
+    } else if (analysis.type === 'max' || analysis.type === 'min') {
+      // For biggest/smallest questions, include all items of the relevant type
+      if (analysis.intent === 'revenue') {
+        result.statements[statementType] = allItems.filter(item => 
+          item.name.toLowerCase().includes('revenue') || 
+          item.name.toLowerCase().includes('sales') ||
+          item.name.toLowerCase().includes('income')
+        );
+      } else if (analysis.intent === 'expense') {
+        result.statements[statementType] = allItems.filter(item => 
+          item.name.toLowerCase().includes('expense') || 
+          item.name.toLowerCase().includes('cost') ||
+          item.name.toLowerCase().includes('operating')
+        );
+      } else {
+        result.statements[statementType] = allItems;
+      }
+    } else {
+      // For general questions, include all items
+      result.statements[statementType] = allItems;
+    }
+    
+    // Limit data size - take only first 15 items if still too many
+    if (result.statements[statementType].length > 15) {
+      result.statements[statementType] = result.statements[statementType].slice(0, 15);
+    }
+  });
+  
+  return result;
+}
+
 module.exports = async (req, res) => {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -71,129 +225,14 @@ module.exports = async (req, res) => {
     
     console.log('Financial data sample:', dataString.substring(0, 2000) + '...');
 
-    // Smart data filtering based on question content
-    let dataToSend = financialData;
+    // Smart data filtering based on question analysis
+    const questionAnalysis = analyzeQuestion(message);
+    console.log('Question analysis:', questionAnalysis);
     
-    // Analyze question to determine which statement types are relevant
-    const questionLower = message.toLowerCase();
-    const relevantStatements = {};
+    let dataToSend = selectRelevantData(financialData, questionAnalysis);
     
-    // Check for specific line item mentions
-    const allLineItems = [
-      ...(financialData.statements?.pnl || []),
-      ...(financialData.statements?.balance || []),
-      ...(financialData.statements?.cashflow || [])
-    ];
-    
-    const mentionedItems = allLineItems.filter(item => {
-      const itemNameLower = item.name.toLowerCase();
-      // More precise matching - check if question contains key words from line item name
-      const itemWords = itemNameLower.split(/\s+/);
-      return itemWords.some(word => 
-        word.length > 2 && questionLower.includes(word)
-      );
-    });
-    
-    // Also check for abstract references to line item types
-    const abstractMentions = [];
-    if (questionLower.includes('revenue') || questionLower.includes('sales')) {
-      abstractMentions.push(...allLineItems.filter(item => 
-        item.name.toLowerCase().includes('revenue') || 
-        item.name.toLowerCase().includes('sales') ||
-        item.name.toLowerCase().includes('income')
-      ));
-    }
-    if (questionLower.includes('expense') || questionLower.includes('cost')) {
-      abstractMentions.push(...allLineItems.filter(item => 
-        item.name.toLowerCase().includes('expense') || 
-        item.name.toLowerCase().includes('cost') ||
-        item.name.toLowerCase().includes('operating')
-      ));
-    }
-    
-    const allMentionedItems = [...mentionedItems, ...abstractMentions];
-    
-    // If specific line items mentioned, include their full data
-    if (allMentionedItems.length > 0) {
-      console.log('Specific line items mentioned:', allMentionedItems.map(item => item.name));
-      
-      // Group mentioned items by statement type
-      allMentionedItems.forEach(item => {
-        if (financialData.statements?.pnl?.some(pnlItem => pnlItem.name === item.name)) {
-          if (!relevantStatements.pnl) relevantStatements.pnl = [];
-          relevantStatements.pnl.push(item);
-        }
-        if (financialData.statements?.balance?.some(balItem => balItem.name === item.name)) {
-          if (!relevantStatements.balance) relevantStatements.balance = [];
-          relevantStatements.balance.push(item);
-        }
-        if (financialData.statements?.cashflow?.some(cfItem => cfItem.name === item.name)) {
-          if (!relevantStatements.cashflow) relevantStatements.cashflow = [];
-          relevantStatements.cashflow.push(item);
-        }
-      });
-    }
-    
-    // Determine which statements are relevant based on question keywords
-    if (questionLower.includes('revenue') || questionLower.includes('sales') || 
-        questionLower.includes('income') || questionLower.includes('profit') ||
-        questionLower.includes('expense') || questionLower.includes('cost') ||
-        questionLower.includes('p&l') || questionLower.includes('profit and loss') ||
-        questionLower.includes('trending') || questionLower.includes('trend') ||
-        questionLower.includes('biggest') || questionLower.includes('largest') ||
-        questionLower.includes('smallest') || questionLower.includes('lowest') ||
-        questionLower.includes('highest') || questionLower.includes('operational') ||
-        questionLower.includes('non-operational') || questionLower.includes('recurring') ||
-        questionLower.includes('analysis') || questionLower.includes('compare') ||
-        questionLower.includes('comparison') || questionLower.includes('growth') ||
-        questionLower.includes('decline') || questionLower.includes('increase') ||
-        questionLower.includes('decrease') || questionLower.includes('change')) {
-      relevantStatements.pnl = financialData.statements?.pnl || [];
-    }
-    
-    if (questionLower.includes('asset') || questionLower.includes('liability') || 
-        questionLower.includes('equity') || questionLower.includes('balance sheet') ||
-        questionLower.includes('balance')) {
-      relevantStatements.balance = financialData.statements?.balance || [];
-    }
-    
-    if (questionLower.includes('cash') || questionLower.includes('flow') ||
-        questionLower.includes('operating') || questionLower.includes('investing') ||
-        questionLower.includes('financing') || questionLower.includes('cash flow')) {
-      relevantStatements.cashflow = financialData.statements?.cashflow || [];
-    }
-    
-    // If no specific statements identified, default to P&L only (most common questions)
-    if (Object.keys(relevantStatements).length === 0) {
-      console.log('No specific statements identified, defaulting to P&L only');
-      relevantStatements.pnl = financialData.statements?.pnl || [];
-      // Don't include balance sheet and cash flow unless specifically asked
-    }
-    
-    dataToSend = {
-      statements: relevantStatements,
-      dateColumns: financialData.dateColumns || [],
-      forecastSettings: financialData.forecastSettings || {}
-    };
-    
-    // Check final data size and truncate if necessary
-    const finalDataString = JSON.stringify(dataToSend);
-    if (finalDataString.length > 30000) {
-      console.log('Data still too large after filtering:', finalDataString.length, 'characters');
-      console.log('Truncating line items to prevent API errors...');
-      
-      // Truncate each statement to first 10 items
-      Object.keys(relevantStatements).forEach(statementType => {
-        if (relevantStatements[statementType].length > 10) {
-          relevantStatements[statementType] = relevantStatements[statementType].slice(0, 10);
-        }
-      });
-      
-      dataToSend.statements = relevantStatements;
-    }
-    
-    console.log('Relevant statements for question:', Object.keys(relevantStatements));
-    console.log('Final data size:', JSON.stringify(dataToSend).length, 'characters');
+    console.log('Selected data size:', JSON.stringify(dataToSend).length, 'characters');
+    console.log('Selected statements:', Object.keys(dataToSend.statements));
     
     const prompt = `You are a financial analysis assistant. Here is the current financial forecast data from the user's financial statements:
 
@@ -201,12 +240,16 @@ ${JSON.stringify(dataToSend, null, 2)}
 
 User Question: ${message}
 
+Question Analysis: ${JSON.stringify(questionAnalysis, null, 2)}
+
 IMPORTANT: The user is currently viewing the ${dataToSend.activeTab || 'monthly'} tab. All data provided corresponds to this view.
 
 Instructions:
 - For specific value requests (like "revenue for December 2025"), look in the dateValues object for each line item
 - Each line item has a "dateValues" object that maps dates to values (e.g., "Dec 31, 2025": 125000)
 - For trend analysis, analyze the forecastValues array over time
+- For "biggest/smallest" questions, compare values across line items
+- For comparison questions, analyze multiple items together
 - Be concise and direct - don't ask for additional data
 - If you can't find a specific value, say "Value not found in the data"
 - Format currency values properly (e.g., $125,000)
