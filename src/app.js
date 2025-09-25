@@ -1863,6 +1863,28 @@ window.testBalanceSheetClassification = testBalanceSheetClassification;
 let balanceSheetClassifications = {};
 
 /**
+ * Auto-detect special balance sheet item types
+ */
+function autoDetectSpecialTypes(balanceSheetItems) {
+  return balanceSheetItems.map(item => {
+    const name = item.name.toLowerCase();
+    const hasValues = item.actualValues && item.actualValues.some(val => val !== null && val !== undefined && val !== '');
+    
+    // Auto-detect totals
+    const isTotal = /\btotal\b/i.test(item.name);
+    
+    // Auto-detect subheaders (no values or all blank)
+    const isSubheader = !hasValues;
+    
+    return {
+      ...item,
+      autoDetectedType: isTotal ? 'calculated_total' : isSubheader ? 'subheader' : 'line_item',
+      hasValues: hasValues
+    };
+  });
+}
+
+/**
  * Process balance sheet classification during CSV upload
  */
 async function processBalanceSheetClassification(data) {
@@ -1876,25 +1898,78 @@ async function processBalanceSheetClassification(data) {
       return;
     }
     
-    const lineItemNames = balanceSheetItems.map(item => item.name);
-    console.log('Balance sheet items to classify:', lineItemNames);
+    // Auto-detect special types (totals, subheaders)
+    const itemsWithDetection = autoDetectSpecialTypes(balanceSheetItems);
+    console.log('Items with auto-detection:', itemsWithDetection);
+    
+    // Only send line items (not totals/subheaders) to AI for classification
+    const lineItemsOnly = itemsWithDetection.filter(item => item.autoDetectedType === 'line_item');
+    const lineItemNames = lineItemsOnly.map(item => item.name);
+    
+    console.log('Line items to classify with AI:', lineItemNames);
+    console.log('Auto-detected totals:', itemsWithDetection.filter(item => item.autoDetectedType === 'calculated_total').map(item => item.name));
+    console.log('Auto-detected subheaders:', itemsWithDetection.filter(item => item.autoDetectedType === 'subheader').map(item => item.name));
     
     // Show loading indicator
     showClassificationLoading();
     
     try {
-      // Get AI classifications
-      const classifications = await classifyBalanceSheetItems(lineItemNames);
-      console.log('AI classifications received:', classifications);
+      let aiClassifications = [];
+      
+      // Only run AI classification if we have actual line items
+      if (lineItemNames.length > 0) {
+        aiClassifications = await classifyBalanceSheetItems(lineItemNames);
+        console.log('AI classifications received:', aiClassifications);
+      }
+      
+      // Combine AI classifications with auto-detected items
+      const allClassifications = itemsWithDetection.map(item => {
+        if (item.autoDetectedType === 'calculated_total') {
+          return {
+            originalName: item.name,
+            category: 'calculated_total',
+            standardName: item.name,
+            driver: 'calculated',
+            method: 'sum_of_components',
+            confidence: 1.0,
+            categoryInfo: 'calculated_total',
+            autoDetected: true
+          };
+        } else if (item.autoDetectedType === 'subheader') {
+          return {
+            originalName: item.name,
+            category: 'subheader',
+            standardName: item.name,
+            driver: 'none',
+            method: 'display_only',
+            confidence: 1.0,
+            categoryInfo: 'subheader',
+            autoDetected: true
+          };
+        } else {
+          // Find AI classification for this line item
+          const aiClassification = aiClassifications.find(ai => ai.originalName === item.name);
+          return aiClassification || {
+            originalName: item.name,
+            category: 'unknown',
+            standardName: item.name,
+            driver: 'manual',
+            method: 'growth_rate',
+            confidence: 0.1,
+            categoryInfo: 'unknown',
+            autoDetected: false
+          };
+        }
+      });
       
       // Store classifications
       balanceSheetClassifications = {};
-      classifications.forEach(classification => {
+      allClassifications.forEach(classification => {
         balanceSheetClassifications[classification.originalName] = classification;
       });
       
       // Show classification review UI
-      await showClassificationReview(classifications);
+      await showClassificationReview(allClassifications);
       
     } catch (error) {
       console.error('Classification failed:', error);
@@ -1958,53 +2033,100 @@ async function showClassificationReview(classifications) {
     const overlay = document.getElementById('classificationOverlay');
     if (!overlay) return resolve();
     
-    const highConfidence = classifications.filter(c => c.confidence >= 0.8);
-    const lowConfidence = classifications.filter(c => c.confidence < 0.8);
+    // Group classifications by type
+    const autoDetectedTotals = classifications.filter(c => c.category === 'calculated_total');
+    const autoDetectedSubheaders = classifications.filter(c => c.category === 'subheader');
+    const lineItems = classifications.filter(c => c.category !== 'calculated_total' && c.category !== 'subheader');
+    
+    // Create dropdown options for all categories
+    const categoryOptions = `
+      <option value="accounts_receivable">Accounts Receivable</option>
+      <option value="inventory">Inventory</option>
+      <option value="cash">Cash and Cash Equivalents</option>
+      <option value="prepaid_expenses">Prepaid Expenses</option>
+      <option value="property_plant_equipment">Property, Plant & Equipment</option>
+      <option value="intangible_assets">Intangible Assets</option>
+      <option value="accounts_payable">Accounts Payable</option>
+      <option value="accrued_expenses">Accrued Expenses</option>
+      <option value="short_term_debt">Short-term Debt</option>
+      <option value="deferred_revenue">Deferred Revenue</option>
+      <option value="long_term_debt">Long-term Debt</option>
+      <option value="common_stock">Common Stock</option>
+      <option value="retained_earnings">Retained Earnings</option>
+      <option value="calculated_total">📊 Calculated Total</option>
+      <option value="subheader">📋 Subheader (Display Only)</option>
+      <option value="unknown">❓ Unknown/Manual</option>
+    `;
     
     overlay.innerHTML = `
-      <div style="background: white; padding: 30px; border-radius: 10px; max-width: 800px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+      <div style="background: white; padding: 30px; border-radius: 10px; max-width: 900px; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
         <div style="font-size: 1.5rem; color: #2c3e50; margin-bottom: 10px;">🎯 AI Balance Sheet Classification</div>
         <div style="color: #6c757d; margin-bottom: 20px;">
-          Review AI classifications for your balance sheet items. High-confidence items are auto-approved.
+          Review and modify AI classifications. All items can be changed using the dropdowns below.
         </div>
         
-        ${highConfidence.length > 0 ? `
+        ${autoDetectedTotals.length > 0 ? `
           <div style="margin-bottom: 25px;">
-            <h4 style="color: #27ae60; margin-bottom: 10px;">✅ High Confidence (Auto-Approved)</h4>
-            <div style="background: #f8fff8; padding: 15px; border-radius: 6px; border-left: 4px solid #27ae60;">
-              ${highConfidence.map(c => `
-                <div style="margin-bottom: 8px; font-size: 0.9rem;">
-                  <strong>"${c.originalName}"</strong> → ${c.standardName} 
-                  <span style="color: #27ae60;">(${(c.confidence * 100).toFixed(0)}% confidence)</span>
-                  <br><span style="color: #6c757d; font-size: 0.8rem;">Method: ${c.method}, Driver: ${c.driver}</span>
+            <h4 style="color: #8e44ad; margin-bottom: 10px;">📊 Auto-Detected Totals (Calculated Sums)</h4>
+            <div style="background: #f8f4ff; padding: 15px; border-radius: 6px; border-left: 4px solid #8e44ad;">
+              ${autoDetectedTotals.map(c => `
+                <div style="margin-bottom: 12px; padding: 8px; background: white; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+                  <div>
+                    <strong>"${c.originalName}"</strong> → Calculated Total
+                    <br><span style="color: #6c757d; font-size: 0.8rem;">Will be sum of component items</span>
+                  </div>
+                  <select id="classification_${c.originalName.replace(/[^a-zA-Z0-9]/g, '_')}" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; min-width: 200px;">
+                    <option value="calculated_total" selected>📊 Calculated Total</option>
+                    ${categoryOptions}
+                  </select>
                 </div>
               `).join('')}
             </div>
           </div>
         ` : ''}
         
-        ${lowConfidence.length > 0 ? `
+        ${autoDetectedSubheaders.length > 0 ? `
           <div style="margin-bottom: 25px;">
-            <h4 style="color: #f39c12; margin-bottom: 10px;">⚠️ Lower Confidence (Please Review)</h4>
-            <div style="background: #fffaf0; padding: 15px; border-radius: 6px; border-left: 4px solid #f39c12;">
-              ${lowConfidence.map(c => `
-                <div style="margin-bottom: 15px; padding: 10px; background: white; border-radius: 4px; border: 1px solid #e9ecef;">
-                  <div style="margin-bottom: 8px;">
-                    <strong>"${c.originalName}"</strong> → 
-                    <select id="classification_${c.originalName.replace(/[^a-zA-Z0-9]/g, '_')}" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;">
-                      <option value="${c.category}" selected>${c.standardName} (${(c.confidence * 100).toFixed(0)}%)</option>
-                      <option value="accounts_receivable">Accounts Receivable</option>
-                      <option value="inventory">Inventory</option>
-                      <option value="cash">Cash</option>
-                      <option value="accounts_payable">Accounts Payable</option>
-                      <option value="property_plant_equipment">Property, Plant & Equipment</option>
-                      <option value="retained_earnings">Retained Earnings</option>
-                      <option value="unknown">Unknown/Manual</option>
-                    </select>
+            <h4 style="color: #34495e; margin-bottom: 10px;">📋 Auto-Detected Subheaders (No Values)</h4>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #34495e;">
+              ${autoDetectedSubheaders.map(c => `
+                <div style="margin-bottom: 12px; padding: 8px; background: white; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+                  <div>
+                    <strong>"${c.originalName}"</strong> → Subheader
+                    <br><span style="color: #6c757d; font-size: 0.8rem;">Display only, no forecasting</span>
                   </div>
-                  <div style="color: #6c757d; font-size: 0.8rem;">Suggested: ${c.method}, Driver: ${c.driver}</div>
+                  <select id="classification_${c.originalName.replace(/[^a-zA-Z0-9]/g, '_')}" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; min-width: 200px;">
+                    <option value="subheader" selected>📋 Subheader (Display Only)</option>
+                    ${categoryOptions}
+                  </select>
                 </div>
               `).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        ${lineItems.length > 0 ? `
+          <div style="margin-bottom: 25px;">
+            <h4 style="color: #2c3e50; margin-bottom: 10px;">💼 Line Items (Individual Forecasting)</h4>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #3498db;">
+              ${lineItems.map(c => {
+                const confidenceColor = c.confidence >= 0.8 ? '#27ae60' : c.confidence >= 0.5 ? '#f39c12' : '#e74c3c';
+                const confidenceIcon = c.confidence >= 0.8 ? '✅' : c.confidence >= 0.5 ? '⚠️' : '❗';
+                
+                return `
+                  <div style="margin-bottom: 12px; padding: 8px; background: white; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                      <strong>"${c.originalName}"</strong> → ${c.standardName}
+                      <span style="color: ${confidenceColor};">${confidenceIcon} ${(c.confidence * 100).toFixed(0)}%</span>
+                      <br><span style="color: #6c757d; font-size: 0.8rem;">Method: ${c.method}, Driver: ${c.driver}</span>
+                    </div>
+                    <select id="classification_${c.originalName.replace(/[^a-zA-Z0-9]/g, '_')}" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; min-width: 200px;">
+                      <option value="${c.category}" selected>${c.standardName} (${(c.confidence * 100).toFixed(0)}%)</option>
+                      ${categoryOptions}
+                    </select>
+                  </div>
+                `;
+              }).join('')}
             </div>
           </div>
         ` : ''}
@@ -2022,8 +2144,8 @@ async function showClassificationReview(classifications) {
     
     // Add event listeners
     document.getElementById('acceptClassifications').addEventListener('click', () => {
-      // Update classifications based on user changes
-      lowConfidence.forEach(c => {
+      // Update classifications based on user changes for ALL items
+      classifications.forEach(c => {
         const selectId = `classification_${c.originalName.replace(/[^a-zA-Z0-9]/g, '_')}`;
         const select = document.getElementById(selectId);
         if (select) {
@@ -2032,6 +2154,14 @@ async function showClassificationReview(classifications) {
             console.log(`User changed "${c.originalName}" from ${c.category} to ${newCategory}`);
             balanceSheetClassifications[c.originalName].category = newCategory;
             balanceSheetClassifications[c.originalName].confidence = 1.0; // User override = 100% confidence
+            
+            // Update method and driver based on new category
+            const categoryInfo = getCategoryInfo(newCategory);
+            if (categoryInfo) {
+              balanceSheetClassifications[c.originalName].standardName = categoryInfo.standardName;
+              balanceSheetClassifications[c.originalName].driver = categoryInfo.driver;
+              balanceSheetClassifications[c.originalName].method = categoryInfo.method;
+            }
           }
         }
       });
@@ -2048,6 +2178,32 @@ async function showClassificationReview(classifications) {
       resolve();
     });
   });
+}
+
+/**
+ * Get category information for user overrides
+ */
+function getCategoryInfo(category) {
+  const categoryMap = {
+    'accounts_receivable': { standardName: 'Accounts Receivable', driver: 'revenue', method: 'days_sales_outstanding' },
+    'inventory': { standardName: 'Inventory', driver: 'cost_of_goods_sold', method: 'days_inventory_outstanding' },
+    'cash': { standardName: 'Cash and Cash Equivalents', driver: 'calculated', method: 'cash_flow_balancing' },
+    'prepaid_expenses': { standardName: 'Prepaid Expenses', driver: 'revenue', method: 'percentage_of_revenue' },
+    'property_plant_equipment': { standardName: 'Property, Plant & Equipment', driver: 'depreciation', method: 'capex_depreciation' },
+    'intangible_assets': { standardName: 'Intangible Assets', driver: 'revenue', method: 'percentage_of_revenue' },
+    'accounts_payable': { standardName: 'Accounts Payable', driver: 'operating_expenses', method: 'days_payable_outstanding' },
+    'accrued_expenses': { standardName: 'Accrued Expenses', driver: 'total_expenses', method: 'percentage_of_expenses' },
+    'short_term_debt': { standardName: 'Short-term Debt', driver: 'manual', method: 'debt_schedule' },
+    'deferred_revenue': { standardName: 'Deferred Revenue', driver: 'revenue', method: 'percentage_of_revenue' },
+    'long_term_debt': { standardName: 'Long-term Debt', driver: 'manual', method: 'debt_schedule' },
+    'common_stock': { standardName: 'Common Stock', driver: 'manual', method: 'equity_schedule' },
+    'retained_earnings': { standardName: 'Retained Earnings', driver: 'net_income', method: 'accumulated_earnings' },
+    'calculated_total': { standardName: 'Calculated Total', driver: 'calculated', method: 'sum_of_components' },
+    'subheader': { standardName: 'Subheader', driver: 'none', method: 'display_only' },
+    'unknown': { standardName: 'Unknown', driver: 'manual', method: 'growth_rate' }
+  };
+  
+  return categoryMap[category];
 }
 
 /**
