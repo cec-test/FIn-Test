@@ -1766,6 +1766,94 @@ function createSVGChart(container, data, periodType) {
 }
 
 /**
+ * Balance Sheet Classification System
+ */
+async function classifyBalanceSheetItems(lineItems) {
+  try {
+    console.log('Classifying balance sheet items:', lineItems);
+    
+    // Backend API endpoint - automatically detect if running locally or on Vercel
+    const BACKEND_URL = window.location.hostname === 'localhost' 
+      ? 'http://localhost:3001/api/classify-balance-sheet'
+      : `${window.location.origin}/api/classify-balance-sheet`;
+    
+    const response = await fetch(BACKEND_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        lineItems: lineItems
+      })
+    });
+    
+    console.log('Classification response status:', response.status);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('Classification error response:', errorData);
+      throw new Error(`Classification API error: ${response.status} - ${errorData.details || errorData.error || 'Unknown error'}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      console.log('Classification successful:', data);
+      return data.classifications;
+    } else {
+      throw new Error(data.error || 'Unknown classification error');
+    }
+    
+  } catch (error) {
+    console.error('Error classifying balance sheet items:', error);
+    throw error;
+  }
+}
+
+/**
+ * Test the balance sheet classification system
+ */
+function testBalanceSheetClassification() {
+  const testItems = [
+    'Cash and Cash Equivalents',
+    'Accounts Receivable - Net',
+    'Customer A/R',
+    'Inventory',
+    'Prepaid Expenses',
+    'Property, Plant & Equipment',
+    'PP&E - Net',
+    'Intangible Assets',
+    'Accounts Payable',
+    'Trade Payables',
+    'Accrued Expenses',
+    'Short-term Debt',
+    'Deferred Revenue',
+    'Long-term Debt',
+    'Common Stock',
+    'Retained Earnings'
+  ];
+  
+  classifyBalanceSheetItems(testItems)
+    .then(results => {
+      console.log('✅ Classification Test Results:');
+      console.table(results);
+      
+      // Show results in a more readable format
+      results.forEach(result => {
+        const confidence = (result.confidence * 100).toFixed(1);
+        console.log(`📊 "${result.originalName}" → ${result.standardName} (${confidence}% confidence)`);
+        console.log(`   Driver: ${result.driver}, Method: ${result.method}, Category: ${result.categoryInfo}`);
+      });
+    })
+    .catch(error => {
+      console.error('❌ Classification Test Failed:', error);
+    });
+}
+
+// Expose test function globally for easy testing
+window.testBalanceSheetClassification = testBalanceSheetClassification;
+
+/**
  * Chat functionality
  */
 let chatHistory = [];
