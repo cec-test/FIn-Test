@@ -1097,13 +1097,17 @@ function rebuildAllTables() {
   createDynamicTable('yearlyCashflowContainer', 'cashflow', 'yearly', 'yearly');
 }
 
-function handleActualsUpload(file) {
+async function handleActualsUpload(file) {
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       console.log('Parsing CSV...');
       const data = parseCSVToObject(reader.result);
       console.log('Parsed data:', data);
+      
+      // Run AI classification on balance sheet items
+      await processBalanceSheetClassification(data);
+      
       applyActualsFromObject(data);
     } catch (e) {
       console.error('CSV parsing error:', e);
@@ -1852,6 +1856,199 @@ function testBalanceSheetClassification() {
 
 // Expose test function globally for easy testing
 window.testBalanceSheetClassification = testBalanceSheetClassification;
+
+/**
+ * Storage for balance sheet classifications
+ */
+let balanceSheetClassifications = {};
+
+/**
+ * Process balance sheet classification during CSV upload
+ */
+async function processBalanceSheetClassification(data) {
+  try {
+    console.log('Processing balance sheet classification...');
+    
+    // Extract balance sheet line items
+    const balanceSheetItems = data.balance || [];
+    if (balanceSheetItems.length === 0) {
+      console.log('No balance sheet items found to classify');
+      return;
+    }
+    
+    const lineItemNames = balanceSheetItems.map(item => item.name);
+    console.log('Balance sheet items to classify:', lineItemNames);
+    
+    // Show loading indicator
+    showClassificationLoading();
+    
+    try {
+      // Get AI classifications
+      const classifications = await classifyBalanceSheetItems(lineItemNames);
+      console.log('AI classifications received:', classifications);
+      
+      // Store classifications
+      balanceSheetClassifications = {};
+      classifications.forEach(classification => {
+        balanceSheetClassifications[classification.originalName] = classification;
+      });
+      
+      // Show classification review UI
+      await showClassificationReview(classifications);
+      
+    } catch (error) {
+      console.error('Classification failed:', error);
+      // Continue without classification if AI fails
+      alert('AI classification failed, continuing with standard forecasting. Error: ' + error.message);
+    }
+    
+  } catch (error) {
+    console.error('Error in processBalanceSheetClassification:', error);
+    // Don't block the upload process if classification fails
+  }
+}
+
+/**
+ * Show loading indicator during classification
+ */
+function showClassificationLoading() {
+  // Create or update loading overlay
+  let overlay = document.getElementById('classificationOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'classificationOverlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    `;
+    document.body.appendChild(overlay);
+  }
+  
+  overlay.innerHTML = `
+    <div style="background: white; padding: 30px; border-radius: 10px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+      <div style="font-size: 1.2rem; color: #2c3e50; margin-bottom: 15px;">🤖 AI Classification in Progress</div>
+      <div style="color: #6c757d; margin-bottom: 20px;">Analyzing your balance sheet line items...</div>
+      <div style="width: 200px; height: 4px; background: #e9ecef; border-radius: 2px; overflow: hidden;">
+        <div style="width: 100%; height: 100%; background: linear-gradient(90deg, #3498db, #2ecc71); animation: loading 2s infinite;"></div>
+      </div>
+    </div>
+    <style>
+      @keyframes loading {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+    </style>
+  `;
+}
+
+/**
+ * Show classification review UI for user confirmation
+ */
+async function showClassificationReview(classifications) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('classificationOverlay');
+    if (!overlay) return resolve();
+    
+    const highConfidence = classifications.filter(c => c.confidence >= 0.8);
+    const lowConfidence = classifications.filter(c => c.confidence < 0.8);
+    
+    overlay.innerHTML = `
+      <div style="background: white; padding: 30px; border-radius: 10px; max-width: 800px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <div style="font-size: 1.5rem; color: #2c3e50; margin-bottom: 10px;">🎯 AI Balance Sheet Classification</div>
+        <div style="color: #6c757d; margin-bottom: 20px;">
+          Review AI classifications for your balance sheet items. High-confidence items are auto-approved.
+        </div>
+        
+        ${highConfidence.length > 0 ? `
+          <div style="margin-bottom: 25px;">
+            <h4 style="color: #27ae60; margin-bottom: 10px;">✅ High Confidence (Auto-Approved)</h4>
+            <div style="background: #f8fff8; padding: 15px; border-radius: 6px; border-left: 4px solid #27ae60;">
+              ${highConfidence.map(c => `
+                <div style="margin-bottom: 8px; font-size: 0.9rem;">
+                  <strong>"${c.originalName}"</strong> → ${c.standardName} 
+                  <span style="color: #27ae60;">(${(c.confidence * 100).toFixed(0)}% confidence)</span>
+                  <br><span style="color: #6c757d; font-size: 0.8rem;">Method: ${c.method}, Driver: ${c.driver}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        ${lowConfidence.length > 0 ? `
+          <div style="margin-bottom: 25px;">
+            <h4 style="color: #f39c12; margin-bottom: 10px;">⚠️ Lower Confidence (Please Review)</h4>
+            <div style="background: #fffaf0; padding: 15px; border-radius: 6px; border-left: 4px solid #f39c12;">
+              ${lowConfidence.map(c => `
+                <div style="margin-bottom: 15px; padding: 10px; background: white; border-radius: 4px; border: 1px solid #e9ecef;">
+                  <div style="margin-bottom: 8px;">
+                    <strong>"${c.originalName}"</strong> → 
+                    <select id="classification_${c.originalName.replace(/[^a-zA-Z0-9]/g, '_')}" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;">
+                      <option value="${c.category}" selected>${c.standardName} (${(c.confidence * 100).toFixed(0)}%)</option>
+                      <option value="accounts_receivable">Accounts Receivable</option>
+                      <option value="inventory">Inventory</option>
+                      <option value="cash">Cash</option>
+                      <option value="accounts_payable">Accounts Payable</option>
+                      <option value="property_plant_equipment">Property, Plant & Equipment</option>
+                      <option value="retained_earnings">Retained Earnings</option>
+                      <option value="unknown">Unknown/Manual</option>
+                    </select>
+                  </div>
+                  <div style="color: #6c757d; font-size: 0.8rem;">Suggested: ${c.method}, Driver: ${c.driver}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        <div style="text-align: center; margin-top: 25px;">
+          <button id="acceptClassifications" style="background: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1rem; margin-right: 10px;">
+            Accept Classifications
+          </button>
+          <button id="skipClassifications" style="background: #95a5a6; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1rem;">
+            Skip AI (Use Standard)
+          </button>
+        </div>
+      </div>
+    `;
+    
+    // Add event listeners
+    document.getElementById('acceptClassifications').addEventListener('click', () => {
+      // Update classifications based on user changes
+      lowConfidence.forEach(c => {
+        const selectId = `classification_${c.originalName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const select = document.getElementById(selectId);
+        if (select) {
+          const newCategory = select.value;
+          if (newCategory !== c.category) {
+            console.log(`User changed "${c.originalName}" from ${c.category} to ${newCategory}`);
+            balanceSheetClassifications[c.originalName].category = newCategory;
+            balanceSheetClassifications[c.originalName].confidence = 1.0; // User override = 100% confidence
+          }
+        }
+      });
+      
+      overlay.remove();
+      console.log('Final classifications:', balanceSheetClassifications);
+      resolve();
+    });
+    
+    document.getElementById('skipClassifications').addEventListener('click', () => {
+      balanceSheetClassifications = {}; // Clear classifications
+      overlay.remove();
+      console.log('User skipped AI classification');
+      resolve();
+    });
+  });
+}
 
 /**
  * Chat functionality
