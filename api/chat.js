@@ -94,12 +94,31 @@ module.exports = async (req, res) => {
       );
     });
     
+    // Also check for abstract references to line item types
+    const abstractMentions = [];
+    if (questionLower.includes('revenue') || questionLower.includes('sales')) {
+      abstractMentions.push(...allLineItems.filter(item => 
+        item.name.toLowerCase().includes('revenue') || 
+        item.name.toLowerCase().includes('sales') ||
+        item.name.toLowerCase().includes('income')
+      ));
+    }
+    if (questionLower.includes('expense') || questionLower.includes('cost')) {
+      abstractMentions.push(...allLineItems.filter(item => 
+        item.name.toLowerCase().includes('expense') || 
+        item.name.toLowerCase().includes('cost') ||
+        item.name.toLowerCase().includes('operating')
+      ));
+    }
+    
+    const allMentionedItems = [...mentionedItems, ...abstractMentions];
+    
     // If specific line items mentioned, include their full data
-    if (mentionedItems.length > 0) {
-      console.log('Specific line items mentioned:', mentionedItems.map(item => item.name));
+    if (allMentionedItems.length > 0) {
+      console.log('Specific line items mentioned:', allMentionedItems.map(item => item.name));
       
       // Group mentioned items by statement type
-      mentionedItems.forEach(item => {
+      allMentionedItems.forEach(item => {
         if (financialData.statements?.pnl?.some(pnlItem => pnlItem.name === item.name)) {
           if (!relevantStatements.pnl) relevantStatements.pnl = [];
           relevantStatements.pnl.push(item);
@@ -119,7 +138,16 @@ module.exports = async (req, res) => {
     if (questionLower.includes('revenue') || questionLower.includes('sales') || 
         questionLower.includes('income') || questionLower.includes('profit') ||
         questionLower.includes('expense') || questionLower.includes('cost') ||
-        questionLower.includes('p&l') || questionLower.includes('profit and loss')) {
+        questionLower.includes('p&l') || questionLower.includes('profit and loss') ||
+        questionLower.includes('trending') || questionLower.includes('trend') ||
+        questionLower.includes('biggest') || questionLower.includes('largest') ||
+        questionLower.includes('smallest') || questionLower.includes('lowest') ||
+        questionLower.includes('highest') || questionLower.includes('operational') ||
+        questionLower.includes('non-operational') || questionLower.includes('recurring') ||
+        questionLower.includes('analysis') || questionLower.includes('compare') ||
+        questionLower.includes('comparison') || questionLower.includes('growth') ||
+        questionLower.includes('decline') || questionLower.includes('increase') ||
+        questionLower.includes('decrease') || questionLower.includes('change')) {
       relevantStatements.pnl = financialData.statements?.pnl || [];
     }
     
