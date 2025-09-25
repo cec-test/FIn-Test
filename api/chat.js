@@ -85,9 +85,14 @@ module.exports = async (req, res) => {
       ...(financialData.statements?.cashflow || [])
     ];
     
-    const mentionedItems = allLineItems.filter(item => 
-      questionLower.includes(item.name.toLowerCase())
-    );
+    const mentionedItems = allLineItems.filter(item => {
+      const itemNameLower = item.name.toLowerCase();
+      // More precise matching - check if question contains key words from line item name
+      const itemWords = itemNameLower.split(/\s+/);
+      return itemWords.some(word => 
+        word.length > 2 && questionLower.includes(word)
+      );
+    });
     
     // If specific line items mentioned, include their full data
     if (mentionedItems.length > 0) {
@@ -130,11 +135,11 @@ module.exports = async (req, res) => {
       relevantStatements.cashflow = financialData.statements?.cashflow || [];
     }
     
-    // If no specific statements identified, include all
+    // If no specific statements identified, default to P&L only (most common questions)
     if (Object.keys(relevantStatements).length === 0) {
+      console.log('No specific statements identified, defaulting to P&L only');
       relevantStatements.pnl = financialData.statements?.pnl || [];
-      relevantStatements.balance = financialData.statements?.balance || [];
-      relevantStatements.cashflow = financialData.statements?.cashflow || [];
+      // Don't include balance sheet and cash flow unless specifically asked
     }
     
     dataToSend = {
@@ -143,7 +148,24 @@ module.exports = async (req, res) => {
       forecastSettings: financialData.forecastSettings || {}
     };
     
+    // Check final data size and truncate if necessary
+    const finalDataString = JSON.stringify(dataToSend);
+    if (finalDataString.length > 30000) {
+      console.log('Data still too large after filtering:', finalDataString.length, 'characters');
+      console.log('Truncating line items to prevent API errors...');
+      
+      // Truncate each statement to first 10 items
+      Object.keys(relevantStatements).forEach(statementType => {
+        if (relevantStatements[statementType].length > 10) {
+          relevantStatements[statementType] = relevantStatements[statementType].slice(0, 10);
+        }
+      });
+      
+      dataToSend.statements = relevantStatements;
+    }
+    
     console.log('Relevant statements for question:', Object.keys(relevantStatements));
+    console.log('Final data size:', JSON.stringify(dataToSend).length, 'characters');
     
     const prompt = `You are a financial analysis assistant. Here is the current financial forecast data from the user's financial statements:
 
