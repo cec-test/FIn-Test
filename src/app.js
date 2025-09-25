@@ -831,8 +831,8 @@ function updateForecast() {
  * Dynamic forecast calculations for all line items
  */
 function updateDynamicForecasts(revGrowth, expGrowth, periods) {
-  // Update each statement type
-  ['pnl', 'balance', 'cashflow'].forEach(statementType => {
+  // Update P&L and Cash Flow using existing logic
+  ['pnl', 'cashflow'].forEach(statementType => {
     const lineItems = uploadedLineItems[statementType] || [];
     
     lineItems.forEach(item => {
@@ -903,6 +903,90 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
       }
     });
   });
+  
+  // Update Balance Sheet using smart calculation engine
+  updateBalanceSheetForecasts(periods);
+}
+
+/**
+ * Update Balance Sheet forecasts using the calculation engine
+ */
+function updateBalanceSheetForecasts(periods) {
+  // Only use balance sheet engine if we have classifications and mappings
+  if (Object.keys(balanceSheetClassifications).length === 0) {
+    console.log('No balance sheet classifications available, skipping smart forecasting');
+    return;
+  }
+  
+  console.log('Updating balance sheet forecasts using calculation engine...');
+  
+  // Create calculation engine
+  const engine = new BalanceSheetCalculationEngine(
+    pnlMappings,
+    balanceSheetClassifications, 
+    balanceSheetAssumptions
+  );
+  
+  // Track previous values for period-to-period calculations
+  const previousValues = {};
+  
+  // Generate forecasts for each period
+  for (let i = 0; i < periods; i++) {
+    // Get P&L forecast data for this period
+    const pnlForecastData = getPnLForecastDataForPeriod(i);
+    
+    // Calculate balance sheet values for this period
+    const balanceSheetResults = engine.calculateForecastedValues(i, pnlForecastData, previousValues);
+    
+    // Update the UI with calculated values
+    Object.keys(balanceSheetResults).forEach(itemName => {
+      const result = balanceSheetResults[itemName];
+      const safeName = itemName.toLowerCase().replace(/\s+/g, '');
+      
+      // Update monthly, quarterly, yearly views
+      ['monthly', 'quarterly', 'yearly'].forEach(periodType => {
+        const forecastKey = `${periodType}-balance-${safeName}-${i}`;
+        document.querySelectorAll(`[data-forecast-key="${forecastKey}"]`).forEach(cell => {
+          if (result.method === 'not_forecasted') {
+            // Subheaders and totals show empty
+            updateElement(cell.id, '');
+          } else {
+            updateElement(cell.id, formatCurrency(result.value, !hasUploadedData));
+            // Add tooltip with calculation details
+            cell.title = `${result.method}: ${result.note}`;
+          }
+        });
+      });
+      
+      // Store for next period calculations
+      previousValues[itemName] = result;
+    });
+  }
+  
+  console.log('Balance sheet forecasts updated successfully');
+}
+
+/**
+ * Get P&L forecast data for a specific period
+ */
+function getPnLForecastDataForPeriod(periodIndex) {
+  const pnlData = {};
+  
+  // Extract P&L values from the current forecast tables
+  const pnlItems = uploadedLineItems.pnl || [];
+  
+  pnlItems.forEach(item => {
+    if (!item.actualValues || item.actualValues.length === 0) return;
+    
+    // Get forecasted values using existing P&L logic
+    const forecastValues = getForecastValuesForItem(item, periodIndex + 1);
+    if (forecastValues && forecastValues.length > periodIndex) {
+      pnlData[item.name] = forecastValues[periodIndex];
+    }
+  });
+  
+  console.log(`P&L forecast data for period ${periodIndex}:`, pnlData);
+  return pnlData;
 }
 
 function lastNonNull(arr) {
@@ -2545,6 +2629,348 @@ async function showPnLMappingReview(mappings, pnlItems) {
       resolve();
     });
   });
+}
+
+/**
+ * Balance Sheet Assumptions Storage
+ */
+let balanceSheetAssumptions = {
+  dso: 30,           // Days Sales Outstanding
+  dpo: 30,           // Days Payable Outstanding
+  dio: 45,           // Days Inventory Outstanding
+  depreciationRate: 10, // Annual depreciation rate %
+  capexPercentage: 3,   // CapEx as % of revenue
+  dividendPolicy: 0,    // Annual dividends
+  workingCapitalGrowth: 5 // Growth rate for misc items %
+};
+
+/**
+ * Balance Sheet Calculation Engine
+ */
+class BalanceSheetCalculationEngine {
+  constructor(pnlMappings, balanceSheetClassifications, assumptions) {
+    this.pnlMappings = pnlMappings;
+    this.classifications = balanceSheetClassifications;
+    this.assumptions = assumptions;
+  }
+
+  /**
+   * Calculate forecasted balance sheet values
+   */
+  calculateForecastedValues(periodIndex, pnlForecastData, previousBalanceSheetValues = {}) {
+    const results = {};
+    
+    console.log(`Calculating balance sheet for period ${periodIndex}:`, pnlForecastData);
+    
+    Object.keys(this.classifications).forEach(itemName => {
+      const classification = this.classifications[itemName];
+      const mapping = this.pnlMappings[itemName];
+      
+      // Skip subheaders and totals - they don't get forecasted
+      if (classification.category === 'subheader' || classification.category === 'calculated_total') {
+        results[itemName] = { value: 0, method: 'not_forecasted', note: classification.category };
+        return;
+      }
+      
+      // Calculate based on category and method
+      const calculatedValue = this.calculateLineItem(
+        itemName, 
+        classification, 
+        mapping, 
+        pnlForecastData, 
+        previousBalanceSheetValues,
+        periodIndex
+      );
+      
+      results[itemName] = calculatedValue;
+    });
+    
+    console.log(`Balance sheet calculations for period ${periodIndex}:`, results);
+    return results;
+  }
+
+  /**
+   * Calculate individual line item based on its classification and method
+   */
+  calculateLineItem(itemName, classification, mapping, pnlData, previousValues, periodIndex) {
+    const category = classification.category;
+    const method = classification.method;
+    
+    try {
+      switch (category) {
+        case 'accounts_receivable':
+          return this.calculateAccountsReceivable(mapping, pnlData);
+          
+        case 'inventory':
+          return this.calculateInventory(mapping, pnlData);
+          
+        case 'accounts_payable':
+          return this.calculateAccountsPayable(mapping, pnlData);
+          
+        case 'accrued_expenses':
+          return this.calculateAccruedExpenses(mapping, pnlData);
+          
+        case 'retained_earnings':
+          return this.calculateRetainedEarnings(mapping, pnlData, previousValues[itemName]);
+          
+        case 'property_plant_equipment':
+          return this.calculatePPE(mapping, pnlData, previousValues[itemName]);
+          
+        case 'prepaid_expenses':
+          return this.calculatePrepaidExpenses(mapping, pnlData);
+          
+        case 'deferred_revenue':
+          return this.calculateDeferredRevenue(mapping, pnlData);
+          
+        case 'cash':
+          return this.calculateCash(pnlData, previousValues); // Special balancing item
+          
+        default:
+          return this.calculateDefaultGrowth(itemName, previousValues[itemName]);
+      }
+    } catch (error) {
+      console.error(`Error calculating ${itemName}:`, error);
+      return {
+        value: previousValues[itemName]?.value || 0,
+        method: 'error_fallback',
+        note: `Calculation failed: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Accounts Receivable = (Revenue / 365) * DSO
+   */
+  calculateAccountsReceivable(mapping, pnlData) {
+    if (!mapping || !mapping.pnlDriver) {
+      return { value: 0, method: 'no_pnl_driver', note: 'No P&L driver mapped' };
+    }
+    
+    const revenue = this.getPnLValue(mapping.pnlDriver, pnlData);
+    if (revenue === null) {
+      return { value: 0, method: 'pnl_value_not_found', note: `P&L driver "${mapping.pnlDriver}" not found` };
+    }
+    
+    const dso = this.assumptions.dso;
+    const arValue = (revenue / 365) * dso;
+    
+    return {
+      value: Math.max(0, arValue), // Don't allow negative AR
+      method: 'days_sales_outstanding',
+      note: `${revenue.toLocaleString()} revenue / 365 * ${dso} DSO`,
+      driver: mapping.pnlDriver,
+      driverValue: revenue
+    };
+  }
+
+  /**
+   * Inventory = (COGS / 365) * DIO
+   */
+  calculateInventory(mapping, pnlData) {
+    if (!mapping || !mapping.pnlDriver) {
+      return { value: 0, method: 'no_pnl_driver', note: 'No P&L driver mapped' };
+    }
+    
+    const cogs = this.getPnLValue(mapping.pnlDriver, pnlData);
+    if (cogs === null) {
+      return { value: 0, method: 'pnl_value_not_found', note: `P&L driver "${mapping.pnlDriver}" not found` };
+    }
+    
+    const dio = this.assumptions.dio;
+    const inventoryValue = (cogs / 365) * dio;
+    
+    return {
+      value: Math.max(0, inventoryValue),
+      method: 'days_inventory_outstanding',
+      note: `${cogs.toLocaleString()} COGS / 365 * ${dio} DIO`,
+      driver: mapping.pnlDriver,
+      driverValue: cogs
+    };
+  }
+
+  /**
+   * Accounts Payable = (Operating Expenses / 365) * DPO
+   */
+  calculateAccountsPayable(mapping, pnlData) {
+    if (!mapping || !mapping.pnlDriver) {
+      return { value: 0, method: 'no_pnl_driver', note: 'No P&L driver mapped' };
+    }
+    
+    const opex = this.getPnLValue(mapping.pnlDriver, pnlData);
+    if (opex === null) {
+      return { value: 0, method: 'pnl_value_not_found', note: `P&L driver "${mapping.pnlDriver}" not found` };
+    }
+    
+    const dpo = this.assumptions.dpo;
+    const apValue = (opex / 365) * dpo;
+    
+    return {
+      value: Math.max(0, apValue),
+      method: 'days_payable_outstanding',
+      note: `${opex.toLocaleString()} OpEx / 365 * ${dpo} DPO`,
+      driver: mapping.pnlDriver,
+      driverValue: opex
+    };
+  }
+
+  /**
+   * Accrued Expenses = Total Expenses * Percentage
+   */
+  calculateAccruedExpenses(mapping, pnlData) {
+    if (!mapping || !mapping.pnlDriver) {
+      return { value: 0, method: 'no_pnl_driver', note: 'No P&L driver mapped' };
+    }
+    
+    const expenses = this.getPnLValue(mapping.pnlDriver, pnlData);
+    if (expenses === null) {
+      return { value: 0, method: 'pnl_value_not_found', note: `P&L driver "${mapping.pnlDriver}" not found` };
+    }
+    
+    const percentage = 5; // 5% of expenses - could be made configurable
+    const accruedValue = expenses * (percentage / 100);
+    
+    return {
+      value: Math.max(0, accruedValue),
+      method: 'percentage_of_expenses',
+      note: `${expenses.toLocaleString()} expenses * ${percentage}%`,
+      driver: mapping.pnlDriver,
+      driverValue: expenses
+    };
+  }
+
+  /**
+   * Retained Earnings = Previous + Net Income - Dividends
+   */
+  calculateRetainedEarnings(mapping, pnlData, previousValue) {
+    const netIncome = this.getPnLValue(mapping?.pnlDriver || 'net income', pnlData) || 0;
+    const dividends = this.assumptions.dividendPolicy;
+    const previousRE = previousValue?.value || 0;
+    
+    const newRE = previousRE + netIncome - dividends;
+    
+    return {
+      value: newRE,
+      method: 'accumulated_earnings',
+      note: `${previousRE.toLocaleString()} + ${netIncome.toLocaleString()} - ${dividends.toLocaleString()}`,
+      driver: mapping?.pnlDriver || 'net income',
+      driverValue: netIncome
+    };
+  }
+
+  /**
+   * Property, Plant & Equipment = Previous + CapEx - Depreciation
+   */
+  calculatePPE(mapping, pnlData, previousValue) {
+    const revenue = this.getPnLValue('total revenue', pnlData) || this.getPnLValue('revenue', pnlData) || 0;
+    const capex = revenue * (this.assumptions.capexPercentage / 100);
+    const depreciation = this.getPnLValue('depreciation', pnlData) || 
+                        (previousValue?.value || 0) * (this.assumptions.depreciationRate / 100 / 12); // Monthly depreciation
+    const previousPPE = previousValue?.value || 0;
+    
+    const newPPE = Math.max(0, previousPPE + capex - depreciation);
+    
+    return {
+      value: newPPE,
+      method: 'capex_depreciation',
+      note: `${previousPPE.toLocaleString()} + ${capex.toLocaleString()} CapEx - ${depreciation.toLocaleString()} Depreciation`,
+      driver: 'revenue + depreciation',
+      driverValue: revenue
+    };
+  }
+
+  /**
+   * Prepaid Expenses = Revenue * Percentage
+   */
+  calculatePrepaidExpenses(mapping, pnlData) {
+    const revenue = this.getPnLValue(mapping?.pnlDriver || 'total revenue', pnlData) || 0;
+    const percentage = 1; // 1% of revenue - could be configurable
+    const prepaidValue = revenue * (percentage / 100);
+    
+    return {
+      value: Math.max(0, prepaidValue),
+      method: 'percentage_of_revenue',
+      note: `${revenue.toLocaleString()} revenue * ${percentage}%`,
+      driver: mapping?.pnlDriver || 'revenue',
+      driverValue: revenue
+    };
+  }
+
+  /**
+   * Deferred Revenue = Revenue * Percentage (advance payments)
+   */
+  calculateDeferredRevenue(mapping, pnlData) {
+    const revenue = this.getPnLValue(mapping?.pnlDriver || 'total revenue', pnlData) || 0;
+    const percentage = 8; // 8% of revenue for SaaS/subscription - could be configurable
+    const deferredValue = revenue * (percentage / 100);
+    
+    return {
+      value: Math.max(0, deferredValue),
+      method: 'percentage_of_revenue',
+      note: `${revenue.toLocaleString()} revenue * ${percentage}%`,
+      driver: mapping?.pnlDriver || 'revenue',
+      driverValue: revenue
+    };
+  }
+
+  /**
+   * Cash = Balancing item (calculated last)
+   */
+  calculateCash(pnlData, allBalanceSheetValues) {
+    // For now, simple approach - could integrate with cash flow later
+    const netIncome = this.getPnLValue('net income', pnlData) || 0;
+    const baseValue = Math.max(10000, netIncome * 2); // Minimum $10k, or 2x net income
+    
+    return {
+      value: baseValue,
+      method: 'simple_multiple',
+      note: `Temporary: ${netIncome.toLocaleString()} net income * 2`,
+      driver: 'net income',
+      driverValue: netIncome
+    };
+  }
+
+  /**
+   * Default growth for unclassified items
+   */
+  calculateDefaultGrowth(itemName, previousValue) {
+    const growthRate = this.assumptions.workingCapitalGrowth / 100 / 12; // Monthly growth
+    const previousVal = previousValue?.value || 0;
+    const newValue = previousVal * (1 + growthRate);
+    
+    return {
+      value: newValue,
+      method: 'growth_rate',
+      note: `${previousVal.toLocaleString()} * ${(this.assumptions.workingCapitalGrowth)}% annual growth`,
+      driver: 'growth assumption',
+      driverValue: growthRate
+    };
+  }
+
+  /**
+   * Helper: Get P&L value by name (fuzzy matching)
+   */
+  getPnLValue(pnlItemName, pnlData) {
+    if (!pnlItemName || !pnlData) return null;
+    
+    // Try exact match first
+    if (pnlData[pnlItemName] !== undefined) {
+      return Number(pnlData[pnlItemName]) || 0;
+    }
+    
+    // Try fuzzy matching
+    const searchTerm = pnlItemName.toLowerCase();
+    const matchingKey = Object.keys(pnlData).find(key => 
+      key.toLowerCase().includes(searchTerm) || 
+      searchTerm.includes(key.toLowerCase())
+    );
+    
+    if (matchingKey) {
+      return Number(pnlData[matchingKey]) || 0;
+    }
+    
+    console.warn(`P&L value not found: "${pnlItemName}" in`, Object.keys(pnlData));
+    return null;
+  }
 }
 
 /**
