@@ -2901,6 +2901,120 @@ function calculateTotalsFromHierarchy(forecastedValues, hierarchy) {
 }
 
 /**
+ * Identify key balance sheet totals from hierarchy
+ */
+function identifyKeyBalanceSheetTotals(hierarchy) {
+  if (!hierarchy || !hierarchy.totals) {
+    return { totalAssets: null, totalLiabilities: null, totalEquity: null };
+  }
+  
+  const totals = Object.keys(hierarchy.totals);
+  
+  // Pattern matching for key totals
+  const totalAssets = totals.find(name => 
+    /total.*assets?$/i.test(name) || /^assets?.*total/i.test(name)
+  );
+  
+  const totalLiabilities = totals.find(name => 
+    /total.*liabilit/i.test(name) || /^liabilit.*total/i.test(name)
+  );
+  
+  const totalEquity = totals.find(name => 
+    /total.*equity/i.test(name) || 
+    /^equity.*total/i.test(name) || 
+    /stockholder.*equity/i.test(name) ||
+    /shareholder.*equity/i.test(name)
+  );
+  
+  console.log('🎯 Identified key totals:', { totalAssets, totalLiabilities, totalEquity });
+  
+  return { totalAssets, totalLiabilities, totalEquity };
+}
+
+/**
+ * Calculate cash needed to balance the balance sheet
+ * This is the MAGIC that makes Assets = Liabilities + Equity
+ */
+function calculateBalancingCash(forecastedValues, calculatedTotals, hierarchy, classifications) {
+  console.log('💰 Calculating balancing cash...');
+  
+  // Identify key totals
+  const keyTotals = identifyKeyBalanceSheetTotals(hierarchy);
+  
+  if (!keyTotals.totalLiabilities || !keyTotals.totalEquity) {
+    console.warn('⚠️ Cannot balance - missing Total Liabilities or Total Equity');
+    return null;
+  }
+  
+  // Get Total Liabilities + Total Equity
+  const totalLiabilities = calculatedTotals[keyTotals.totalLiabilities] || 0;
+  const totalEquity = calculatedTotals[keyTotals.totalEquity] || 0;
+  const totalLiabilitiesAndEquity = totalLiabilities + totalEquity;
+  
+  console.log(`Total Liabilities: $${totalLiabilities.toLocaleString()}`);
+  console.log(`Total Equity: $${totalEquity.toLocaleString()}`);
+  console.log(`Total Liabilities + Equity: $${totalLiabilitiesAndEquity.toLocaleString()}`);
+  
+  // Sum all non-cash assets
+  let nonCashAssets = 0;
+  Object.keys(forecastedValues).forEach(itemName => {
+    const classification = classifications[itemName];
+    const value = forecastedValues[itemName];
+    
+    // Skip if it's cash, a total, or a subheader
+    if (!classification || !value) return;
+    if (classification.category === 'cash') return;
+    if (classification.category === 'calculated_total') return;
+    if (classification.category === 'subheader') return;
+    
+    // Check if this is an asset (not liability or equity)
+    const isAsset = !isLiabilityOrEquityCategory(classification.category);
+    
+    if (isAsset) {
+      nonCashAssets += value.value || 0;
+    }
+  });
+  
+  console.log(`Non-cash assets: $${nonCashAssets.toLocaleString()}`);
+  
+  // Calculate cash needed to balance
+  const cashNeeded = totalLiabilitiesAndEquity - nonCashAssets;
+  
+  console.log(`✅ Cash needed to balance: $${cashNeeded.toLocaleString()}`);
+  console.log(`   Formula: ($${totalLiabilitiesAndEquity.toLocaleString()} Liab+Equity) - ($${nonCashAssets.toLocaleString()} Other Assets)`);
+  
+  return {
+    value: Math.max(0, cashNeeded), // Don't allow negative cash
+    method: 'balancing_plug',
+    note: `Balancing plug: ($${totalLiabilitiesAndEquity.toLocaleString()} L+E) - ($${nonCashAssets.toLocaleString()} other assets)`,
+    totalLiabilitiesAndEquity,
+    nonCashAssets,
+    isBalanced: true
+  };
+}
+
+/**
+ * Helper: Check if a category is a liability or equity
+ */
+function isLiabilityOrEquityCategory(category) {
+  const liabilityEquityCategories = [
+    'accounts_payable',
+    'accrued_expenses',
+    'short_term_debt',
+    'deferred_revenue',
+    'accrued_payroll',
+    'long_term_debt',
+    'deferred_tax_liabilities',
+    'common_stock',
+    'retained_earnings',
+    'additional_paid_in_capital',
+    'treasury_stock'
+  ];
+  
+  return liabilityEquityCategories.includes(category);
+}
+
+/**
  * Balance Sheet Calculation Engine
  */
 class BalanceSheetCalculationEngine {
@@ -2949,12 +3063,13 @@ class BalanceSheetCalculationEngine {
       results[itemName] = calculatedValue;
     });
     
-    // Step 2: Calculate totals using intelligent hierarchy
+    // Step 2: Calculate totals using intelligent hierarchy (first pass without cash)
+    let calculatedTotals = {};
     if (this.hierarchy && this.hierarchy.totals) {
-      console.log('🧠 Calculating totals from hierarchy...');
-      const calculatedTotals = calculateTotalsFromHierarchy(results, this.hierarchy);
+      console.log('🧠 Calculating preliminary totals from hierarchy...');
+      calculatedTotals = calculateTotalsFromHierarchy(results, this.hierarchy);
       
-      // Update results with calculated totals
+      // Update results with calculated totals (preliminary)
       Object.keys(calculatedTotals).forEach(totalName => {
         results[totalName] = {
           value: calculatedTotals[totalName],
@@ -2965,9 +3080,67 @@ class BalanceSheetCalculationEngine {
         };
       });
       
-      console.log('✅ Totals calculated from hierarchy:', calculatedTotals);
+      console.log('✅ Preliminary totals calculated:', calculatedTotals);
     } else {
       console.warn('⚠️ No hierarchy available - totals will be $0');
+    }
+    
+    // Step 3: Calculate balancing cash (makes Assets = Liabilities + Equity)
+    const balancingCash = calculateBalancingCash(results, calculatedTotals, this.hierarchy, this.classifications);
+    
+    if (balancingCash) {
+      // Find cash item and update it
+      const cashItems = Object.keys(this.classifications).filter(itemName => 
+        this.classifications[itemName].category === 'cash'
+      );
+      
+      if (cashItems.length > 0) {
+        const cashItemName = cashItems[0];
+        results[cashItemName] = balancingCash;
+        console.log(`💰 Updated cash "${cashItemName}" to balancing value: $${balancingCash.value.toLocaleString()}`);
+        
+        // Step 4: Recalculate totals with balanced cash
+        if (this.hierarchy && this.hierarchy.totals) {
+          console.log('🔄 Recalculating totals with balanced cash...');
+          const finalTotals = calculateTotalsFromHierarchy(results, this.hierarchy);
+          
+          // Update results with final balanced totals
+          Object.keys(finalTotals).forEach(totalName => {
+            results[totalName] = {
+              value: finalTotals[totalName],
+              method: 'hierarchical_sum',
+              note: `Sum of ${this.hierarchy.totals[totalName].children.length} children (balanced)`,
+              children: this.hierarchy.totals[totalName].children,
+              validated: this.hierarchy.totals[totalName].validated,
+              isBalanced: true
+            };
+          });
+          
+          console.log('✅ Final balanced totals:', finalTotals);
+          
+          // Verify balance
+          const keyTotals = identifyKeyBalanceSheetTotals(this.hierarchy);
+          if (keyTotals.totalAssets && keyTotals.totalLiabilities && keyTotals.totalEquity) {
+            const totalAssets = finalTotals[keyTotals.totalAssets] || 0;
+            const totalLiabilities = finalTotals[keyTotals.totalLiabilities] || 0;
+            const totalEquity = finalTotals[keyTotals.totalEquity] || 0;
+            const totalLiabEquity = totalLiabilities + totalEquity;
+            const difference = Math.abs(totalAssets - totalLiabEquity);
+            
+            console.log(`🎯 Balance Check: Assets=$${totalAssets.toLocaleString()}, Liab+Equity=$${totalLiabEquity.toLocaleString()}, Diff=$${difference.toLocaleString()}`);
+            
+            if (difference < 1) {
+              console.log('✅ BALANCE SHEET BALANCED! Assets = Liabilities + Equity');
+            } else {
+              console.warn(`⚠️ Balance sheet not perfectly balanced. Difference: $${difference.toLocaleString()}`);
+            }
+          }
+        }
+      } else {
+        console.warn('⚠️ No cash item found - cannot balance balance sheet');
+      }
+    } else {
+      console.warn('⚠️ Could not calculate balancing cash');
     }
     
     console.log(`Balance sheet calculations for period ${periodIndex}:`, results);
@@ -3199,19 +3372,19 @@ class BalanceSheetCalculationEngine {
   }
 
   /**
-   * Cash = Balancing item (calculated last)
+   * Cash = Balancing item (calculated via balancing logic, not here)
    */
   calculateCash(pnlData, allBalanceSheetValues) {
-    // For now, simple approach - could integrate with cash flow later
-    const netIncome = this.getPnLValue('net income', pnlData) || 0;
-    const baseValue = Math.max(10000, netIncome * 2); // Minimum $10k, or 2x net income
+    // Cash is now calculated as a balancing plug in the main calculation loop
+    // This method is kept for backward compatibility but shouldn't be called
+    console.warn('⚠️ calculateCash called - should use balancing logic instead');
     
     return {
-      value: baseValue,
-      method: 'simple_multiple',
-      note: `Temporary: ${netIncome.toLocaleString()} net income * 2`,
-      driver: 'net income',
-      driverValue: netIncome
+      value: 0,
+      method: 'pending_balance',
+      note: 'Cash will be calculated as balancing plug',
+      driver: 'balance_sheet_balancing',
+      driverValue: 0
     };
   }
 
