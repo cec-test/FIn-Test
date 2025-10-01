@@ -3372,82 +3372,66 @@ function hideCustomTooltip() {
 }
 
 /**
- * Toggle collapsible sections
+ * Switch configuration tabs
  */
-function toggleSection(sectionId) {
-  const header = document.querySelector(`#${sectionId}-content`).previousElementSibling;
-  const content = document.getElementById(`${sectionId}-content`);
+function switchConfigTab(tabName) {
+  console.log(`Switching to config tab: ${tabName}`);
   
-  // Toggle collapsed state
-  header.classList.toggle('collapsed');
-  content.classList.toggle('collapsed');
-  
-  // Save state to localStorage
-  const isCollapsed = content.classList.contains('collapsed');
-  localStorage.setItem(`section-${sectionId}-collapsed`, isCollapsed);
-  
-  console.log(`Toggled ${sectionId}: ${isCollapsed ? 'collapsed' : 'expanded'}`);
-}
-
-/**
- * Initialize collapsible sections state from localStorage
- */
-function initializeCollapsibleSections() {
-  const sections = ['forecast', 'balancesheet'];
-  
-  sections.forEach(sectionId => {
-    const savedState = localStorage.getItem(`section-${sectionId}-collapsed`);
-    const header = document.querySelector(`#${sectionId}-content`)?.previousElementSibling;
-    const content = document.getElementById(`${sectionId}-content`);
-    
-    if (header && content) {
-      // Default: collapsed (already set in HTML)
-      // If user previously expanded it, restore that state
-      if (savedState === 'false') {
-        header.classList.remove('collapsed');
-        content.classList.remove('collapsed');
-      }
-    }
+  // Hide all panels
+  document.querySelectorAll('.config-panel').forEach(panel => {
+    panel.classList.remove('active');
   });
   
-  // Smart behavior: On first visit, show hint to expand forecast config
-  const isFirstVisit = !localStorage.getItem('hasVisited');
-  if (isFirstVisit) {
-    localStorage.setItem('hasVisited', 'true');
-    const forecastHeader = document.querySelector(`#forecast-content`)?.previousElementSibling;
-    if (forecastHeader) {
-      forecastHeader.classList.add('hint');
-      // Remove hint after 3 seconds
-      setTimeout(() => {
-        forecastHeader.classList.remove('hint');
-      }, 3000);
-    }
+  // Remove active from all tabs
+  document.querySelectorAll('.config-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Show selected panel
+  const selectedPanel = document.getElementById(`${tabName}-config`);
+  if (selectedPanel) {
+    selectedPanel.classList.add('active');
   }
+  
+  // Highlight selected tab
+  const selectedTab = document.querySelector(`[data-config-tab="${tabName}"]`);
+  if (selectedTab) {
+    selectedTab.classList.add('active');
+  }
+  
+  // Save preference
+  localStorage.setItem('activeConfigTab', tabName);
 }
 
 /**
- * Auto-collapse forecast section after running forecast
+ * Initialize configuration tabs
  */
-function autoCollapseAfterForecast() {
-  const forecastHeader = document.querySelector(`#forecast-content`)?.previousElementSibling;
-  const forecastContent = document.getElementById('forecast-content');
+function initializeConfigTabs() {
+  // Restore last active tab or default to 'pnl'
+  const savedTab = localStorage.getItem('activeConfigTab') || 'pnl';
   
-  if (forecastHeader && forecastContent && !forecastContent.classList.contains('collapsed')) {
-    setTimeout(() => {
-      forecastHeader.classList.add('collapsed');
-      forecastContent.classList.add('collapsed');
-      localStorage.setItem('section-forecast-collapsed', 'true');
-      console.log('Auto-collapsed forecast section after running forecast');
-    }, 500);
+  // Add click handlers to all config tabs
+  document.querySelectorAll('.config-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      const tabName = this.getAttribute('data-config-tab');
+      switchConfigTab(tabName);
+    });
+  });
+  
+  // Set initial active tab (already set in HTML to 'pnl', but respect saved preference)
+  if (savedTab !== 'pnl') {
+    switchConfigTab(savedTab);
   }
+  
+  console.log(`Initialized config tabs, active tab: ${savedTab}`);
 }
 
 document.addEventListener('DOMContentLoaded', function () {
   console.log('DOM loaded, initializing...');
   console.log('JavaScript is running!');
   
-  // Initialize collapsible sections
-  initializeCollapsibleSections();
+  // Initialize configuration tabs
+  initializeConfigTabs();
   
   // Initialize custom tooltips
   initializeCustomTooltips();
@@ -3678,9 +3662,6 @@ document.addEventListener('DOMContentLoaded', function () {
   runBtn?.addEventListener('click', function() {
     console.log('Run Forecast clicked');
     updateForecast();
-    
-    // Auto-collapse forecast section after running
-    autoCollapseAfterForecast();
   });
 
   // Upload

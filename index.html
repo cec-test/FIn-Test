@@ -778,6 +778,150 @@
             background: rgba(0, 0, 0, 0.1);
         }
         
+        /* Configuration Tabs Styles */
+        .config-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        
+        .config-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            overflow-x: auto;
+        }
+        
+        .config-tabs::-webkit-scrollbar {
+            height: 3px;
+        }
+        
+        .config-tabs::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 3px;
+        }
+        
+        .config-tab {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        
+        .config-tab:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .config-tab.active {
+            background: white;
+            color: #3498db;
+        }
+        
+        .config-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #3498db;
+        }
+        
+        .config-tab .tab-icon {
+            font-size: 1rem;
+        }
+        
+        .config-tab .tab-badge {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 0.7rem;
+            margin-left: 4px;
+        }
+        
+        .config-content {
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .config-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .config-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .config-content::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        .config-content::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .config-panel {
+            display: none;
+        }
+        
+        .config-panel.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .config-placeholder {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .config-placeholder h4 {
+            color: #495057;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .config-placeholder p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .config-placeholder .placeholder-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
         /* Insights Container Styles */
         .insights-container {
             height: 500px;
@@ -1086,13 +1230,30 @@
                         </div>
                     </div>
                     
-                    <!-- Forecast Configuration - Collapsible -->
-                    <div class="controls collapsible">
-                        <div class="collapsible-header collapsed" onclick="toggleSection('forecast')">
-                            <h3>⚙️ Forecast Configuration</h3>
-                            <span class="collapse-icon">▼</span>
+                    <!-- Configuration Tabs -->
+                    <div class="config-section">
+                        <div class="config-tabs">
+                            <button class="config-tab active" data-config-tab="pnl">
+                                <span class="tab-icon">⚙️</span>
+                                <span>P&L Forecast</span>
+                            </button>
+                            <button class="config-tab" data-config-tab="balance">
+                                <span class="tab-icon">📊</span>
+                                <span>Balance Sheet</span>
+                            </button>
+                            <button class="config-tab" data-config-tab="cashflow">
+                                <span class="tab-icon">💰</span>
+                                <span>Cash Flow</span>
+                            </button>
+                            <button class="config-tab" data-config-tab="scenarios">
+                                <span class="tab-icon">📈</span>
+                                <span>Scenarios</span>
+                            </button>
                         </div>
-                        <div class="collapsible-content collapsed" id="forecast-content">
+                        
+                        <div class="config-content">
+                            <!-- P&L Forecast Configuration Panel -->
+                            <div class="config-panel active" id="pnl-config">
                             <div class="control-group">
                                 <div class="control-item">
                                     <label>Method:</label>
@@ -1171,16 +1332,10 @@
                                 </div>
                             </div>
                             <button class="run-forecast-btn" id="runForecastBtn">Run Forecasts</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Balance Sheet Assumptions - Collapsible -->
-                    <div class="controls collapsible">
-                        <div class="collapsible-header collapsed" onclick="toggleSection('balancesheet')">
-                            <h3>📊 Balance Sheet Assumptions</h3>
-                            <span class="collapse-icon">▼</span>
-                        </div>
-                        <div class="collapsible-content collapsed" id="balancesheet-content">
+                            </div>
+                            
+                            <!-- Balance Sheet Configuration Panel -->
+                            <div class="config-panel" id="balance-config">
                         
                         <div class="bs-controls-section">
                             <h4>Working Capital</h4>
@@ -1279,6 +1434,40 @@
                         </div>
                         
                         <button class="bs-reset-btn" id="bsResetBtn">Reset to Defaults</button>
+                            </div>
+                            
+                            <!-- Cash Flow Configuration Panel (Placeholder) -->
+                            <div class="config-panel" id="cashflow-config">
+                                <div class="config-placeholder">
+                                    <div class="placeholder-icon">💰</div>
+                                    <h4>Cash Flow Statement Configuration</h4>
+                                    <p>Configure cash flow forecasting assumptions and methods.</p>
+                                    <p style="margin-top: 15px; font-style: italic;">Coming soon! This will include:</p>
+                                    <ul style="text-align: left; display: inline-block; margin-top: 10px;">
+                                        <li>Operating activities adjustments</li>
+                                        <li>Investing activities (CapEx, acquisitions)</li>
+                                        <li>Financing activities (debt, equity, dividends)</li>
+                                        <li>Cash reconciliation methods</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <!-- Scenarios Configuration Panel (Placeholder) -->
+                            <div class="config-panel" id="scenarios-config">
+                                <div class="config-placeholder">
+                                    <div class="placeholder-icon">📈</div>
+                                    <h4>Scenario Planning</h4>
+                                    <p>Create and compare multiple forecast scenarios.</p>
+                                    <p style="margin-top: 15px; font-style: italic;">Coming soon! This will include:</p>
+                                    <ul style="text-align: left; display: inline-block; margin-top: 10px;">
+                                        <li>Base Case / Optimistic / Conservative scenarios</li>
+                                        <li>What-if analysis (change assumptions, see impact)</li>
+                                        <li>Sensitivity analysis (how sensitive to key drivers)</li>
+                                        <li>Scenario comparison dashboards</li>
+                                        <li>Save and load scenario configurations</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
