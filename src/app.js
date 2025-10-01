@@ -1186,14 +1186,31 @@ async function handleActualsUpload(file) {
   const reader = new FileReader();
   reader.onload = async () => {
     try {
-      console.log('Parsing CSV...');
+      console.log('📁 Parsing CSV...');
       const data = parseCSVToObject(reader.result);
       console.log('Parsed data:', data);
       
-      // Run AI classification on balance sheet items
-      await processBalanceSheetClassification(data);
+      // Determine optimal forecasting strategy
+      const strategy = determineForecastingStrategy(data);
+      console.log(`🎯 Strategy selected: ${strategy.strategy}`);
+      console.log(`   ${strategy.description}`);
       
-      applyActualsFromObject(data);
+      // Process based on strategy
+      if (strategy.strategy === 'integrated_pnl_bs') {
+        console.log('🔗 Full integration mode: Using P&L-driven formulas');
+        await processIntegratedForecasting(data);
+      } else if (strategy.strategy === 'balance_sheet_only') {
+        console.log('📊 Balance sheet only mode: Using growth patterns');
+        await processBalanceSheetOnly(data);
+      } else if (strategy.strategy === 'pnl_only') {
+        console.log('💼 P&L only mode');
+        applyActualsFromObject(data);
+      } else {
+        console.warn('⚠️ No valid data found');
+        alert('Please upload a valid financial statement CSV file');
+        return;
+      }
+      
     } catch (e) {
       console.error('CSV parsing error:', e);
       alert('Failed to parse CSV: ' + e.message);
@@ -1958,6 +1975,16 @@ let balanceSheetHierarchy = null;
 let pnlMappings = {};
 
 /**
+ * Storage for available data context
+ */
+let availableDataContext = {
+  hasPnL: false,
+  hasBalanceSheet: false,
+  hasCashFlow: false,
+  forecastingStrategy: 'unknown'
+};
+
+/**
  * P&L Pattern Recognition for Smart Mapping
  */
 const PNL_MAPPING_PATTERNS = {
@@ -2353,6 +2380,310 @@ function generatePnLMappings(balanceSheetClassifications, pnlItems) {
     
     console.log(`Mapped "${itemName}" → "${matchResult.match?.name}" (${(matchResult.confidence * 100).toFixed(0)}% confidence)`);
   });
+  
+  return mappings;
+}
+
+/**
+ * Process integrated P&L + Balance Sheet forecasting (Full Power Mode)
+ */
+async function processIntegratedForecasting(data) {
+  console.log('🔗 Processing integrated P&L + Balance Sheet forecasting...');
+  
+  // Detect critical items using pattern matching (NO AI needed for most cases)
+  const criticalBS = detectCriticalBalanceSheetItems(data.balance || []);
+  const criticalPnL = detectCriticalPnLItems(data.pnl || []);
+  
+  // Auto-create simplified classifications for critical items only
+  balanceSheetClassifications = createSimplifiedClassifications(criticalBS, data.balance || []);
+  
+  // Auto-create mappings between critical BS and P&L items
+  pnlMappings = createAutomaticMappings(criticalBS, criticalPnL);
+  
+  // Build hierarchy for totals
+  balanceSheetHierarchy = buildBalanceSheetHierarchy(data.balance || []);
+  
+  // Apply actuals and we're done!
+  applyActualsFromObject(data);
+  
+  console.log('✅ Integrated forecasting ready - using P&L-driven formulas for critical items');
+}
+
+/**
+ * Process balance sheet only forecasting (Growth Rate Mode)
+ */
+async function processBalanceSheetOnly(data) {
+  console.log('📊 Processing balance sheet only forecasting...');
+  
+  // Detect critical items (still useful for special handling)
+  const criticalBS = detectCriticalBalanceSheetItems(data.balance || []);
+  
+  // Create growth-based classifications (no P&L needed)
+  balanceSheetClassifications = createGrowthBasedClassifications(criticalBS, data.balance || []);
+  
+  // No P&L mappings needed
+  pnlMappings = {};
+  
+  // Build hierarchy for totals
+  balanceSheetHierarchy = buildBalanceSheetHierarchy(data.balance || []);
+  
+  // Apply actuals
+  applyActualsFromObject(data);
+  
+  console.log('✅ Balance sheet forecasting ready - using historical growth patterns');
+}
+
+/**
+ * Create simplified classifications for critical items + growth for others
+ */
+function createSimplifiedClassifications(criticalBS, allBalanceSheetItems) {
+  console.log('🎯 Creating simplified classifications...');
+  
+  const classifications = {};
+  
+  allBalanceSheetItems.forEach(item => {
+    const itemName = item.name;
+    
+    // Check if this is a critical item
+    if (criticalBS.cash && criticalBS.cash.name === itemName) {
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'cash',
+        method: 'balancing_plug',
+        confidence: 0.95,
+        autoDetected: true
+      };
+    } else if (criticalBS.accountsReceivable && criticalBS.accountsReceivable.name === itemName) {
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'accounts_receivable',
+        method: 'days_sales_outstanding',
+        confidence: 0.95,
+        autoDetected: true
+      };
+    } else if (criticalBS.inventory && criticalBS.inventory.name === itemName) {
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'inventory',
+        method: 'days_inventory_outstanding',
+        confidence: 0.95,
+        autoDetected: true
+      };
+    } else if (criticalBS.accountsPayable && criticalBS.accountsPayable.name === itemName) {
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'accounts_payable',
+        method: 'days_payable_outstanding',
+        confidence: 0.95,
+        autoDetected: true
+      };
+    } else if (criticalBS.retainedEarnings && criticalBS.retainedEarnings.name === itemName) {
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'retained_earnings',
+        method: 'accumulated_earnings',
+        confidence: 0.95,
+        autoDetected: true
+      };
+    } else if (criticalBS.ppe && criticalBS.ppe.name === itemName) {
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'property_plant_equipment',
+        method: 'capex_depreciation',
+        confidence: 0.95,
+        autoDetected: true
+      };
+    } else if (criticalBS.commonStock && criticalBS.commonStock.name === itemName) {
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'common_stock',
+        method: 'static_value',
+        confidence: 0.95,
+        autoDetected: true
+      };
+    } else if (item.autoDetectedType === 'calculated_total') {
+      // Total lines
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'calculated_total',
+        method: 'hierarchical_sum',
+        confidence: 1.0,
+        autoDetected: true
+      };
+    } else if (item.autoDetectedType === 'subheader') {
+      // Subheaders
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'subheader',
+        method: 'none',
+        confidence: 1.0,
+        autoDetected: true
+      };
+    } else {
+      // Everything else: use growth rate
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'other_asset_or_liability',
+        method: 'growth_rate',
+        confidence: 0.7,
+        autoDetected: true,
+        note: 'Using historical growth rate'
+      };
+    }
+  });
+  
+  console.log(`✅ Created ${Object.keys(classifications).length} classifications`);
+  console.log(`   Critical items: ${Object.keys(criticalBS).filter(k => criticalBS[k] && k !== 'otherItems').length}`);
+  console.log(`   Other items (growth rate): ${criticalBS.otherItems.length}`);
+  
+  return classifications;
+}
+
+/**
+ * Create growth-based classifications (for balance sheet only mode)
+ */
+function createGrowthBasedClassifications(criticalBS, allBalanceSheetItems) {
+  console.log('📈 Creating growth-based classifications...');
+  
+  const classifications = {};
+  
+  allBalanceSheetItems.forEach(item => {
+    const itemName = item.name;
+    
+    // Critical items get special handling even without P&L
+    if (criticalBS.cash && criticalBS.cash.name === itemName) {
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'cash',
+        method: 'balancing_plug',
+        confidence: 0.95,
+        autoDetected: true
+      };
+    } else if (criticalBS.retainedEarnings && criticalBS.retainedEarnings.name === itemName) {
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'retained_earnings',
+        method: 'growth_rate', // Without P&L, just grow it
+        confidence: 0.95,
+        autoDetected: true
+      };
+    } else if (criticalBS.commonStock && criticalBS.commonStock.name === itemName) {
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'common_stock',
+        method: 'static_value',
+        confidence: 0.95,
+        autoDetected: true
+      };
+    } else if (item.autoDetectedType === 'calculated_total') {
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'calculated_total',
+        method: 'hierarchical_sum',
+        confidence: 1.0,
+        autoDetected: true
+      };
+    } else if (item.autoDetectedType === 'subheader') {
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'subheader',
+        method: 'none',
+        confidence: 1.0,
+        autoDetected: true
+      };
+    } else {
+      // Everything else: use growth rate based on historical data
+      classifications[itemName] = {
+        originalName: itemName,
+        category: 'other_asset_or_liability',
+        method: 'growth_rate',
+        confidence: 0.8,
+        autoDetected: true,
+        note: 'Using historical growth pattern'
+      };
+    }
+  });
+  
+  console.log(`✅ Created ${Object.keys(classifications).length} growth-based classifications`);
+  
+  return classifications;
+}
+
+/**
+ * Create automatic mappings between critical BS and P&L items
+ */
+function createAutomaticMappings(criticalBS, criticalPnL) {
+  console.log('🔗 Creating automatic P&L mappings...');
+  
+  const mappings = {};
+  
+  // AR → Revenue
+  if (criticalBS.accountsReceivable && criticalPnL.revenue) {
+    mappings[criticalBS.accountsReceivable.name] = {
+      balanceSheetItem: criticalBS.accountsReceivable.name,
+      balanceSheetCategory: 'accounts_receivable',
+      pnlDriver: criticalPnL.revenue.name,
+      confidence: 0.95,
+      method: 'days_sales_outstanding',
+      autoMapped: true
+    };
+    console.log(`✅ Auto-mapped: ${criticalBS.accountsReceivable.name} → ${criticalPnL.revenue.name}`);
+  }
+  
+  // Inventory → COGS
+  if (criticalBS.inventory && criticalPnL.cogs) {
+    mappings[criticalBS.inventory.name] = {
+      balanceSheetItem: criticalBS.inventory.name,
+      balanceSheetCategory: 'inventory',
+      pnlDriver: criticalPnL.cogs.name,
+      confidence: 0.95,
+      method: 'days_inventory_outstanding',
+      autoMapped: true
+    };
+    console.log(`✅ Auto-mapped: ${criticalBS.inventory.name} → ${criticalPnL.cogs.name}`);
+  }
+  
+  // AP → Operating Expenses
+  if (criticalBS.accountsPayable && criticalPnL.operatingExpenses) {
+    mappings[criticalBS.accountsPayable.name] = {
+      balanceSheetItem: criticalBS.accountsPayable.name,
+      balanceSheetCategory: 'accounts_payable',
+      pnlDriver: criticalPnL.operatingExpenses.name,
+      confidence: 0.95,
+      method: 'days_payable_outstanding',
+      autoMapped: true
+    };
+    console.log(`✅ Auto-mapped: ${criticalBS.accountsPayable.name} → ${criticalPnL.operatingExpenses.name}`);
+  }
+  
+  // Retained Earnings → Net Income
+  if (criticalBS.retainedEarnings && criticalPnL.netIncome) {
+    mappings[criticalBS.retainedEarnings.name] = {
+      balanceSheetItem: criticalBS.retainedEarnings.name,
+      balanceSheetCategory: 'retained_earnings',
+      pnlDriver: criticalPnL.netIncome.name,
+      confidence: 0.95,
+      method: 'accumulated_earnings',
+      autoMapped: true
+    };
+    console.log(`✅ Auto-mapped: ${criticalBS.retainedEarnings.name} → ${criticalPnL.netIncome.name}`);
+  }
+  
+  // PPE → Revenue (for CapEx) + Depreciation
+  if (criticalBS.ppe) {
+    mappings[criticalBS.ppe.name] = {
+      balanceSheetItem: criticalBS.ppe.name,
+      balanceSheetCategory: 'property_plant_equipment',
+      pnlDriver: criticalPnL.revenue?.name || 'revenue',
+      pnlDriverDepreciation: criticalPnL.depreciation?.name || null,
+      confidence: 0.9,
+      method: 'capex_depreciation',
+      autoMapped: true
+    };
+    console.log(`✅ Auto-mapped: ${criticalBS.ppe.name} → Revenue (CapEx) + Depreciation`);
+  }
+  
+  console.log(`✅ Created ${Object.keys(mappings).length} automatic mappings`);
   
   return mappings;
 }
@@ -3015,6 +3346,288 @@ function isLiabilityOrEquityCategory(category) {
 }
 
 /**
+ * ADAPTIVE INTELLIGENCE SYSTEM
+ * Detects what data is available and chooses optimal forecasting strategy
+ */
+
+/**
+ * Detect critical balance sheet items using smart pattern matching (NO AI)
+ * This replaces the need for full AI classification
+ */
+function detectCriticalBalanceSheetItems(balanceSheetItems) {
+  console.log('🔍 Detecting critical balance sheet items using pattern matching...');
+  
+  const detected = {
+    cash: null,
+    accountsReceivable: null,
+    inventory: null,
+    accountsPayable: null,
+    retainedEarnings: null,
+    ppe: null,
+    commonStock: null,
+    otherItems: []
+  };
+  
+  balanceSheetItems.forEach(item => {
+    const name = item.name.toLowerCase().trim();
+    const originalName = item.name;
+    
+    // Cash detection (high confidence patterns)
+    if (!detected.cash && (
+      name === 'cash' ||
+      name === 'cash and cash equivalents' ||
+      name.includes('cash') && !name.includes('flow') && !name.includes('operating')
+    )) {
+      detected.cash = { name: originalName, confidence: 0.95, item: item };
+      console.log(`✅ Detected Cash: "${originalName}"`);
+      return;
+    }
+    
+    // Accounts Receivable (high confidence patterns)
+    if (!detected.accountsReceivable && (
+      name === 'accounts receivable' ||
+      name === 'receivables' ||
+      name === 'a/r' ||
+      name === 'ar' ||
+      name === 'trade receivables' ||
+      name.includes('accounts') && name.includes('receivable')
+    )) {
+      detected.accountsReceivable = { name: originalName, confidence: 0.95, item: item };
+      console.log(`✅ Detected Accounts Receivable: "${originalName}"`);
+      return;
+    }
+    
+    // Inventory (high confidence patterns)
+    if (!detected.inventory && (
+      name === 'inventory' ||
+      name === 'inventories' ||
+      name === 'stock' ||
+      name === 'merchandise inventory' ||
+      name.includes('inventory') && !name.includes('reserve')
+    )) {
+      detected.inventory = { name: originalName, confidence: 0.95, item: item };
+      console.log(`✅ Detected Inventory: "${originalName}"`);
+      return;
+    }
+    
+    // Accounts Payable (high confidence patterns)
+    if (!detected.accountsPayable && (
+      name === 'accounts payable' ||
+      name === 'payables' ||
+      name === 'a/p' ||
+      name === 'ap' ||
+      name === 'trade payables' ||
+      name.includes('accounts') && name.includes('payable')
+    )) {
+      detected.accountsPayable = { name: originalName, confidence: 0.95, item: item };
+      console.log(`✅ Detected Accounts Payable: "${originalName}"`);
+      return;
+    }
+    
+    // Retained Earnings (high confidence patterns)
+    if (!detected.retainedEarnings && (
+      name === 'retained earnings' ||
+      name === 'accumulated earnings' ||
+      name === 'retained deficit' ||
+      name.includes('retained') && name.includes('earning')
+    )) {
+      detected.retainedEarnings = { name: originalName, confidence: 0.95, item: item };
+      console.log(`✅ Detected Retained Earnings: "${originalName}"`);
+      return;
+    }
+    
+    // Property, Plant & Equipment (high confidence patterns)
+    if (!detected.ppe && (
+      name === 'ppe' ||
+      name === 'pp&e' ||
+      name === 'property, plant and equipment' ||
+      name === 'property, plant & equipment' ||
+      name === 'fixed assets' ||
+      name.includes('property') && name.includes('equipment') ||
+      name === 'net ppe'
+    )) {
+      detected.ppe = { name: originalName, confidence: 0.95, item: item };
+      console.log(`✅ Detected PPE: "${originalName}"`);
+      return;
+    }
+    
+    // Common Stock (high confidence patterns)
+    if (!detected.commonStock && (
+      name === 'common stock' ||
+      name === 'share capital' ||
+      name === 'capital stock' ||
+      name.includes('common') && name.includes('stock')
+    )) {
+      detected.commonStock = { name: originalName, confidence: 0.95, item: item };
+      console.log(`✅ Detected Common Stock: "${originalName}"`);
+      return;
+    }
+    
+    // Everything else goes to "other items"
+    if (item.autoDetectedType !== 'calculated_total' && item.autoDetectedType !== 'subheader') {
+      detected.otherItems.push({ name: originalName, item: item });
+    }
+  });
+  
+  console.log(`🎯 Critical items detected: ${Object.keys(detected).filter(k => detected[k] && k !== 'otherItems').length}/7`);
+  console.log(`📋 Other items (will use growth rates): ${detected.otherItems.length}`);
+  
+  return detected;
+}
+
+/**
+ * Detect critical P&L items using smart pattern matching (NO AI)
+ */
+function detectCriticalPnLItems(pnlItems) {
+  console.log('🔍 Detecting critical P&L items using pattern matching...');
+  
+  const detected = {
+    revenue: null,
+    cogs: null,
+    operatingExpenses: null,
+    netIncome: null,
+    depreciation: null,
+    otherItems: []
+  };
+  
+  pnlItems.forEach(item => {
+    const name = item.name.toLowerCase().trim();
+    const originalName = item.name;
+    
+    // Revenue detection (prioritize "total" revenue)
+    if (!detected.revenue && (
+      name === 'total revenue' ||
+      name === 'revenue' ||
+      name === 'total sales' ||
+      name === 'sales' ||
+      name === 'net revenue' ||
+      name.includes('total') && name.includes('revenue')
+    )) {
+      detected.revenue = { name: originalName, confidence: 0.95, item: item };
+      console.log(`✅ Detected Revenue: "${originalName}"`);
+      return;
+    }
+    
+    // COGS detection
+    if (!detected.cogs && (
+      name === 'cost of goods sold' ||
+      name === 'cogs' ||
+      name === 'cost of sales' ||
+      name === 'total cost of goods sold' ||
+      name.includes('cost') && name.includes('goods')
+    )) {
+      detected.cogs = { name: originalName, confidence: 0.95, item: item };
+      console.log(`✅ Detected COGS: "${originalName}"`);
+      return;
+    }
+    
+    // Operating Expenses detection
+    if (!detected.operatingExpenses && (
+      name === 'operating expenses' ||
+      name === 'total operating expenses' ||
+      name === 'opex' ||
+      name === 'sg&a' ||
+      name === 'selling, general and administrative' ||
+      name.includes('operating') && name.includes('expense')
+    )) {
+      detected.operatingExpenses = { name: originalName, confidence: 0.95, item: item };
+      console.log(`✅ Detected Operating Expenses: "${originalName}"`);
+      return;
+    }
+    
+    // Net Income detection
+    if (!detected.netIncome && (
+      name === 'net income' ||
+      name === 'net profit' ||
+      name === 'net earnings' ||
+      name === 'profit after tax' ||
+      name === 'bottom line' ||
+      name.includes('net') && (name.includes('income') || name.includes('profit'))
+    )) {
+      detected.netIncome = { name: originalName, confidence: 0.95, item: item };
+      console.log(`✅ Detected Net Income: "${originalName}"`);
+      return;
+    }
+    
+    // Depreciation detection
+    if (!detected.depreciation && (
+      name === 'depreciation' ||
+      name === 'depreciation expense' ||
+      name === 'depreciation and amortization' ||
+      name === 'd&a' ||
+      name.includes('depreciation')
+    )) {
+      detected.depreciation = { name: originalName, confidence: 0.95, item: item };
+      console.log(`✅ Detected Depreciation: "${originalName}"`);
+      return;
+    }
+    
+    // Other items
+    if (item.autoDetectedType !== 'calculated_total' && item.autoDetectedType !== 'subheader') {
+      detected.otherItems.push({ name: originalName, item: item });
+    }
+  });
+  
+  console.log(`🎯 Critical P&L items detected: ${Object.keys(detected).filter(k => detected[k] && k !== 'otherItems').length}/5`);
+  
+  return detected;
+}
+
+/**
+ * Determine optimal forecasting strategy based on available data
+ */
+function determineForecastingStrategy(uploadedData) {
+  console.log('🧠 Determining optimal forecasting strategy...');
+  
+  const hasPnL = uploadedData.pnl && uploadedData.pnl.length > 0;
+  const hasBalanceSheet = uploadedData.balance && uploadedData.balance.length > 0;
+  const hasCashFlow = uploadedData.cashflow && uploadedData.cashflow.length > 0;
+  
+  // Update global context
+  availableDataContext.hasPnL = hasPnL;
+  availableDataContext.hasBalanceSheet = hasBalanceSheet;
+  availableDataContext.hasCashFlow = hasCashFlow;
+  
+  let strategy = 'unknown';
+  let description = '';
+  let usesFormulas = false;
+  let requiresMapping = false;
+  
+  if (hasPnL && hasBalanceSheet) {
+    strategy = 'integrated_pnl_bs';
+    description = '🎯 Full Integration: P&L-driven balance sheet formulas for maximum accuracy';
+    usesFormulas = true;
+    requiresMapping = true;
+  } else if (hasBalanceSheet && !hasPnL) {
+    strategy = 'balance_sheet_only';
+    description = '📊 Balance Sheet Only: Using historical growth patterns (no P&L needed)';
+    usesFormulas = false;
+    requiresMapping = false;
+  } else if (hasPnL && !hasBalanceSheet) {
+    strategy = 'pnl_only';
+    description = '💼 P&L Only: Forecasting income statement';
+    usesFormulas = false;
+    requiresMapping = false;
+  } else {
+    strategy = 'no_data';
+    description = '⚠️ No Data: Please upload financial statements';
+    usesFormulas = false;
+    requiresMapping = false;
+  }
+  
+  availableDataContext.forecastingStrategy = strategy;
+  availableDataContext.description = description;
+  availableDataContext.usesFormulas = usesFormulas;
+  availableDataContext.requiresMapping = requiresMapping;
+  
+  console.log(`✅ Strategy: ${strategy}`);
+  console.log(`   ${description}`);
+  console.log(`   Uses formulas: ${usesFormulas}, Requires mapping: ${requiresMapping}`);
+  
+  return availableDataContext;
+}
+
+/**
  * Balance Sheet Calculation Engine
  */
 class BalanceSheetCalculationEngine {
@@ -3182,6 +3795,12 @@ class BalanceSheetCalculationEngine {
           
         case 'cash':
           return this.calculateCash(pnlData, previousValues); // Special balancing item
+        
+        case 'other_asset_or_liability':
+          return this.calculateDefaultGrowth(itemName, previousValues[itemName]);
+        
+        case 'common_stock':
+          return this.calculateStaticValue(itemName, previousValues[itemName]);
           
         default:
           return this.calculateDefaultGrowth(itemName, previousValues[itemName]);
@@ -3402,6 +4021,21 @@ class BalanceSheetCalculationEngine {
       note: `${previousVal.toLocaleString()} * ${(this.assumptions.workingCapitalGrowth)}% annual growth`,
       driver: 'growth assumption',
       driverValue: growthRate
+    };
+  }
+  
+  /**
+   * Static value for items that don't change (like Common Stock)
+   */
+  calculateStaticValue(itemName, previousValue) {
+    const value = previousValue?.value || 0;
+    
+    return {
+      value: value,
+      method: 'static_value',
+      note: `Carried forward from previous period`,
+      driver: 'none',
+      driverValue: value
     };
   }
 
