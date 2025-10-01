@@ -336,10 +336,30 @@ module.exports = async (req, res) => {
     console.error('Balance sheet classification error:', error.response?.data || error.message);
     console.error('Full error:', error);
     
+    // Check for API key authentication errors
+    if (error.response?.status === 401) {
+      return res.status(500).json({
+        success: false,
+        error: 'Invalid or expired OpenAI API key',
+        details: error.response.data,
+        hint: 'Please check your OPENAI_API_KEY in Vercel environment variables'
+      });
+    }
+    
+    // Check for rate limiting
+    if (error.response?.status === 429) {
+      return res.status(429).json({
+        success: false,
+        error: 'OpenAI API rate limit exceeded',
+        details: error.response.data,
+        hint: 'Please wait a moment and try again'
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Failed to classify balance sheet items',
-      details: error.message
+      details: error.response?.data || error.message
     });
   }
 };
