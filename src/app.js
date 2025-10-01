@@ -2640,8 +2640,27 @@ let balanceSheetAssumptions = {
   dio: 45,           // Days Inventory Outstanding
   depreciationRate: 10, // Annual depreciation rate %
   capexPercentage: 3,   // CapEx as % of revenue
-  dividendPolicy: 0,    // Annual dividends
+  dividendPolicy: 0,    // Dividend policy as % of net income
+  cashTarget: 30,       // Minimum cash buffer in days
+  accruedExpensesPercentage: 5,  // Accrued expenses as % of total expenses
+  prepaidExpensesPercentage: 1,  // Prepaid expenses as % of revenue
   workingCapitalGrowth: 5 // Growth rate for misc items %
+};
+
+/**
+ * Default Balance Sheet Assumptions (for reset)
+ */
+const DEFAULT_BS_ASSUMPTIONS = {
+  dso: 30,
+  dpo: 30,
+  dio: 45,
+  depreciationRate: 10,
+  capexPercentage: 3,
+  dividendPolicy: 0,
+  cashTarget: 30,
+  accruedExpensesPercentage: 5,
+  prepaidExpensesPercentage: 1,
+  workingCapitalGrowth: 5
 };
 
 /**
@@ -2826,7 +2845,7 @@ class BalanceSheetCalculationEngine {
       return { value: 0, method: 'pnl_value_not_found', note: `P&L driver "${mapping.pnlDriver}" not found` };
     }
     
-    const percentage = 5; // 5% of expenses - could be made configurable
+    const percentage = this.assumptions.accruedExpensesPercentage;
     const accruedValue = expenses * (percentage / 100);
     
     return {
@@ -2843,7 +2862,8 @@ class BalanceSheetCalculationEngine {
    */
   calculateRetainedEarnings(mapping, pnlData, previousValue) {
     const netIncome = this.getPnLValue(mapping?.pnlDriver || 'net income', pnlData) || 0;
-    const dividends = this.assumptions.dividendPolicy;
+    const dividendPercentage = this.assumptions.dividendPolicy / 100;
+    const dividends = netIncome * dividendPercentage;
     const previousRE = previousValue?.value || 0;
     
     const newRE = previousRE + netIncome - dividends;
@@ -2851,7 +2871,7 @@ class BalanceSheetCalculationEngine {
     return {
       value: newRE,
       method: 'accumulated_earnings',
-      note: `${previousRE.toLocaleString()} + ${netIncome.toLocaleString()} - ${dividends.toLocaleString()}`,
+      note: `${previousRE.toLocaleString()} + ${netIncome.toLocaleString()} - ${dividends.toLocaleString()} (${this.assumptions.dividendPolicy}% of NI)`,
       driver: mapping?.pnlDriver || 'net income',
       driverValue: netIncome
     };
@@ -2883,7 +2903,7 @@ class BalanceSheetCalculationEngine {
    */
   calculatePrepaidExpenses(mapping, pnlData) {
     const revenue = this.getPnLValue(mapping?.pnlDriver || 'total revenue', pnlData) || 0;
-    const percentage = 1; // 1% of revenue - could be configurable
+    const percentage = this.assumptions.prepaidExpensesPercentage;
     const prepaidValue = revenue * (percentage / 100);
     
     return {
@@ -3465,6 +3485,79 @@ document.addEventListener('DOMContentLoaded', function () {
       rebuildAllTables();
       updateForecast();
     });
+  });
+
+  // Balance Sheet Assumptions Controls
+  const bsControls = {
+    dso: document.getElementById('bsDSO'),
+    dpo: document.getElementById('bsDPO'),
+    dio: document.getElementById('bsDIO'),
+    depreciationRate: document.getElementById('bsDepreciationRate'),
+    capexPercentage: document.getElementById('bsCapexPercentage'),
+    dividendPolicy: document.getElementById('bsDividendPolicy'),
+    cashTarget: document.getElementById('bsCashTarget'),
+    accruedExpenses: document.getElementById('bsAccruedExpenses'),
+    prepaidExpenses: document.getElementById('bsPrepaidExpenses')
+  };
+
+  // Update balanceSheetAssumptions when controls change
+  Object.keys(bsControls).forEach(key => {
+    const element = bsControls[key];
+    if (element) {
+      element.addEventListener('change', function() {
+        const value = parseFloat(this.value) || 0;
+        
+        // Map UI field names to assumption object keys
+        const assumptionKey = {
+          'dso': 'dso',
+          'dpo': 'dpo',
+          'dio': 'dio',
+          'depreciationRate': 'depreciationRate',
+          'capexPercentage': 'capexPercentage',
+          'dividendPolicy': 'dividendPolicy',
+          'cashTarget': 'cashTarget',
+          'accruedExpenses': 'accruedExpensesPercentage',
+          'prepaidExpenses': 'prepaidExpensesPercentage'
+        }[key];
+        
+        balanceSheetAssumptions[assumptionKey] = value;
+        console.log(`Updated ${assumptionKey} to ${value}`);
+        
+        // Optionally auto-update forecast (user can also click "Run Forecasts")
+        // For now, user must click "Run Forecasts" to see changes
+      });
+    }
+  });
+
+  // Reset to defaults button
+  const bsResetBtn = document.getElementById('bsResetBtn');
+  bsResetBtn?.addEventListener('click', function() {
+    // Reset all controls to default values
+    Object.keys(DEFAULT_BS_ASSUMPTIONS).forEach(key => {
+      balanceSheetAssumptions[key] = DEFAULT_BS_ASSUMPTIONS[key];
+    });
+    
+    // Update UI
+    if (bsControls.dso) bsControls.dso.value = DEFAULT_BS_ASSUMPTIONS.dso;
+    if (bsControls.dpo) bsControls.dpo.value = DEFAULT_BS_ASSUMPTIONS.dpo;
+    if (bsControls.dio) bsControls.dio.value = DEFAULT_BS_ASSUMPTIONS.dio;
+    if (bsControls.depreciationRate) bsControls.depreciationRate.value = DEFAULT_BS_ASSUMPTIONS.depreciationRate;
+    if (bsControls.capexPercentage) bsControls.capexPercentage.value = DEFAULT_BS_ASSUMPTIONS.capexPercentage;
+    if (bsControls.dividendPolicy) bsControls.dividendPolicy.value = DEFAULT_BS_ASSUMPTIONS.dividendPolicy;
+    if (bsControls.cashTarget) bsControls.cashTarget.value = DEFAULT_BS_ASSUMPTIONS.cashTarget;
+    if (bsControls.accruedExpenses) bsControls.accruedExpenses.value = DEFAULT_BS_ASSUMPTIONS.accruedExpensesPercentage;
+    if (bsControls.prepaidExpenses) bsControls.prepaidExpenses.value = DEFAULT_BS_ASSUMPTIONS.prepaidExpensesPercentage;
+    
+    console.log('Balance sheet assumptions reset to defaults');
+    
+    // Show confirmation
+    const originalText = bsResetBtn.textContent;
+    bsResetBtn.textContent = '✓ Reset Complete';
+    bsResetBtn.style.background = '#27ae60';
+    setTimeout(() => {
+      bsResetBtn.textContent = originalText;
+      bsResetBtn.style.background = '';
+    }, 1500);
   });
 
   // Forecast method help modal handlers

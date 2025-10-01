@@ -596,6 +596,101 @@
             cursor: not-allowed;
         }
         
+        /* Balance Sheet Controls Styles */
+        .bs-controls-section {
+            margin-top: 8px;
+        }
+        
+        .bs-controls-section h4 {
+            color: #2c3e50;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #e3f2fd;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .bs-control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .bs-control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        
+        .bs-control-row label {
+            font-size: 0.85rem;
+            color: #495057;
+            font-weight: 500;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .bs-control-row input {
+            width: 80px;
+            padding: 6px 8px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            text-align: right;
+            transition: border-color 0.2s;
+        }
+        
+        .bs-control-row input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .bs-control-row .unit {
+            font-size: 0.8rem;
+            color: #6c757d;
+            min-width: 35px;
+        }
+        
+        .bs-info-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: #6c757d;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 16px;
+            font-size: 11px;
+            cursor: help;
+            transition: background 0.2s;
+        }
+        
+        .bs-info-icon:hover {
+            background: #3498db;
+        }
+        
+        .bs-reset-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            width: 100%;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        
+        .bs-reset-btn:hover {
+            background: #5a6268;
+        }
+        
         /* Insights Container Styles */
         .insights-container {
             height: 500px;
@@ -959,6 +1054,108 @@
                             </div>
                         </div>
                         <button class="run-forecast-btn" id="runForecastBtn">Run Forecasts</button>
+                    </div>
+                    
+                    <div class="controls">
+                        <h3>Balance Sheet Assumptions</h3>
+                        
+                        <div class="bs-controls-section">
+                            <h4>Working Capital</h4>
+                            <div class="bs-control-group">
+                                <div class="bs-control-row">
+                                    <label>
+                                        <span>DSO</span>
+                                        <span class="bs-info-icon" title="Days Sales Outstanding - Average time to collect payment from customers">i</span>
+                                    </label>
+                                    <input type="number" id="bsDSO" value="30" min="0" max="365" step="1">
+                                    <span class="unit">days</span>
+                                </div>
+                                <div class="bs-control-row">
+                                    <label>
+                                        <span>DPO</span>
+                                        <span class="bs-info-icon" title="Days Payable Outstanding - Average time to pay suppliers">i</span>
+                                    </label>
+                                    <input type="number" id="bsDPO" value="30" min="0" max="365" step="1">
+                                    <span class="unit">days</span>
+                                </div>
+                                <div class="bs-control-row">
+                                    <label>
+                                        <span>DIO</span>
+                                        <span class="bs-info-icon" title="Days Inventory Outstanding - Average time inventory sits before being sold">i</span>
+                                    </label>
+                                    <input type="number" id="bsDIO" value="45" min="0" max="365" step="1">
+                                    <span class="unit">days</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bs-controls-section">
+                            <h4>Fixed Assets</h4>
+                            <div class="bs-control-group">
+                                <div class="bs-control-row">
+                                    <label>
+                                        <span>Depreciation Rate</span>
+                                        <span class="bs-info-icon" title="Annual depreciation rate for Property, Plant & Equipment">i</span>
+                                    </label>
+                                    <input type="number" id="bsDepreciationRate" value="10" min="0" max="100" step="0.5">
+                                    <span class="unit">%</span>
+                                </div>
+                                <div class="bs-control-row">
+                                    <label>
+                                        <span>CapEx % of Revenue</span>
+                                        <span class="bs-info-icon" title="Capital Expenditures as percentage of revenue - new investments in fixed assets">i</span>
+                                    </label>
+                                    <input type="number" id="bsCapexPercentage" value="3" min="0" max="100" step="0.5">
+                                    <span class="unit">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bs-controls-section">
+                            <h4>Policies</h4>
+                            <div class="bs-control-group">
+                                <div class="bs-control-row">
+                                    <label>
+                                        <span>Dividend Policy</span>
+                                        <span class="bs-info-icon" title="Dividends paid as percentage of net income">i</span>
+                                    </label>
+                                    <input type="number" id="bsDividendPolicy" value="0" min="0" max="100" step="1">
+                                    <span class="unit">%</span>
+                                </div>
+                                <div class="bs-control-row">
+                                    <label>
+                                        <span>Cash Target</span>
+                                        <span class="bs-info-icon" title="Minimum cash buffer in days of operating expenses">i</span>
+                                    </label>
+                                    <input type="number" id="bsCashTarget" value="30" min="0" max="365" step="1">
+                                    <span class="unit">days</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bs-controls-section">
+                            <h4>Accruals</h4>
+                            <div class="bs-control-group">
+                                <div class="bs-control-row">
+                                    <label>
+                                        <span>Accrued Expenses</span>
+                                        <span class="bs-info-icon" title="Accrued expenses as percentage of total expenses">i</span>
+                                    </label>
+                                    <input type="number" id="bsAccruedExpenses" value="5" min="0" max="100" step="0.5">
+                                    <span class="unit">%</span>
+                                </div>
+                                <div class="bs-control-row">
+                                    <label>
+                                        <span>Prepaid Expenses</span>
+                                        <span class="bs-info-icon" title="Prepaid expenses as percentage of revenue">i</span>
+                                    </label>
+                                    <input type="number" id="bsPrepaidExpenses" value="1" min="0" max="100" step="0.5">
+                                    <span class="unit">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="bs-reset-btn" id="bsResetBtn">Reset to Defaults</button>
                     </div>
                     
                     <div class="controls">
