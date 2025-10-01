@@ -3666,10 +3666,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Upload
   const fileEl = document.getElementById('actualsFile');
+  const uploadStatus = document.getElementById('uploadStatus');
+  
   fileEl?.addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
       console.log('File uploaded:', file.name);
+      
+      // Update status display
+      if (uploadStatus) {
+        uploadStatus.textContent = `✓ ${file.name}`;
+        uploadStatus.classList.add('has-file');
+      }
+      
       handleActualsUpload(file);
     }
   });
