@@ -920,11 +920,12 @@ function updateBalanceSheetForecasts(periods) {
   
   console.log('Updating balance sheet forecasts using calculation engine...');
   
-  // Create calculation engine
+  // Create calculation engine with hierarchy
   const engine = new BalanceSheetCalculationEngine(
     pnlMappings,
     balanceSheetClassifications, 
-    balanceSheetAssumptions
+    balanceSheetAssumptions,
+    balanceSheetHierarchy
   );
   
   // Track previous values for period-to-period calculations
@@ -1947,6 +1948,11 @@ window.testBalanceSheetClassification = testBalanceSheetClassification;
 let balanceSheetClassifications = {};
 
 /**
+ * Storage for balance sheet hierarchy (intelligent totals structure)
+ */
+let balanceSheetHierarchy = null;
+
+/**
  * Storage for P&L to Balance Sheet mappings
  */
 let pnlMappings = {};
@@ -1995,25 +2001,218 @@ const BALANCE_SHEET_DRIVER_REQUIREMENTS = {
 };
 
 /**
- * Auto-detect special balance sheet item types
+ * Auto-detect special balance sheet item types with enhanced intelligence
  */
 function autoDetectSpecialTypes(balanceSheetItems) {
-  return balanceSheetItems.map(item => {
+  return balanceSheetItems.map((item, index) => {
     const name = item.name.toLowerCase();
     const hasValues = item.actualValues && item.actualValues.some(val => val !== null && val !== undefined && val !== '');
     
-    // Auto-detect totals
-    const isTotal = /\btotal\b/i.test(item.name);
+    // Enhanced total detection patterns
+    const totalPatterns = [
+      /\btotal\b/i,
+      /\bsum\b/i,
+      /\bsubtotal\b/i,
+      /\bgrand total\b/i,
+      /^total\s+/i
+    ];
+    const isTotal = totalPatterns.some(pattern => pattern.test(item.name));
     
-    // Auto-detect subheaders (no values or all blank)
-    const isSubheader = !hasValues;
+    // Auto-detect subheaders (no values or all blank, and not a total)
+    const isSubheader = !hasValues && !isTotal;
     
+    // Store original position for hierarchy building
     return {
       ...item,
       autoDetectedType: isTotal ? 'calculated_total' : isSubheader ? 'subheader' : 'line_item',
-      hasValues: hasValues
+      hasValues: hasValues,
+      originalIndex: index
     };
   });
+}
+
+/**
+ * Build intelligent hierarchy tree from balance sheet structure
+ * This is the MAGIC that makes the system truly intelligent
+ */
+function buildBalanceSheetHierarchy(balanceSheetItems) {
+  console.log('🧠 Building intelligent balance sheet hierarchy...');
+  
+  const hierarchy = {
+    items: [],
+    totals: {},
+    tree: {},
+    relationships: []
+  };
+  
+  // Step 1: Identify all items with their types
+  const processedItems = autoDetectSpecialTypes(balanceSheetItems);
+  
+  // Step 2: Separate totals from detail items
+  const totals = processedItems.filter(item => item.autoDetectedType === 'calculated_total');
+  const details = processedItems.filter(item => item.autoDetectedType === 'line_item');
+  const subheaders = processedItems.filter(item => item.autoDetectedType === 'subheader');
+  
+  console.log(`Found ${totals.length} totals, ${details.length} detail items, ${subheaders.length} subheaders`);
+  
+  // Step 3: For each total, find its children (items that should sum to it)
+  totals.forEach(total => {
+    const children = findChildrenForTotal(total, processedItems);
+    
+    // Validate: do children sum to total? (from actuals)
+    const validation = validateTotalCalculation(total, children);
+    
+    hierarchy.totals[total.name] = {
+      name: total.name,
+      index: total.originalIndex,
+      children: children.map(child => child.name),
+      childrenDetails: children,
+      validated: validation.isValid,
+      expectedValue: validation.expectedValue,
+      actualValue: validation.actualValue,
+      confidence: validation.confidence
+    };
+    
+    console.log(`Total "${total.name}": ${children.length} children, validated: ${validation.isValid}, confidence: ${validation.confidence}`);
+  });
+  
+  // Step 4: Build tree structure (nested totals)
+  hierarchy.tree = buildNestedTree(processedItems, hierarchy.totals);
+  
+  // Step 5: Store all items for reference
+  hierarchy.items = processedItems;
+  
+  console.log('✅ Hierarchy built successfully:', hierarchy);
+  return hierarchy;
+}
+
+/**
+ * Find children for a total line by analyzing position and relationships
+ */
+function findChildrenForTotal(total, allItems) {
+  const totalIndex = total.originalIndex;
+  const children = [];
+  
+  // Strategy: Find all detail items between this total and the previous total (or start of section)
+  let startIndex = 0;
+  
+  // Find the previous total or subheader
+  for (let i = totalIndex - 1; i >= 0; i--) {
+    const item = allItems[i];
+    if (item.autoDetectedType === 'calculated_total' || item.autoDetectedType === 'subheader') {
+      startIndex = i + 1;
+      break;
+    }
+  }
+  
+  // Collect all line items and nested totals between start and this total
+  for (let i = startIndex; i < totalIndex; i++) {
+    const item = allItems[i];
+    if (item.autoDetectedType === 'line_item' || item.autoDetectedType === 'calculated_total') {
+      children.push(item);
+    }
+  }
+  
+  return children;
+}
+
+/**
+ * Validate that a total equals the sum of its children (using actuals)
+ */
+function validateTotalCalculation(total, children) {
+  // Get the first actual value from total
+  const totalValue = total.actualValues && total.actualValues.find(v => v !== null && v !== undefined && v !== '');
+  
+  if (totalValue === null || totalValue === undefined || totalValue === '') {
+    return {
+      isValid: false,
+      expectedValue: null,
+      actualValue: null,
+      confidence: 0
+    };
+  }
+  
+  // Sum children's first actual values
+  let childrenSum = 0;
+  let validChildren = 0;
+  
+  children.forEach(child => {
+    const childValue = child.actualValues && child.actualValues.find(v => v !== null && v !== undefined && v !== '');
+    if (childValue !== null && childValue !== undefined && childValue !== '') {
+      childrenSum += parseFloat(childValue) || 0;
+      validChildren++;
+    }
+  });
+  
+  const totalValueNum = parseFloat(totalValue) || 0;
+  const difference = Math.abs(totalValueNum - childrenSum);
+  const percentDiff = totalValueNum !== 0 ? (difference / Math.abs(totalValueNum)) * 100 : 0;
+  
+  // Validation thresholds
+  const isValid = percentDiff < 5; // Within 5% is considered valid
+  const confidence = Math.max(0, Math.min(1, 1 - (percentDiff / 100)));
+  
+  return {
+    isValid,
+    expectedValue: childrenSum,
+    actualValue: totalValueNum,
+    difference,
+    percentDiff,
+    confidence,
+    validChildren
+  };
+}
+
+/**
+ * Build nested tree structure for multi-level totals
+ */
+function buildNestedTree(items, totalsMap) {
+  const tree = {};
+  
+  // Find grand totals (totals that aren't children of other totals)
+  const grandTotals = Object.keys(totalsMap).filter(totalName => {
+    const total = totalsMap[totalName];
+    // Check if this total appears as a child of another total
+    const isChild = Object.values(totalsMap).some(otherTotal => 
+      otherTotal.name !== totalName && otherTotal.children.includes(totalName)
+    );
+    return !isChild;
+  });
+  
+  console.log('Grand totals (top-level):', grandTotals);
+  
+  // Build tree recursively for each grand total
+  grandTotals.forEach(grandTotalName => {
+    tree[grandTotalName] = buildTreeNode(grandTotalName, totalsMap);
+  });
+  
+  return tree;
+}
+
+/**
+ * Recursively build a tree node
+ */
+function buildTreeNode(totalName, totalsMap) {
+  const total = totalsMap[totalName];
+  if (!total) return null;
+  
+  const node = {
+    name: totalName,
+    children: []
+  };
+  
+  // Process each child
+  total.children.forEach(childName => {
+    if (totalsMap[childName]) {
+      // Child is also a total - recurse
+      node.children.push(buildTreeNode(childName, totalsMap));
+    } else {
+      // Child is a detail item - add as leaf
+      node.children.push({ name: childName, isLeaf: true });
+    }
+  });
+  
+  return node;
 }
 
 /**
@@ -2241,6 +2440,10 @@ async function processBalanceSheetClassification(data) {
       allClassifications.forEach(classification => {
         balanceSheetClassifications[classification.originalName] = classification;
       });
+      
+      // Build intelligent hierarchy from balance sheet structure
+      balanceSheetHierarchy = buildBalanceSheetHierarchy(balanceSheetItems);
+      console.log('🎯 Balance sheet hierarchy built:', balanceSheetHierarchy);
       
       // Show classification review UI
       await showClassificationReview(allClassifications);
@@ -2664,13 +2867,48 @@ const DEFAULT_BS_ASSUMPTIONS = {
 };
 
 /**
+ * Calculate totals from hierarchy
+ */
+function calculateTotalsFromHierarchy(forecastedValues, hierarchy) {
+  if (!hierarchy || !hierarchy.totals) {
+    console.warn('No hierarchy available for calculating totals');
+    return {};
+  }
+  
+  const calculatedTotals = {};
+  
+  // Calculate each total based on its children
+  Object.keys(hierarchy.totals).forEach(totalName => {
+    const totalInfo = hierarchy.totals[totalName];
+    let sum = 0;
+    
+    totalInfo.children.forEach(childName => {
+      // Check if child is also a total (nested)
+      if (calculatedTotals[childName] !== undefined) {
+        sum += calculatedTotals[childName];
+      } 
+      // Otherwise it's a detail item
+      else if (forecastedValues[childName]) {
+        sum += forecastedValues[childName].value || 0;
+      }
+    });
+    
+    calculatedTotals[totalName] = sum;
+    console.log(`Calculated total "${totalName}" = $${sum.toLocaleString()} from ${totalInfo.children.length} children`);
+  });
+  
+  return calculatedTotals;
+}
+
+/**
  * Balance Sheet Calculation Engine
  */
 class BalanceSheetCalculationEngine {
-  constructor(pnlMappings, balanceSheetClassifications, assumptions) {
+  constructor(pnlMappings, balanceSheetClassifications, assumptions, hierarchy = null) {
     this.pnlMappings = pnlMappings;
     this.classifications = balanceSheetClassifications;
     this.assumptions = assumptions;
+    this.hierarchy = hierarchy;
   }
 
   /**
@@ -2681,13 +2919,20 @@ class BalanceSheetCalculationEngine {
     
     console.log(`Calculating balance sheet for period ${periodIndex}:`, pnlForecastData);
     
+    // Step 1: Calculate detail items (skip totals and subheaders for now)
     Object.keys(this.classifications).forEach(itemName => {
       const classification = this.classifications[itemName];
       const mapping = this.pnlMappings[itemName];
       
-      // Skip subheaders and totals - they don't get forecasted
-      if (classification.category === 'subheader' || classification.category === 'calculated_total') {
-        results[itemName] = { value: 0, method: 'not_forecasted', note: classification.category };
+      // Skip subheaders and totals - they'll be calculated from hierarchy
+      if (classification.category === 'subheader') {
+        results[itemName] = { value: 0, method: 'subheader', note: 'Section header' };
+        return;
+      }
+      
+      if (classification.category === 'calculated_total') {
+        // Placeholder - will be calculated from hierarchy
+        results[itemName] = { value: 0, method: 'pending_total_calculation', note: 'Will be calculated from children' };
         return;
       }
       
@@ -2703,6 +2948,27 @@ class BalanceSheetCalculationEngine {
       
       results[itemName] = calculatedValue;
     });
+    
+    // Step 2: Calculate totals using intelligent hierarchy
+    if (this.hierarchy && this.hierarchy.totals) {
+      console.log('🧠 Calculating totals from hierarchy...');
+      const calculatedTotals = calculateTotalsFromHierarchy(results, this.hierarchy);
+      
+      // Update results with calculated totals
+      Object.keys(calculatedTotals).forEach(totalName => {
+        results[totalName] = {
+          value: calculatedTotals[totalName],
+          method: 'hierarchical_sum',
+          note: `Sum of ${this.hierarchy.totals[totalName].children.length} children`,
+          children: this.hierarchy.totals[totalName].children,
+          validated: this.hierarchy.totals[totalName].validated
+        };
+      });
+      
+      console.log('✅ Totals calculated from hierarchy:', calculatedTotals);
+    } else {
+      console.warn('⚠️ No hierarchy available - totals will be $0');
+    }
     
     console.log(`Balance sheet calculations for period ${periodIndex}:`, results);
     return results;
