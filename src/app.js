@@ -3371,9 +3371,83 @@ function hideCustomTooltip() {
   }
 }
 
+/**
+ * Toggle collapsible sections
+ */
+function toggleSection(sectionId) {
+  const header = document.querySelector(`#${sectionId}-content`).previousElementSibling;
+  const content = document.getElementById(`${sectionId}-content`);
+  
+  // Toggle collapsed state
+  header.classList.toggle('collapsed');
+  content.classList.toggle('collapsed');
+  
+  // Save state to localStorage
+  const isCollapsed = content.classList.contains('collapsed');
+  localStorage.setItem(`section-${sectionId}-collapsed`, isCollapsed);
+  
+  console.log(`Toggled ${sectionId}: ${isCollapsed ? 'collapsed' : 'expanded'}`);
+}
+
+/**
+ * Initialize collapsible sections state from localStorage
+ */
+function initializeCollapsibleSections() {
+  const sections = ['forecast', 'balancesheet'];
+  
+  sections.forEach(sectionId => {
+    const savedState = localStorage.getItem(`section-${sectionId}-collapsed`);
+    const header = document.querySelector(`#${sectionId}-content`)?.previousElementSibling;
+    const content = document.getElementById(`${sectionId}-content`);
+    
+    if (header && content) {
+      // Default: collapsed (already set in HTML)
+      // If user previously expanded it, restore that state
+      if (savedState === 'false') {
+        header.classList.remove('collapsed');
+        content.classList.remove('collapsed');
+      }
+    }
+  });
+  
+  // Smart behavior: On first visit, show hint to expand forecast config
+  const isFirstVisit = !localStorage.getItem('hasVisited');
+  if (isFirstVisit) {
+    localStorage.setItem('hasVisited', 'true');
+    const forecastHeader = document.querySelector(`#forecast-content`)?.previousElementSibling;
+    if (forecastHeader) {
+      forecastHeader.classList.add('hint');
+      // Remove hint after 3 seconds
+      setTimeout(() => {
+        forecastHeader.classList.remove('hint');
+      }, 3000);
+    }
+  }
+}
+
+/**
+ * Auto-collapse forecast section after running forecast
+ */
+function autoCollapseAfterForecast() {
+  const forecastHeader = document.querySelector(`#forecast-content`)?.previousElementSibling;
+  const forecastContent = document.getElementById('forecast-content');
+  
+  if (forecastHeader && forecastContent && !forecastContent.classList.contains('collapsed')) {
+    setTimeout(() => {
+      forecastHeader.classList.add('collapsed');
+      forecastContent.classList.add('collapsed');
+      localStorage.setItem('section-forecast-collapsed', 'true');
+      console.log('Auto-collapsed forecast section after running forecast');
+    }, 500);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   console.log('DOM loaded, initializing...');
   console.log('JavaScript is running!');
+  
+  // Initialize collapsible sections
+  initializeCollapsibleSections();
   
   // Initialize custom tooltips
   initializeCustomTooltips();
@@ -3604,6 +3678,9 @@ document.addEventListener('DOMContentLoaded', function () {
   runBtn?.addEventListener('click', function() {
     console.log('Run Forecast clicked');
     updateForecast();
+    
+    // Auto-collapse forecast section after running
+    autoCollapseAfterForecast();
   });
 
   // Upload

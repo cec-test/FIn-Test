@@ -691,6 +691,93 @@
             background: #5a6268;
         }
         
+        /* Collapsible Section Styles */
+        .controls.collapsible {
+            position: relative;
+        }
+        
+        .collapsible-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            padding: 12px 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            margin-bottom: 0;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        
+        .collapsible-header:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .collapsible-header h3 {
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+            flex: 1;
+        }
+        
+        .collapse-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+            line-height: 1;
+        }
+        
+        .collapsible-header.collapsed .collapse-icon {
+            transform: rotate(-90deg);
+        }
+        
+        .collapsible-content {
+            max-height: 2000px;
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.3s ease, margin 0.3s ease;
+            opacity: 1;
+            margin-top: 12px;
+        }
+        
+        .collapsible-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+        }
+        
+        /* Pulse animation for hints */
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(102, 126, 234, 0); }
+        }
+        
+        .collapsible-header.hint {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Chat always visible - no collapsible styling */
+        .controls.chat-controls {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .controls.chat-controls h3 {
+            color: white;
+            padding: 12px 15px;
+            margin: 0 0 12px 0;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+        
         /* Insights Container Styles */
         .insights-container {
             height: 500px;
@@ -974,90 +1061,126 @@
         <div class="content">
             <div class="layout">
                 <aside class="sidebar">
-                    <div class="controls">
-                        <h3>Forecast Configuration</h3>
-                        <div class="control-group">
-                            <div class="control-item">
-                                <label>Method:</label>
-                                <span class="help-button" id="forecastMethodHelp" title="Click for forecast method explanations">?</span>
-                                <select id="forecastMethod">
-                                    <option value="custom">Linear Growth</option>
-                                    <option value="exponential">Exponential Growth</option>
-                                    <option value="logarithmic">Logarithmic Growth</option>
-                                    <option value="scurve" style="color: red;">S-Curve Growth (in development)</option>
-                                    <option value="rolling">Rolling Average</option>
-                                </select>
-                            </div>
-                            <div class="control-item">
-                                <label>Annual Growth Rate (%):</label>
-                                <input type="number" id="customGrowthRate" value="5.0" step="0.1" title="Enter annual growth rate (e.g., 5% = 5% per year)">
-                            </div>
-                            
-                            <!-- S-Curve Specific Controls -->
-                            <div id="scurve-controls" style="display: none;">
-                                <div class="control-item">
-                                    <label>Max Value ($):</label>
-                                    <input type="number" id="scurveMaxValue" step="1000" title="Maximum possible value (market ceiling)">
-                                </div>
-                                <div class="control-item">
-                                    <label>Midpoint (Month):</label>
-                                    <input type="number" id="scurveMidpoint" min="1" max="60" title="Month when growth peaks (inflection point)">
-                                </div>
-                            </div>
-                            <div class="control-item">
-                                <label>Periods:</label>
-                                <input type="number" id="forecastPeriods" value="12" min="1" max="60">
-                            </div>
-                            
-                            <!-- Seasonality Controls -->
-                            <div class="control-item">
-                                <label>Seasonal Pattern:</label>
-                                <span class="help-button" id="seasonalPatternHelp" title="Click for seasonal pattern explanations">?</span>
-                                <select id="seasonalPattern">
-                                    <option value="none">No Seasonality</option>
-                                    <option value="retail">Retail (Q4 peak)</option>
-                                    <option value="saas">SaaS (steady)</option>
-                                    <option value="construction">Construction (summer peak)</option>
-                                    <option value="custom">Custom Pattern</option>
-                                </select>
-                            </div>
-                            
-                            <div class="control-item">
-                                <label>Seasonal Strength:</label>
-                                <input type="range" id="seasonalStrength" min="0" max="100" value="50" style="width: 120px;">
-                                <span id="seasonalStrengthValue">50%</span>
-                            </div>
-                            
-                            <!-- Custom Seasonal Multipliers -->
-                            <div id="custom-seasonal" style="display: none;">
-                                <div class="control-item">
-                                    <label>Custom Monthly Multipliers:</label>
-                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; font-size: 0.8rem;">
-                                        <div>Jan: <input type="number" id="jan-mult" value="0.8" step="0.1" min="0" max="2" style="width: 50px;"></div>
-                                        <div>Feb: <input type="number" id="feb-mult" value="0.9" step="0.1" min="0" max="2" style="width: 50px;"></div>
-                                        <div>Mar: <input type="number" id="mar-mult" value="1.0" step="0.1" min="0" max="2" style="width: 50px;"></div>
-                                        <div>Apr: <input type="number" id="apr-mult" value="1.1" step="0.1" min="0" max="2" style="width: 50px;"></div>
-                                        <div>May: <input type="number" id="may-mult" value="1.2" step="0.1" min="0" max="2" style="width: 50px;"></div>
-                                        <div>Jun: <input type="number" id="jun-mult" value="1.3" step="0.1" min="0" max="2" style="width: 50px;"></div>
-                                        <div>Jul: <input type="number" id="jul-mult" value="1.2" step="0.1" min="0" max="2" style="width: 50px;"></div>
-                                        <div>Aug: <input type="number" id="aug-mult" value="1.1" step="0.1" min="0" max="2" style="width: 50px;"></div>
-                                        <div>Sep: <input type="number" id="sep-mult" value="1.0" step="0.1" min="0" max="2" style="width: 50px;"></div>
-                                        <div>Oct: <input type="number" id="oct-mult" value="0.9" step="0.1" min="0" max="2" style="width: 50px;"></div>
-                                        <div>Nov: <input type="number" id="nov-mult" value="1.1" step="0.1" min="0" max="2" style="width: 50px;"></div>
-                                        <div>Dec: <input type="number" id="dec-mult" value="1.5" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                    <!-- Financial Chat Assistant - Always Visible at Top -->
+                    <div class="controls chat-controls">
+                        <h3>💬 Financial Assistant</h3>
+                        <div class="chat-container">
+                            <div class="chat-messages" id="chatMessages">
+                                <div class="chat-message assistant">
+                                    <div class="message-content">
+                                        👋 Hi! I'm your financial assistant. I can help you:
+                                        <ul>
+                                            <li>Understand your forecast settings</li>
+                                            <li>Analyze financial trends and patterns</li>
+                                            <li>Explain balance sheet calculations</li>
+                                            <li>Answer questions about your data</li>
+                                        </ul>
+                                        <strong>Tip:</strong> Expand sections below to configure your forecasts!
                                     </div>
                                 </div>
                             </div>
-                            <div class="control-item">
-                                <label>Upload Actuals (CSV):</label>
-                                <input type="file" id="actualsFile" accept=".csv">
+                            <div class="chat-input-container">
+                                <input type="text" id="chatInput" placeholder="Ask me anything about your financials..." />
+                                <button id="sendChatBtn">Send</button>
                             </div>
                         </div>
-                        <button class="run-forecast-btn" id="runForecastBtn">Run Forecasts</button>
                     </div>
                     
-                    <div class="controls">
-                        <h3>Balance Sheet Assumptions</h3>
+                    <!-- Forecast Configuration - Collapsible -->
+                    <div class="controls collapsible">
+                        <div class="collapsible-header collapsed" onclick="toggleSection('forecast')">
+                            <h3>⚙️ Forecast Configuration</h3>
+                            <span class="collapse-icon">▼</span>
+                        </div>
+                        <div class="collapsible-content collapsed" id="forecast-content">
+                            <div class="control-group">
+                                <div class="control-item">
+                                    <label>Method:</label>
+                                    <span class="help-button" id="forecastMethodHelp" title="Click for forecast method explanations">?</span>
+                                    <select id="forecastMethod">
+                                        <option value="custom">Linear Growth</option>
+                                        <option value="exponential">Exponential Growth</option>
+                                        <option value="logarithmic">Logarithmic Growth</option>
+                                        <option value="scurve" style="color: red;">S-Curve Growth (in development)</option>
+                                        <option value="rolling">Rolling Average</option>
+                                    </select>
+                                </div>
+                                <div class="control-item">
+                                    <label>Annual Growth Rate (%):</label>
+                                    <input type="number" id="customGrowthRate" value="5.0" step="0.1" title="Enter annual growth rate (e.g., 5% = 5% per year)">
+                                </div>
+                                
+                                <!-- S-Curve Specific Controls -->
+                                <div id="scurve-controls" style="display: none;">
+                                    <div class="control-item">
+                                        <label>Max Value ($):</label>
+                                        <input type="number" id="scurveMaxValue" step="1000" title="Maximum possible value (market ceiling)">
+                                    </div>
+                                    <div class="control-item">
+                                        <label>Midpoint (Month):</label>
+                                        <input type="number" id="scurveMidpoint" min="1" max="60" title="Month when growth peaks (inflection point)">
+                                    </div>
+                                </div>
+                                <div class="control-item">
+                                    <label>Periods:</label>
+                                    <input type="number" id="forecastPeriods" value="12" min="1" max="60">
+                                </div>
+                                
+                                <!-- Seasonality Controls -->
+                                <div class="control-item">
+                                    <label>Seasonal Pattern:</label>
+                                    <span class="help-button" id="seasonalPatternHelp" title="Click for seasonal pattern explanations">?</span>
+                                    <select id="seasonalPattern">
+                                        <option value="none">No Seasonality</option>
+                                        <option value="retail">Retail (Q4 peak)</option>
+                                        <option value="saas">SaaS (steady)</option>
+                                        <option value="construction">Construction (summer peak)</option>
+                                        <option value="custom">Custom Pattern</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="control-item">
+                                    <label>Seasonal Strength:</label>
+                                    <input type="range" id="seasonalStrength" min="0" max="100" value="50" style="width: 120px;">
+                                    <span id="seasonalStrengthValue">50%</span>
+                                </div>
+                                
+                                <!-- Custom Seasonal Multipliers -->
+                                <div id="custom-seasonal" style="display: none;">
+                                    <div class="control-item">
+                                        <label>Custom Monthly Multipliers:</label>
+                                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; font-size: 0.8rem;">
+                                            <div>Jan: <input type="number" id="jan-mult" value="0.8" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                                            <div>Feb: <input type="number" id="feb-mult" value="0.9" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                                            <div>Mar: <input type="number" id="mar-mult" value="1.0" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                                            <div>Apr: <input type="number" id="apr-mult" value="1.1" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                                            <div>May: <input type="number" id="may-mult" value="1.2" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                                            <div>Jun: <input type="number" id="jun-mult" value="1.3" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                                            <div>Jul: <input type="number" id="jul-mult" value="1.2" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                                            <div>Aug: <input type="number" id="aug-mult" value="1.1" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                                            <div>Sep: <input type="number" id="sep-mult" value="1.0" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                                            <div>Oct: <input type="number" id="oct-mult" value="0.9" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                                            <div>Nov: <input type="number" id="nov-mult" value="1.1" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                                            <div>Dec: <input type="number" id="dec-mult" value="1.5" step="0.1" min="0" max="2" style="width: 50px;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="control-item">
+                                    <label>Upload Actuals (CSV):</label>
+                                    <input type="file" id="actualsFile" accept=".csv">
+                                </div>
+                            </div>
+                            <button class="run-forecast-btn" id="runForecastBtn">Run Forecasts</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Balance Sheet Assumptions - Collapsible -->
+                    <div class="controls collapsible">
+                        <div class="collapsible-header collapsed" onclick="toggleSection('balancesheet')">
+                            <h3>📊 Balance Sheet Assumptions</h3>
+                            <span class="collapse-icon">▼</span>
+                        </div>
+                        <div class="collapsible-content collapsed" id="balancesheet-content">
                         
                         <div class="bs-controls-section">
                             <h4>Working Capital</h4>
@@ -1156,28 +1279,6 @@
                         </div>
                         
                         <button class="bs-reset-btn" id="bsResetBtn">Reset to Defaults</button>
-                    </div>
-                    
-                    <div class="controls">
-                        <h3>Financial Chat Assistant</h3>
-                        <div style="background: red; color: white; padding: 5px; margin: 5px 0;">DEBUG: Chat container should be visible</div>
-                        <div class="chat-container">
-                            <div class="chat-messages" id="chatMessages">
-                                <div class="chat-message assistant">
-                                    <div class="message-content">
-                                        Ask me anything about your financial data! Try questions like:
-                                        <ul>
-                                            <li>"What do my operating expenses look like for the last 10 months?"</li>
-                                            <li>"How is my total revenue trending for the next year?"</li>
-                                            <li>"Show me the biggest changes in my balance sheet"</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="chat-input-container">
-                                <input type="text" id="chatInput" placeholder="Ask about your financials..." />
-                                <button id="sendChatBtn">Send</button>
-                            </div>
                         </div>
                     </div>
                     
