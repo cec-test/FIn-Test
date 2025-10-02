@@ -160,6 +160,60 @@
             pointer-events: none;
         }
         
+        /* Collapsed Sidebar Icon Strip */
+        .sidebar-collapsed-icons {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            padding: 10px 0;
+        }
+        
+        .sidebar.collapsed .sidebar-collapsed-icons {
+            display: flex;
+        }
+        
+        .sidebar-icon-item {
+            width: 36px;
+            height: 36px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .sidebar-icon-item:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .sidebar-icon-item:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 50px;
+            background: #2c3e50;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            white-space: nowrap;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .sidebar-expand-icon {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            font-size: 1.1rem;
+        }
+        
         .main {
             flex: 1;
             min-width: 0;
@@ -1461,6 +1515,16 @@
                     <!-- Sidebar Toggle -->
                     <div class="sidebar-toggle">
                         <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Collapse sidebar">◀</button>
+                    </div>
+                    
+                    <!-- Collapsed Sidebar Icon Strip -->
+                    <div class="sidebar-collapsed-icons">
+                        <div class="sidebar-icon-item" data-tooltip="Quick Actions" id="collapsedQuickActions">⚡</div>
+                        <div class="sidebar-icon-item" data-tooltip="P&L Forecast" id="collapsedPnL">⚙️</div>
+                        <div class="sidebar-icon-item" data-tooltip="Balance Sheet" id="collapsedBalance">📊</div>
+                        <div class="sidebar-icon-item" data-tooltip="Cash Flow" id="collapsedCash">💰</div>
+                        <div class="sidebar-icon-item" data-tooltip="Scenarios" id="collapsedScenarios">📈</div>
+                        <div class="sidebar-icon-item sidebar-expand-icon" id="collapsedExpand" data-tooltip="Expand Configuration">▶</div>
                     </div>
                     
                     <div class="sidebar-content">

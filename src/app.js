@@ -5458,6 +5458,51 @@ function initializeSidebarToggle() {
     }
   });
   
+  // Icon strip click handlers (when collapsed)
+  const iconExpand = document.getElementById('collapsedExpand');
+  const iconPnL = document.getElementById('collapsedPnL');
+  const iconBalance = document.getElementById('collapsedBalance');
+  const iconCash = document.getElementById('collapsedCash');
+  const iconScenarios = document.getElementById('collapsedScenarios');
+  
+  // Expand button
+  iconExpand?.addEventListener('click', () => {
+    toggleBtn.click(); // Just expand
+  });
+  
+  // Tab icons - expand AND switch to that tab
+  iconPnL?.addEventListener('click', () => {
+    sidebar.classList.remove('collapsed');
+    toggleBtn.textContent = '◀';
+    toggleBtn.title = 'Collapse sidebar';
+    localStorage.setItem('sidebarCollapsed', 'false');
+    switchConfigTab('pnl');
+  });
+  
+  iconBalance?.addEventListener('click', () => {
+    sidebar.classList.remove('collapsed');
+    toggleBtn.textContent = '◀';
+    toggleBtn.title = 'Collapse sidebar';
+    localStorage.setItem('sidebarCollapsed', 'false');
+    switchConfigTab('balance');
+  });
+  
+  iconCash?.addEventListener('click', () => {
+    sidebar.classList.remove('collapsed');
+    toggleBtn.textContent = '◀';
+    toggleBtn.title = 'Collapse sidebar';
+    localStorage.setItem('sidebarCollapsed', 'false');
+    switchConfigTab('cashflow');
+  });
+  
+  iconScenarios?.addEventListener('click', () => {
+    sidebar.classList.remove('collapsed');
+    toggleBtn.textContent = '◀';
+    toggleBtn.title = 'Collapse sidebar';
+    localStorage.setItem('sidebarCollapsed', 'false');
+    switchConfigTab('scenarios');
+  });
+  
   console.log('✅ Sidebar toggle initialized');
 }
 
