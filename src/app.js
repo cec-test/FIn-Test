@@ -971,6 +971,50 @@ function updateBalanceSheetForecasts(periods) {
 }
 
 /**
+ * Initialize cash flow statement structure
+ */
+function initializeCashFlowStructure() {
+  // Create standard cash flow line items if not already in uploadedLineItems
+  if (!uploadedLineItems.cashflow || uploadedLineItems.cashflow.length === 0) {
+    console.log('💰 Initializing cash flow statement structure...');
+    
+    uploadedLineItems.cashflow = [
+      // Operating Activities
+      { name: 'OPERATING ACTIVITIES', actualValues: [], isSubheader: true },
+      { name: 'Net Income', actualValues: [] },
+      { name: 'Depreciation & Amortization', actualValues: [] },
+      { name: 'Increase in Accounts Receivable', actualValues: [] },
+      { name: 'Increase in Inventory', actualValues: [] },
+      { name: 'Increase in Accounts Payable', actualValues: [] },
+      { name: 'Increase in Accrued Expenses', actualValues: [] },
+      { name: 'Increase in Prepaid Expenses', actualValues: [] },
+      { name: 'Increase in Deferred Revenue', actualValues: [] },
+      { name: 'Cash from Operating Activities', actualValues: [], isTotal: true },
+      
+      // Investing Activities
+      { name: 'INVESTING ACTIVITIES', actualValues: [], isSubheader: true },
+      { name: 'Capital Expenditures', actualValues: [] },
+      { name: 'Cash from Investing Activities', actualValues: [], isTotal: true },
+      
+      // Financing Activities
+      { name: 'FINANCING ACTIVITIES', actualValues: [], isSubheader: true },
+      { name: 'Dividends Paid', actualValues: [] },
+      { name: 'Proceeds from Debt Issuance', actualValues: [] },
+      { name: 'Debt Repayments', actualValues: [] },
+      { name: 'Proceeds from Stock Issuance', actualValues: [] },
+      { name: 'Cash from Financing Activities', actualValues: [], isTotal: true },
+      
+      // Reconciliation
+      { name: 'Net Change in Cash', actualValues: [], isTotal: true },
+      { name: 'Beginning Cash', actualValues: [] },
+      { name: 'Ending Cash', actualValues: [], isTotal: true }
+    ];
+    
+    console.log('✅ Cash flow structure initialized with standard line items');
+  }
+}
+
+/**
  * Update Cash Flow forecasts using the calculation engine
  */
 function updateCashFlowForecasts(periods) {
@@ -979,6 +1023,9 @@ function updateCashFlowForecasts(periods) {
     console.log('No balance sheet data available, skipping cash flow forecasting');
     return;
   }
+  
+  // Initialize cash flow structure if needed
+  initializeCashFlowStructure();
   
   console.log('💰 Updating cash flow forecasts using calculation engine...');
   
@@ -1067,16 +1114,122 @@ function getLastActualBalanceSheet() {
  * Update cash flow UI with calculated values
  */
 function updateCashFlowUI(cashFlowResults, periodIndex) {
-  // For now, just log - we'll build the UI display next
-  console.log(`Cash Flow Period ${periodIndex}:`, {
-    operating: cashFlowResults.operating.total,
-    investing: cashFlowResults.investing.total,
-    financing: cashFlowResults.financing.total,
-    netChange: cashFlowResults.netChange,
-    reconciles: cashFlowResults.reconciles
+  console.log(`Updating Cash Flow UI for period ${periodIndex}...`);
+  
+  // Build structured cash flow line items for display
+  const allLineItems = buildCashFlowLineItems(cashFlowResults);
+  
+  // Update each line item in the UI
+  allLineItems.forEach(lineItem => {
+    const safeName = lineItem.name.toLowerCase().replace(/\s+/g, '');
+    
+    ['monthly', 'quarterly', 'yearly'].forEach(periodType => {
+      const forecastKey = `${periodType}-cashflow-${safeName}-${periodIndex}`;
+      const cells = document.querySelectorAll(`[data-forecast-key="${forecastKey}"]`);
+      
+      cells.forEach(cell => {
+        updateElement(cell.id, formatCurrency(lineItem.value, false));
+        if (lineItem.note) {
+          cell.title = lineItem.note;
+        }
+      });
+    });
   });
   
-  // TODO: Update actual UI cells when cash flow table is built
+  console.log(`✅ Cash Flow UI updated for period ${periodIndex}`);
+}
+
+/**
+ * Build structured line items for cash flow display
+ */
+function buildCashFlowLineItems(cashFlowResults) {
+  const lineItems = [];
+  
+  // OPERATING ACTIVITIES SECTION
+  lineItems.push({
+    name: 'OPERATING ACTIVITIES',
+    value: 0,
+    isSubheader: true,
+    note: ''
+  });
+  
+  // Add all operating activity line items
+  cashFlowResults.operating.lineItems.forEach(item => {
+    lineItems.push(item);
+  });
+  
+  // Operating subtotal
+  lineItems.push({
+    name: 'Cash from Operating Activities',
+    value: cashFlowResults.operating.total,
+    isTotal: true,
+    note: 'Total operating cash flow'
+  });
+  
+  // INVESTING ACTIVITIES SECTION
+  lineItems.push({
+    name: 'INVESTING ACTIVITIES',
+    value: 0,
+    isSubheader: true,
+    note: ''
+  });
+  
+  // Add all investing activity line items
+  cashFlowResults.investing.lineItems.forEach(item => {
+    lineItems.push(item);
+  });
+  
+  // Investing subtotal
+  lineItems.push({
+    name: 'Cash from Investing Activities',
+    value: cashFlowResults.investing.total,
+    isTotal: true,
+    note: 'Total investing cash flow'
+  });
+  
+  // FINANCING ACTIVITIES SECTION
+  lineItems.push({
+    name: 'FINANCING ACTIVITIES',
+    value: 0,
+    isSubheader: true,
+    note: ''
+  });
+  
+  // Add all financing activity line items
+  cashFlowResults.financing.lineItems.forEach(item => {
+    lineItems.push(item);
+  });
+  
+  // Financing subtotal
+  lineItems.push({
+    name: 'Cash from Financing Activities',
+    value: cashFlowResults.financing.total,
+    isTotal: true,
+    note: 'Total financing cash flow'
+  });
+  
+  // NET CHANGE AND RECONCILIATION
+  lineItems.push({
+    name: 'Net Change in Cash',
+    value: cashFlowResults.netChange,
+    isTotal: true,
+    note: 'Operating + Investing + Financing'
+  });
+  
+  lineItems.push({
+    name: 'Beginning Cash',
+    value: cashFlowResults.beginningCash,
+    note: 'Cash at start of period'
+  });
+  
+  lineItems.push({
+    name: 'Ending Cash',
+    value: cashFlowResults.endingCash,
+    isTotal: true,
+    note: cashFlowResults.reconciles ? '✅ Ties to Balance Sheet' : `⚠️ Difference: $${cashFlowResults.reconciliationDifference.toLocaleString()}`
+  });
+  
+  return lineItems;
 }
 
 /**
