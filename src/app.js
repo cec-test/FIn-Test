@@ -5828,30 +5828,63 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // Balance sheet help modal handlers
-  const bsHelpModal = document.getElementById('balanceSheetHelpModal');
-  const closeBSModal = document.getElementById('closeBSModal');
+  // Balance sheet help - show individual explanations
+  const bsHelpContent = {
+    'DSO': {
+      title: 'DSO (Days Sales Outstanding)',
+      explanation: 'Average number of days it takes to collect payment from customers after a sale. Lower is better for cash flow. Typical range: 30-60 days.'
+    },
+    'DPO': {
+      title: 'DPO (Days Payable Outstanding)',
+      explanation: 'Average number of days you take to pay suppliers. Higher means you hold onto cash longer. Typical range: 30-45 days.'
+    },
+    'DIO': {
+      title: 'DIO (Days Inventory Outstanding)',
+      explanation: 'Average number of days inventory sits before being sold. Lower is better (less cash tied up). Typical range: 30-90 days depending on industry.'
+    },
+    'Depreciation Rate': {
+      title: 'Depreciation Rate',
+      explanation: 'Annual percentage rate at which fixed assets lose value. Used to calculate depreciation expense and PPE. Typical range: 5-20% depending on asset type.'
+    },
+    'CapEx % of Revenue': {
+      title: 'CapEx % of Revenue',
+      explanation: 'Capital expenditures (investments in fixed assets) as a percentage of revenue. Reflects growth and maintenance needs. Typical range: 2-10%.'
+    },
+    'Dividend Policy': {
+      title: 'Dividend Policy',
+      explanation: 'Percentage of net income paid to shareholders as dividends. Affects retained earnings and cash flow. Typical range: 0-50% (growth companies often pay 0%).'
+    },
+    'Cash Target': {
+      title: 'Cash Target',
+      explanation: 'Minimum cash buffer measured in days of operating expenses. Used for cash management and balancing. Typical range: 15-60 days.'
+    },
+    'Accrued Expenses': {
+      title: 'Accrued Expenses',
+      explanation: 'Expenses incurred but not yet paid, as percentage of total expenses. Affects liabilities and cash flow timing. Typical range: 3-10%.'
+    },
+    'Prepaid Expenses': {
+      title: 'Prepaid Expenses',
+      explanation: 'Expenses paid in advance, as percentage of revenue. Affects assets and cash flow timing. Typical range: 0.5-3%.'
+    }
+  };
 
-  // Add click handlers to all BS info icons
+  // Add click handlers to BS info icons
   document.querySelectorAll('.bs-info-icon').forEach(icon => {
-    icon.addEventListener('click', function() {
-      if (bsHelpModal) {
-        bsHelpModal.style.display = 'block';
+    icon.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      // Get the label text before the icon
+      const label = this.parentElement.querySelector('span:first-child');
+      const labelText = label ? label.textContent.trim() : '';
+      
+      const helpInfo = bsHelpContent[labelText];
+      
+      if (helpInfo) {
+        // Create simple alert-style modal
+        const alertContent = `${helpInfo.title}\n\n${helpInfo.explanation}`;
+        alert(alertContent);
       }
     });
-  });
-
-  closeBSModal?.addEventListener('click', function() {
-    if (bsHelpModal) {
-      bsHelpModal.style.display = 'none';
-    }
-  });
-
-  // Close BS modal when clicking outside of it
-  window.addEventListener('click', function(event) {
-    if (event.target === bsHelpModal) {
-      bsHelpModal.style.display = 'none';
-    }
   });
 
   // Run forecast button
