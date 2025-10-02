@@ -4067,6 +4067,170 @@ class BalanceSheetCalculationEngine {
 }
 
 /**
+ * Storage for cash flow forecasts
+ */
+let cashFlowForecasts = {
+  monthly: [],
+  quarterly: [],
+  yearly: []
+};
+
+/**
+ * Cash Flow Calculation Engine
+ * Generates cash flow statements from P&L and Balance Sheet data
+ */
+class CashFlowCalculationEngine {
+  constructor(pnlData, balanceSheetCurrent, balanceSheetPrevious, criticalItems, assumptions) {
+    this.pnlData = pnlData;
+    this.bsCurrent = balanceSheetCurrent;
+    this.bsPrevious = balanceSheetPrevious;
+    this.criticalItems = criticalItems;
+    this.assumptions = assumptions;
+  }
+
+  /**
+   * Main entry point: Calculate complete cash flow for a period
+   */
+  calculateCashFlow(periodIndex) {
+    console.log(`💰 Calculating cash flow for period ${periodIndex}...`);
+    
+    // Step 1: Operating activities
+    const operating = this.calculateOperatingActivities();
+    
+    // Step 2: Investing activities  
+    const investing = this.calculateInvestingActivities();
+    
+    // Step 3: Financing activities
+    const financing = this.calculateFinancingActivities();
+    
+    // Step 4: Net change and reconciliation
+    const netChange = operating.total + investing.total + financing.total;
+    
+    const cashItemName = this.criticalItems.cash?.name || 'Cash';
+    const beginningCash = this.bsPrevious[cashItemName]?.value || 0;
+    const endingCash = this.bsCurrent[cashItemName]?.value || 0;
+    const calculatedEndingCash = beginningCash + netChange;
+    const reconciliationDifference = endingCash - calculatedEndingCash;
+    
+    const reconciles = Math.abs(reconciliationDifference) < 1;
+    
+    if (reconciles) {
+      console.log(`✅ Cash flow reconciles! Beginning: $${beginningCash.toLocaleString()}, Net Change: $${netChange.toLocaleString()}, Ending: $${endingCash.toLocaleString()}`);
+    } else {
+      console.warn(`⚠️ Cash flow doesn't reconcile. Difference: $${reconciliationDifference.toLocaleString()}`);
+    }
+    
+    return {
+      operating,
+      investing,
+      financing,
+      netChange,
+      beginningCash,
+      endingCash,
+      calculatedEndingCash,
+      reconciliationDifference,
+      reconciles
+    };
+  }
+
+  /**
+   * Calculate operating activities section
+   */
+  calculateOperatingActivities() {
+    // TODO: Implement in Step 2
+    console.log('📊 Calculating operating activities...');
+    
+    return {
+      netIncome: 0,
+      depreciation: 0,
+      adjustments: [],
+      workingCapitalChanges: [],
+      total: 0,
+      details: {}
+    };
+  }
+
+  /**
+   * Calculate investing activities section
+   */
+  calculateInvestingActivities() {
+    // TODO: Implement in Step 3
+    console.log('🏗️ Calculating investing activities...');
+    
+    return {
+      capex: 0,
+      acquisitions: 0,
+      assetSales: 0,
+      total: 0,
+      details: {}
+    };
+  }
+
+  /**
+   * Calculate financing activities section
+   */
+  calculateFinancingActivities() {
+    // TODO: Implement in Step 4
+    console.log('💼 Calculating financing activities...');
+    
+    return {
+      debtIssuance: 0,
+      debtRepayment: 0,
+      dividends: 0,
+      equityIssuance: 0,
+      total: 0,
+      details: {}
+    };
+  }
+
+  /**
+   * Helper: Get balance sheet change for an item
+   */
+  getBalanceSheetChange(itemName) {
+    if (!itemName) {
+      return { current: 0, previous: 0, change: 0, increase: false, decrease: false };
+    }
+    
+    const currentValue = this.bsCurrent[itemName]?.value || 0;
+    const previousValue = this.bsPrevious[itemName]?.value || 0;
+    const change = currentValue - previousValue;
+    
+    return {
+      current: currentValue,
+      previous: previousValue,
+      change: change,
+      increase: change > 0,
+      decrease: change < 0
+    };
+  }
+
+  /**
+   * Helper: Get P&L value by name (with fuzzy matching)
+   */
+  getPnLValue(itemName) {
+    if (!itemName || !this.pnlData) return 0;
+    
+    // Try exact match
+    if (this.pnlData[itemName] !== undefined) {
+      return Number(this.pnlData[itemName]) || 0;
+    }
+    
+    // Try fuzzy matching
+    const searchTerm = itemName.toLowerCase();
+    const matchingKey = Object.keys(this.pnlData).find(key => 
+      key.toLowerCase().includes(searchTerm) || 
+      searchTerm.includes(key.toLowerCase())
+    );
+    
+    if (matchingKey) {
+      return Number(this.pnlData[matchingKey]) || 0;
+    }
+    
+    return 0;
+  }
+}
+
+/**
  * Chat functionality
  */
 let chatHistory = [];
