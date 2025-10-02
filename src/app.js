@@ -4137,32 +4137,237 @@ class CashFlowCalculationEngine {
    * Calculate operating activities section
    */
   calculateOperatingActivities() {
-    // TODO: Implement in Step 2
     console.log('📊 Calculating operating activities...');
     
+    const lineItems = [];
+    let runningTotal = 0;
+    
+    // 1. Start with Net Income
+    const netIncome = this.getPnLValue(this.criticalItems.netIncome?.name || 'net income');
+    runningTotal += netIncome;
+    lineItems.push({
+      name: 'Net Income',
+      value: netIncome,
+      note: 'From P&L statement',
+      isSubtotal: false
+    });
+    
+    // 2. Add back non-cash expenses
+    const depreciation = this.getPnLValue(this.criticalItems.depreciation?.name || 'depreciation');
+    if (depreciation !== 0) {
+      runningTotal += depreciation;
+      lineItems.push({
+        name: 'Depreciation & Amortization',
+        value: depreciation,
+        note: 'Non-cash expense added back',
+        isSubtotal: false
+      });
+    }
+    
+    // 3. Changes in Working Capital
+    const wcChanges = this.calculateWorkingCapitalChanges();
+    
+    // Add each working capital change
+    wcChanges.forEach(change => {
+      runningTotal += change.value;
+      lineItems.push(change);
+    });
+    
+    // 4. Calculate total
+    const total = runningTotal;
+    
+    console.log(`✅ Operating CF: $${total.toLocaleString()} (Net Income: $${netIncome.toLocaleString()}, WC Changes: $${(total - netIncome - depreciation).toLocaleString()})`);
+    
     return {
-      netIncome: 0,
-      depreciation: 0,
-      adjustments: [],
-      workingCapitalChanges: [],
-      total: 0,
-      details: {}
+      netIncome,
+      depreciation,
+      workingCapitalChanges: wcChanges,
+      lineItems,
+      total,
+      details: {
+        startingPoint: netIncome,
+        nonCashAdjustments: depreciation,
+        workingCapitalImpact: total - netIncome - depreciation
+      }
     };
+  }
+
+  /**
+   * Calculate changes in working capital items
+   */
+  calculateWorkingCapitalChanges() {
+    const changes = [];
+    
+    // Accounts Receivable
+    if (this.criticalItems.accountsReceivable) {
+      const arChange = this.getBalanceSheetChange(this.criticalItems.accountsReceivable.name);
+      if (arChange.change !== 0) {
+        changes.push({
+          name: `${arChange.increase ? 'Increase' : 'Decrease'} in Accounts Receivable`,
+          value: -arChange.change, // Negative of increase (increase in AR = cash outflow)
+          note: `AR ${arChange.increase ? 'increased' : 'decreased'} by $${Math.abs(arChange.change).toLocaleString()}`,
+          rawChange: arChange.change,
+          isSubtotal: false
+        });
+      }
+    }
+    
+    // Inventory
+    if (this.criticalItems.inventory) {
+      const invChange = this.getBalanceSheetChange(this.criticalItems.inventory.name);
+      if (invChange.change !== 0) {
+        changes.push({
+          name: `${invChange.increase ? 'Increase' : 'Decrease'} in Inventory`,
+          value: -invChange.change, // Negative of increase (increase in inventory = cash outflow)
+          note: `Inventory ${invChange.increase ? 'increased' : 'decreased'} by $${Math.abs(invChange.change).toLocaleString()}`,
+          rawChange: invChange.change,
+          isSubtotal: false
+        });
+      }
+    }
+    
+    // Accounts Payable
+    if (this.criticalItems.accountsPayable) {
+      const apChange = this.getBalanceSheetChange(this.criticalItems.accountsPayable.name);
+      if (apChange.change !== 0) {
+        changes.push({
+          name: `${apChange.increase ? 'Increase' : 'Decrease'} in Accounts Payable`,
+          value: apChange.change, // Positive as-is (increase in AP = cash inflow)
+          note: `AP ${apChange.increase ? 'increased' : 'decreased'} by $${Math.abs(apChange.change).toLocaleString()}`,
+          rawChange: apChange.change,
+          isSubtotal: false
+        });
+      }
+    }
+    
+    // Detect and handle other working capital items automatically
+    const otherWCItems = this.detectOtherWorkingCapitalItems();
+    otherWCItems.forEach(item => {
+      const change = this.getBalanceSheetChange(item.name);
+      if (change.change !== 0) {
+        // Determine if asset or liability based on typical patterns
+        const isAsset = item.isAsset;
+        const cashImpact = isAsset ? -change.change : change.change;
+        
+        changes.push({
+          name: `${change.increase ? 'Increase' : 'Decrease'} in ${item.displayName}`,
+          value: cashImpact,
+          note: `${item.displayName} ${change.increase ? 'increased' : 'decreased'} by $${Math.abs(change.change).toLocaleString()}`,
+          rawChange: change.change,
+          isSubtotal: false
+        });
+      }
+    });
+    
+    const totalWCImpact = changes.reduce((sum, c) => sum + c.value, 0);
+    console.log(`Working capital changes: ${changes.length} items, total impact: $${totalWCImpact.toLocaleString()}`);
+    
+    return changes;
+  }
+
+  /**
+   * Detect other working capital items beyond the critical ones
+   */
+  detectOtherWorkingCapitalItems() {
+    const otherItems = [];
+    
+    // Look for common working capital items we haven't classified as "critical"
+    Object.keys(this.bsCurrent).forEach(itemName => {
+      const nameLower = itemName.toLowerCase();
+      
+      // Prepaid Expenses (current asset)
+      if (nameLower.includes('prepaid') && !this.criticalItems.prepaidExpenses) {
+        otherItems.push({
+          name: itemName,
+          displayName: itemName,
+          isAsset: true,
+          category: 'prepaid_expenses'
+        });
+      }
+      
+      // Accrued Expenses (current liability)
+      if (nameLower.includes('accrued') && nameLower.includes('expense')) {
+        otherItems.push({
+          name: itemName,
+          displayName: itemName,
+          isAsset: false,
+          category: 'accrued_expenses'
+        });
+      }
+      
+      // Deferred Revenue (current liability)
+      if (nameLower.includes('deferred') && nameLower.includes('revenue')) {
+        otherItems.push({
+          name: itemName,
+          displayName: itemName,
+          isAsset: false,
+          category: 'deferred_revenue'
+        });
+      }
+    });
+    
+    return otherItems;
   }
 
   /**
    * Calculate investing activities section
    */
   calculateInvestingActivities() {
-    // TODO: Implement in Step 3
     console.log('🏗️ Calculating investing activities...');
     
+    const lineItems = [];
+    let total = 0;
+    
+    // 1. Capital Expenditures
+    // Get CapEx from PPE calculation or estimate from revenue
+    let capex = 0;
+    
+    if (this.criticalItems.ppe) {
+      const ppeChange = this.getBalanceSheetChange(this.criticalItems.ppe.name);
+      const depreciation = this.getPnLValue(this.criticalItems.depreciation?.name || 'depreciation');
+      
+      // CapEx = Δ PPE + Depreciation
+      // (because PPE(end) = PPE(begin) + CapEx - Depreciation)
+      capex = ppeChange.change + depreciation;
+      
+      if (capex > 0) {
+        total -= capex; // CapEx is cash outflow (negative)
+        lineItems.push({
+          name: 'Capital Expenditures',
+          value: -capex,
+          note: `PPE increased by $${ppeChange.change.toLocaleString()}, Depreciation: $${depreciation.toLocaleString()}`,
+          isSubtotal: false
+        });
+      }
+    } else {
+      // Fallback: estimate CapEx as % of revenue
+      const revenue = this.getPnLValue(this.criticalItems.revenue?.name || 'revenue');
+      capex = revenue * (this.assumptions.capexPercentage / 100);
+      
+      if (capex > 0) {
+        total -= capex;
+        lineItems.push({
+          name: 'Capital Expenditures',
+          value: -capex,
+          note: `Estimated as ${this.assumptions.capexPercentage}% of revenue`,
+          isSubtotal: false
+        });
+      }
+    }
+    
+    // 2. Future: Acquisitions, Asset Sales (placeholders for now)
+    
+    console.log(`✅ Investing CF: $${total.toLocaleString()} (CapEx: $${capex.toLocaleString()})`);
+    
     return {
-      capex: 0,
+      capex: -capex,
       acquisitions: 0,
       assetSales: 0,
-      total: 0,
-      details: {}
+      lineItems,
+      total,
+      details: {
+        capitalExpenditures: capex
+      }
     };
   }
 
@@ -4170,16 +4375,118 @@ class CashFlowCalculationEngine {
    * Calculate financing activities section
    */
   calculateFinancingActivities() {
-    // TODO: Implement in Step 4
     console.log('💼 Calculating financing activities...');
     
+    const lineItems = [];
+    let total = 0;
+    
+    // 1. Dividends (from retained earnings calculation)
+    let dividends = 0;
+    if (this.criticalItems.retainedEarnings) {
+      const netIncome = this.getPnLValue(this.criticalItems.netIncome?.name || 'net income');
+      const dividendPercentage = this.assumptions.dividendPolicy / 100;
+      dividends = netIncome * dividendPercentage;
+      
+      if (dividends > 0) {
+        total -= dividends; // Dividends are cash outflow (negative)
+        lineItems.push({
+          name: 'Dividends Paid',
+          value: -dividends,
+          note: `${this.assumptions.dividendPolicy}% of net income ($${netIncome.toLocaleString()})`,
+          isSubtotal: false
+        });
+      }
+    }
+    
+    // 2. Debt Changes (calculate from balance sheet)
+    const debtChange = this.calculateDebtChanges();
+    if (debtChange.netChange !== 0) {
+      total += debtChange.netChange;
+      
+      if (debtChange.netChange > 0) {
+        lineItems.push({
+          name: 'Proceeds from Debt Issuance',
+          value: debtChange.netChange,
+          note: `Net increase in debt`,
+          isSubtotal: false
+        });
+      } else {
+        lineItems.push({
+          name: 'Debt Repayments',
+          value: debtChange.netChange,
+          note: `Net decrease in debt`,
+          isSubtotal: false
+        });
+      }
+    }
+    
+    // 3. Equity Changes (calculate from balance sheet)
+    if (this.criticalItems.commonStock) {
+      const equityChange = this.getBalanceSheetChange(this.criticalItems.commonStock.name);
+      if (equityChange.change !== 0) {
+        total += equityChange.change;
+        lineItems.push({
+          name: equityChange.increase ? 'Proceeds from Stock Issuance' : 'Stock Repurchase',
+          value: equityChange.change,
+          note: `Common stock ${equityChange.increase ? 'increased' : 'decreased'} by $${Math.abs(equityChange.change).toLocaleString()}`,
+          isSubtotal: false
+        });
+      }
+    }
+    
+    console.log(`✅ Financing CF: $${total.toLocaleString()} (Dividends: -$${dividends.toLocaleString()}, Debt: $${debtChange.netChange.toLocaleString()})`);
+    
     return {
-      debtIssuance: 0,
-      debtRepayment: 0,
-      dividends: 0,
+      debtIssuance: Math.max(0, debtChange.netChange),
+      debtRepayment: Math.min(0, debtChange.netChange),
+      dividends: -dividends,
       equityIssuance: 0,
-      total: 0,
-      details: {}
+      lineItems,
+      total,
+      details: {
+        dividendsPaid: dividends,
+        netDebtChange: debtChange.netChange
+      }
+    };
+  }
+
+  /**
+   * Calculate changes in debt (short-term + long-term)
+   */
+  calculateDebtChanges() {
+    let totalDebtChange = 0;
+    const debtItems = [];
+    
+    // Detect debt items from balance sheet
+    Object.keys(this.bsCurrent).forEach(itemName => {
+      const nameLower = itemName.toLowerCase();
+      
+      // Short-term debt patterns
+      if (nameLower.includes('short') && nameLower.includes('debt') ||
+          nameLower.includes('short') && nameLower.includes('loan') ||
+          nameLower.includes('current') && nameLower.includes('debt')) {
+        const change = this.getBalanceSheetChange(itemName);
+        totalDebtChange += change.change;
+        debtItems.push({ name: itemName, change: change.change });
+      }
+      
+      // Long-term debt patterns
+      if (nameLower.includes('long') && nameLower.includes('debt') ||
+          nameLower.includes('long') && nameLower.includes('loan') ||
+          nameLower === 'debt' ||
+          nameLower === 'notes payable' ||
+          nameLower.includes('bonds payable')) {
+        const change = this.getBalanceSheetChange(itemName);
+        totalDebtChange += change.change;
+        debtItems.push({ name: itemName, change: change.change });
+      }
+    });
+    
+    console.log(`Debt changes: ${debtItems.length} debt items, net change: $${totalDebtChange.toLocaleString()}`);
+    
+    return {
+      netChange: totalDebtChange,
+      items: debtItems
     };
   }
 
