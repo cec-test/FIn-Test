@@ -5459,15 +5459,19 @@ function initializeSidebarToggle() {
   });
   
   // Icon strip click handlers (when collapsed)
-  const iconExpand = document.getElementById('collapsedExpand');
   const iconPnL = document.getElementById('collapsedPnL');
   const iconBalance = document.getElementById('collapsedBalance');
   const iconCash = document.getElementById('collapsedCash');
   const iconScenarios = document.getElementById('collapsedScenarios');
+  const iconQuickActions = document.getElementById('collapsedQuickActions');
   
-  // Expand button
-  iconExpand?.addEventListener('click', () => {
-    toggleBtn.click(); // Just expand
+  // Quick Actions icon - expand to P&L tab (where upload is)
+  iconQuickActions?.addEventListener('click', () => {
+    sidebar.classList.remove('collapsed');
+    toggleBtn.textContent = '◀';
+    toggleBtn.title = 'Collapse sidebar';
+    localStorage.setItem('sidebarCollapsed', 'false');
+    switchConfigTab('pnl');
   });
   
   // Tab icons - expand AND switch to that tab
