@@ -1473,22 +1473,23 @@ async function handleActualsUpload(file) {
       console.log('Parsed data:', data);
       
       // Determine optimal forecasting strategy
-      const strategy = determineForecastingStrategy(data);
-      console.log(`🎯 Strategy selected: ${strategy.strategy}`);
-      console.log(`   ${strategy.description}`);
+      const strategyResult = determineForecastingStrategy(data);
+      console.log(`🎯 Strategy selected: ${strategyResult.forecastingStrategy}`);
+      console.log(`   ${strategyResult.description}`);
       
       // Process based on strategy
-      if (strategy.strategy === 'integrated_pnl_bs') {
+      if (strategyResult.forecastingStrategy === 'integrated_pnl_bs') {
         console.log('🔗 Full integration mode: Using P&L-driven formulas');
         await processIntegratedForecasting(data);
-      } else if (strategy.strategy === 'balance_sheet_only') {
+      } else if (strategyResult.forecastingStrategy === 'balance_sheet_only') {
         console.log('📊 Balance sheet only mode: Using growth patterns');
         await processBalanceSheetOnly(data);
-      } else if (strategy.strategy === 'pnl_only') {
+      } else if (strategyResult.forecastingStrategy === 'pnl_only') {
         console.log('💼 P&L only mode');
         applyActualsFromObject(data);
       } else {
         console.warn('⚠️ No valid data found');
+        console.error('Strategy result:', strategyResult);
         alert('Please upload a valid financial statement CSV file');
         return;
       }
