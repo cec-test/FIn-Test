@@ -5828,7 +5828,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // Balance sheet help - show individual explanations
+  // Balance sheet help - show individual explanations in styled modal
   const bsHelpContent = {
     'DSO': {
       title: 'DSO (Days Sales Outstanding)',
@@ -5868,6 +5868,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   };
 
+  const bsHelpModal = document.getElementById('balanceSheetHelpModal');
+  const closeBSModal = document.getElementById('closeBSModal');
+
   // Add click handlers to BS info icons
   document.querySelectorAll('.bs-info-icon').forEach(icon => {
     icon.addEventListener('click', function(e) {
@@ -5879,12 +5882,37 @@ document.addEventListener('DOMContentLoaded', function () {
       
       const helpInfo = bsHelpContent[labelText];
       
-      if (helpInfo) {
-        // Create simple alert-style modal
-        const alertContent = `${helpInfo.title}\n\n${helpInfo.explanation}`;
-        alert(alertContent);
+      if (helpInfo && bsHelpModal) {
+        // Update modal content with this specific item's help
+        const modalContent = bsHelpModal.querySelector('.modal-content');
+        if (modalContent) {
+          modalContent.innerHTML = `
+            <div class="modal-header">
+              <h3>${helpInfo.title}</h3>
+              <span class="close" id="closeBSModalDynamic">&times;</span>
+            </div>
+            <div class="method-explanation">
+              ${helpInfo.explanation}
+            </div>
+          `;
+          
+          // Re-attach close handler
+          const closeBtn = document.getElementById('closeBSModalDynamic');
+          closeBtn?.addEventListener('click', () => {
+            bsHelpModal.style.display = 'none';
+          });
+        }
+        
+        bsHelpModal.style.display = 'block';
       }
     });
+  });
+
+  // Close BS modal when clicking outside
+  window.addEventListener('click', function(event) {
+    if (event.target === bsHelpModal) {
+      bsHelpModal.style.display = 'none';
+    }
   });
 
   // Run forecast button
