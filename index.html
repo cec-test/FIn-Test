@@ -1519,7 +1519,7 @@
                     
                     <!-- Collapsed Sidebar Icon Strip -->
                     <div class="sidebar-collapsed-icons">
-                        <div class="sidebar-icon-item" data-tooltip="Quick Actions" id="collapsedQuickActions" title="Quick Actions">⚡</div>
+                        <div class="sidebar-icon-item" data-tooltip="Model Config" id="collapsedModel" title="Model Configuration">🔧</div>
                         <div class="sidebar-icon-item" data-tooltip="P&L Forecast" id="collapsedPnL" title="P&L Forecast">⚙️</div>
                         <div class="sidebar-icon-item" data-tooltip="Balance Sheet" id="collapsedBalance" title="Balance Sheet">📊</div>
                         <div class="sidebar-icon-item" data-tooltip="Cash Flow" id="collapsedCash" title="Cash Flow">💰</div>
@@ -1547,7 +1547,11 @@
                     <!-- Configuration Tabs -->
                     <div class="config-section">
                         <div class="config-tabs">
-                            <button class="config-tab active" data-config-tab="pnl">
+                            <button class="config-tab active" data-config-tab="model">
+                                <span class="tab-icon">🔧</span>
+                                <span>Model Config</span>
+                            </button>
+                            <button class="config-tab" data-config-tab="pnl">
                                 <span class="tab-icon">⚙️</span>
                                 <span>P&L Forecast</span>
                             </button>
@@ -1566,8 +1570,23 @@
                         </div>
                         
                         <div class="config-content">
+                            <!-- Model Configuration Panel -->
+                            <div class="config-panel active" id="model-config">
+                                <div class="control-group">
+                                    <div class="control-item">
+                                        <label>Forecast Periods:</label>
+                                        <input type="number" id="forecastPeriods" value="12" min="1" max="60">
+                                    </div>
+                                </div>
+                                <div style="background: #e3f2fd; border: 1px solid #2196f3; border-radius: 8px; padding: 15px; margin-top: 20px;">
+                                    <div style="font-size: 0.9rem; color: #1976d2;">
+                                        <strong>ℹ️ Global Settings:</strong> These settings affect the entire financial model across all three statements (P&L, Balance Sheet, and Cash Flow).
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <!-- P&L Forecast Configuration Panel -->
-                            <div class="config-panel active" id="pnl-config">
+                            <div class="config-panel" id="pnl-config">
                             <div class="control-group">
                                 <div class="control-item">
                                     <label>Method:</label>
@@ -1595,10 +1614,6 @@
                                         <label>Midpoint (Month):</label>
                                         <input type="number" id="scurveMidpoint" min="1" max="60" title="Month when growth peaks (inflection point)">
                                     </div>
-                                </div>
-                                <div class="control-item">
-                                    <label>Periods:</label>
-                                    <input type="number" id="forecastPeriods" value="12" min="1" max="60">
                                 </div>
                                 
                                 <!-- Seasonality Controls -->

@@ -5388,8 +5388,8 @@ function switchConfigTab(tabName) {
  * Initialize configuration tabs
  */
 function initializeConfigTabs() {
-  // Restore last active tab or default to 'pnl'
-  const savedTab = localStorage.getItem('activeConfigTab') || 'pnl';
+  // Restore last active tab or default to 'model'
+  const savedTab = localStorage.getItem('activeConfigTab') || 'model';
   
   // Add click handlers to all config tabs
   document.querySelectorAll('.config-tab').forEach(tab => {
@@ -5399,8 +5399,8 @@ function initializeConfigTabs() {
     });
   });
   
-  // Set initial active tab (already set in HTML to 'pnl', but respect saved preference)
-  if (savedTab !== 'pnl') {
+  // Set initial active tab (already set in HTML to 'model', but respect saved preference)
+  if (savedTab !== 'model') {
     switchConfigTab(savedTab);
   }
   
@@ -5459,19 +5459,19 @@ function initializeSidebarToggle() {
   });
   
   // Icon strip click handlers (when collapsed)
+  const iconModel = document.getElementById('collapsedModel');
   const iconPnL = document.getElementById('collapsedPnL');
   const iconBalance = document.getElementById('collapsedBalance');
   const iconCash = document.getElementById('collapsedCash');
   const iconScenarios = document.getElementById('collapsedScenarios');
-  const iconQuickActions = document.getElementById('collapsedQuickActions');
   
-  // Quick Actions icon - expand to P&L tab (where upload is)
-  iconQuickActions?.addEventListener('click', () => {
+  // Model Config icon
+  iconModel?.addEventListener('click', () => {
     sidebar.classList.remove('collapsed');
     toggleBtn.textContent = '◀';
     toggleBtn.title = 'Collapse sidebar';
     localStorage.setItem('sidebarCollapsed', 'false');
-    switchConfigTab('pnl');
+    switchConfigTab('model');
   });
   
   // Tab icons - expand AND switch to that tab
