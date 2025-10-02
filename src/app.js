@@ -932,7 +932,8 @@ function updateBalanceSheetForecasts(periods) {
   );
   
   // Track previous values for period-to-period calculations
-  const previousValues = {};
+  // Seed with last actual values from uploaded data
+  const previousValues = getLastActualBalanceSheet();
   
   // Generate forecasts for each period
   for (let i = 0; i < periods; i++) {
