@@ -2681,7 +2681,10 @@ async function processIntegratedForecasting(data) {
   balanceSheetClassifications = createSimplifiedClassifications(criticalBS, data.balance || []);
   
   // Auto-create mappings between critical BS and P&L items
-  pnlMappings = createAutomaticMappings(criticalBS, criticalPnL);
+  const autoMappings = createAutomaticMappings(criticalBS, criticalPnL);
+  
+  // Show simplified confirmation UI for mappings
+  await showMappingConfirmation(autoMappings, criticalBS, criticalPnL, data);
   
   // Build hierarchy for totals
   balanceSheetHierarchy = buildBalanceSheetHierarchy(data.balance || []);
@@ -2969,6 +2972,149 @@ function createAutomaticMappings(criticalBS, criticalPnL) {
   console.log(`✅ Created ${Object.keys(mappings).length} automatic mappings`);
   
   return mappings;
+}
+
+/**
+ * Show simplified mapping confirmation UI
+ */
+async function showMappingConfirmation(autoMappings, criticalBS, criticalPnL, data) {
+  return new Promise((resolve) => {
+    console.log('📋 Showing mapping confirmation UI...');
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    `;
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      background: white;
+      border-radius: 12px;
+      max-width: 700px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    `;
+    
+    // Build mapping rows
+    const mappingRows = Object.keys(autoMappings).map(bsItem => {
+      const mapping = autoMappings[bsItem];
+      const pnlOptions = buildPnLOptions(data.pnl || [], mapping.pnlDriver);
+      
+      return `
+        <div style="display: flex; align-items: center; gap: 15px; padding: 12px; border-bottom: 1px solid #e9ecef;">
+          <div style="flex: 1;">
+            <strong style="color: #2c3e50;">${bsItem}</strong>
+            <div style="font-size: 0.85rem; color: #6c757d;">${mapping.balanceSheetCategory.replace(/_/g, ' ')}</div>
+          </div>
+          <div style="color: #3498db; font-size: 1.2rem;">→</div>
+          <div style="flex: 1;">
+            <select id="mapping-${bsItem.replace(/\s+/g, '-')}" style="width: 100%; padding: 8px; border: 2px solid #dee2e6; border-radius: 6px; font-size: 0.9rem;">
+              ${pnlOptions}
+            </select>
+          </div>
+          <div style="color: ${mapping.confidence > 0.9 ? '#27ae60' : '#f39c12'}; font-size: 0.85rem; font-weight: 600;">
+            ${(mapping.confidence * 100).toFixed(0)}%
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    modal.innerHTML = `
+      <div style="padding: 30px;">
+        <h2 style="color: #2c3e50; margin-bottom: 10px;">🎯 Confirm P&L Mappings</h2>
+        <p style="color: #6c757d; margin-bottom: 25px;">
+          We auto-detected ${Object.keys(autoMappings).length} key balance sheet items and their P&L drivers. 
+          Review and confirm or adjust as needed.
+        </p>
+        
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+          ${mappingRows.length > 0 ? mappingRows : '<p style="color: #6c757d;">No critical items detected. Balance sheet will use growth rates.</p>'}
+        </div>
+        
+        <div style="background: #e3f2fd; border: 1px solid #2196f3; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+          <div style="font-size: 0.9rem; color: #1976d2;">
+            <strong>ℹ️ Note:</strong> Other balance sheet items (${(data.balance?.length || 0) - Object.keys(autoMappings).length}) will use simple growth rates. 
+            This keeps setup fast while maintaining accuracy for the most important items.
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button id="confirmMappingsBtn" style="
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+          ">
+            ✓ Confirm & Continue
+          </button>
+        </div>
+      </div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    // Handle confirm
+    document.getElementById('confirmMappingsBtn').addEventListener('click', () => {
+      // Collect any user changes to mappings
+      Object.keys(autoMappings).forEach(bsItem => {
+        const selectId = `mapping-${bsItem.replace(/\s+/g, '-')}`;
+        const select = document.getElementById(selectId);
+        if (select) {
+          const selectedPnL = select.value;
+          if (selectedPnL && autoMappings[bsItem]) {
+            autoMappings[bsItem].pnlDriver = selectedPnL;
+            autoMappings[bsItem].userOverride = select.value !== autoMappings[bsItem].pnlDriver;
+          }
+        }
+      });
+      
+      // Store the final mappings
+      pnlMappings = autoMappings;
+      console.log('✅ Mappings confirmed:', pnlMappings);
+      
+      overlay.remove();
+      resolve();
+    });
+  });
+}
+
+/**
+ * Build dropdown options for P&L items
+ */
+function buildPnLOptions(pnlItems, selectedItem) {
+  const options = ['<option value="">-- Select P&L Driver --</option>'];
+  
+  pnlItems.forEach(item => {
+    // Skip totals and subheaders for cleaner dropdown
+    const isTotal = /\btotal\b/i.test(item.name);
+    const hasValues = item.actualValues && item.actualValues.some(v => v !== null && v !== undefined && v !== '');
+    
+    if (hasValues || isTotal) {
+      const selected = item.name === selectedItem ? 'selected' : '';
+      options.push(`<option value="${item.name}" ${selected}>${item.name}</option>`);
+    }
+  });
+  
+  return options.join('');
 }
 
 /**
