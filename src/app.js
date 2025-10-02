@@ -5408,6 +5408,60 @@ function initializeConfigTabs() {
 }
 
 /**
+ * Initialize sidebar toggle functionality
+ */
+function initializeSidebarToggle() {
+  const sidebar = document.getElementById('sidebar');
+  const toggleBtn = document.getElementById('sidebarToggleBtn');
+  
+  if (!sidebar || !toggleBtn) {
+    console.warn('Sidebar toggle elements not found');
+    return;
+  }
+  
+  // Restore sidebar state from localStorage (default: expanded)
+  const sidebarState = localStorage.getItem('sidebarCollapsed');
+  const isCollapsed = sidebarState === 'true';
+  
+  if (isCollapsed) {
+    sidebar.classList.add('collapsed');
+    toggleBtn.textContent = '▶';
+    toggleBtn.title = 'Expand sidebar';
+  }
+  
+  // Toggle button click handler
+  toggleBtn.addEventListener('click', () => {
+    const isCurrentlyCollapsed = sidebar.classList.contains('collapsed');
+    
+    if (isCurrentlyCollapsed) {
+      // Expand
+      sidebar.classList.remove('collapsed');
+      toggleBtn.textContent = '◀';
+      toggleBtn.title = 'Collapse sidebar';
+      localStorage.setItem('sidebarCollapsed', 'false');
+    } else {
+      // Collapse
+      sidebar.classList.add('collapsed');
+      toggleBtn.textContent = '▶';
+      toggleBtn.title = 'Expand sidebar';
+      localStorage.setItem('sidebarCollapsed', 'true');
+    }
+    
+    console.log(`Sidebar ${isCurrentlyCollapsed ? 'expanded' : 'collapsed'}`);
+  });
+  
+  // Keyboard shortcut: Ctrl+B to toggle sidebar
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'b') {
+      e.preventDefault();
+      toggleBtn.click();
+    }
+  });
+  
+  console.log('✅ Sidebar toggle initialized');
+}
+
+/**
  * Initialize floating chat functionality
  */
 function initializeFloatingChat() {
@@ -5470,6 +5524,9 @@ document.addEventListener('DOMContentLoaded', function () {
   
   // Initialize configuration tabs
   initializeConfigTabs();
+  
+  // Initialize sidebar toggle
+  initializeSidebarToggle();
   
   // Initialize floating chat
   initializeFloatingChat();

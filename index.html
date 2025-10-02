@@ -106,6 +106,58 @@
             align-self: flex-start;
             background: #f8f9fa;
             padding: 10px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .sidebar.collapsed {
+            flex: 0 0 50px;
+            padding: 10px 5px;
+        }
+        
+        .sidebar-toggle {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+        
+        .sidebar-toggle-btn {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-toggle-btn:hover {
+            transform: translateX(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        .sidebar.collapsed .sidebar-toggle-btn {
+            transform: rotate(180deg);
+        }
+        
+        .sidebar.collapsed .sidebar-toggle-btn:hover {
+            transform: rotate(180deg) translateX(-2px);
+        }
+        
+        .sidebar-content {
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .sidebar.collapsed .sidebar-content {
+            opacity: 0;
+            pointer-events: none;
         }
         
         .main {
@@ -1405,7 +1457,13 @@
         
         <div class="content">
             <div class="layout">
-                <aside class="sidebar">
+                <aside class="sidebar" id="sidebar">
+                    <!-- Sidebar Toggle -->
+                    <div class="sidebar-toggle">
+                        <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Collapse sidebar">◀</button>
+                    </div>
+                    
+                    <div class="sidebar-content">
                     <!-- Quick Actions -->
                     <div class="quick-actions">
                         <h3>⚡ Quick Actions</h3>
@@ -1658,6 +1716,7 @@
                             </div>
                         </div>
                     </div>
+                    </div><!-- End sidebar-content -->
                     
                 </aside>
                 <div class="main">
