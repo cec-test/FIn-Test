@@ -906,6 +906,9 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
   
   // Update Balance Sheet using smart calculation engine
   updateBalanceSheetForecasts(periods);
+  
+  // Update Cash Flow statement
+  updateCashFlowForecasts(periods);
 }
 
 /**
@@ -965,6 +968,132 @@ function updateBalanceSheetForecasts(periods) {
   }
   
   console.log('Balance sheet forecasts updated successfully');
+}
+
+/**
+ * Update Cash Flow forecasts using the calculation engine
+ */
+function updateCashFlowForecasts(periods) {
+  // Check if we have required data
+  if (Object.keys(balanceSheetClassifications).length === 0) {
+    console.log('No balance sheet data available, skipping cash flow forecasting');
+    return;
+  }
+  
+  console.log('💰 Updating cash flow forecasts using calculation engine...');
+  
+  // Detect critical items for cash flow
+  const criticalBS = detectCriticalBalanceSheetItems(uploadedLineItems.balance || []);
+  const criticalPnL = detectCriticalPnLItems(uploadedLineItems.pnl || []);
+  const criticalItems = { ...criticalBS, ...criticalPnL };
+  
+  // Track balance sheet values for period-to-period comparison
+  const balanceSheetByPeriod = [];
+  
+  // First, we need to get balance sheet values for each period
+  // (these were calculated in updateBalanceSheetForecasts)
+  for (let i = 0; i < periods; i++) {
+    const periodBS = {};
+    
+    Object.keys(balanceSheetClassifications).forEach(itemName => {
+      const safeName = itemName.toLowerCase().replace(/\s+/g, '');
+      const forecastKey = `monthly-balance-${safeName}-${i}`;
+      const cell = document.querySelector(`[data-forecast-key="${forecastKey}"]`);
+      
+      if (cell) {
+        // Extract value from cell (parse currency)
+        const cellText = cell.textContent;
+        const value = parseCurrencyToNumber(cellText);
+        periodBS[itemName] = { value };
+      }
+    });
+    
+    balanceSheetByPeriod.push(periodBS);
+  }
+  
+  // Generate cash flow for each period
+  for (let i = 0; i < periods; i++) {
+    // Get P&L forecast data
+    const pnlForecastData = getPnLForecastDataForPeriod(i);
+    
+    // Get current and previous balance sheet
+    const bsCurrent = balanceSheetByPeriod[i] || {};
+    const bsPrevious = i > 0 ? balanceSheetByPeriod[i - 1] : getLastActualBalanceSheet();
+    
+    // Create cash flow engine
+    const cfEngine = new CashFlowCalculationEngine(
+      pnlForecastData,
+      bsCurrent,
+      bsPrevious,
+      criticalItems,
+      balanceSheetAssumptions
+    );
+    
+    // Calculate cash flow
+    const cashFlowResults = cfEngine.calculateCashFlow(i);
+    
+    // Update UI with cash flow values
+    updateCashFlowUI(cashFlowResults, i);
+    
+    // Store for reference
+    cashFlowForecasts.monthly[i] = cashFlowResults;
+  }
+  
+  console.log('✅ Cash flow forecasts updated successfully');
+}
+
+/**
+ * Get last actual balance sheet values (for period 0 previous comparison)
+ */
+function getLastActualBalanceSheet() {
+  const lastActual = {};
+  
+  if (!uploadedLineItems.balance) return lastActual;
+  
+  uploadedLineItems.balance.forEach(item => {
+    if (item.actualValues && item.actualValues.length > 0) {
+      // Get last non-null actual value
+      const lastValue = lastNonNull(item.actualValues);
+      if (lastValue !== null) {
+        lastActual[item.name] = { value: lastValue };
+      }
+    }
+  });
+  
+  return lastActual;
+}
+
+/**
+ * Update cash flow UI with calculated values
+ */
+function updateCashFlowUI(cashFlowResults, periodIndex) {
+  // For now, just log - we'll build the UI display next
+  console.log(`Cash Flow Period ${periodIndex}:`, {
+    operating: cashFlowResults.operating.total,
+    investing: cashFlowResults.investing.total,
+    financing: cashFlowResults.financing.total,
+    netChange: cashFlowResults.netChange,
+    reconciles: cashFlowResults.reconciles
+  });
+  
+  // TODO: Update actual UI cells when cash flow table is built
+}
+
+/**
+ * Helper: Parse currency string to number
+ */
+function parseCurrencyToNumber(str) {
+  if (!str || str === '' || str === '-') return 0;
+  
+  // Remove currency symbols, commas, spaces
+  const cleaned = str.replace(/[$,\s]/g, '');
+  
+  // Handle parentheses for negative numbers
+  if (cleaned.includes('(') && cleaned.includes(')')) {
+    return -parseFloat(cleaned.replace(/[()]/g, '')) || 0;
+  }
+  
+  return parseFloat(cleaned) || 0;
 }
 
 /**
