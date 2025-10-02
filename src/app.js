@@ -5425,7 +5425,6 @@ function initializeSidebarToggle() {
   
   if (isCollapsed) {
     sidebar.classList.add('collapsed');
-    toggleBtn.textContent = '▶';
     toggleBtn.title = 'Expand sidebar';
   }
   
@@ -5436,13 +5435,11 @@ function initializeSidebarToggle() {
     if (isCurrentlyCollapsed) {
       // Expand
       sidebar.classList.remove('collapsed');
-      toggleBtn.textContent = '◀';
       toggleBtn.title = 'Collapse sidebar';
       localStorage.setItem('sidebarCollapsed', 'false');
     } else {
       // Collapse
       sidebar.classList.add('collapsed');
-      toggleBtn.textContent = '▶';
       toggleBtn.title = 'Expand sidebar';
       localStorage.setItem('sidebarCollapsed', 'true');
     }
@@ -5468,7 +5465,6 @@ function initializeSidebarToggle() {
   // Model Config icon
   iconModel?.addEventListener('click', () => {
     sidebar.classList.remove('collapsed');
-    toggleBtn.textContent = '◀';
     toggleBtn.title = 'Collapse sidebar';
     localStorage.setItem('sidebarCollapsed', 'false');
     switchConfigTab('model');
@@ -5477,7 +5473,6 @@ function initializeSidebarToggle() {
   // Tab icons - expand AND switch to that tab
   iconPnL?.addEventListener('click', () => {
     sidebar.classList.remove('collapsed');
-    toggleBtn.textContent = '◀';
     toggleBtn.title = 'Collapse sidebar';
     localStorage.setItem('sidebarCollapsed', 'false');
     switchConfigTab('pnl');
@@ -5485,7 +5480,6 @@ function initializeSidebarToggle() {
   
   iconBalance?.addEventListener('click', () => {
     sidebar.classList.remove('collapsed');
-    toggleBtn.textContent = '◀';
     toggleBtn.title = 'Collapse sidebar';
     localStorage.setItem('sidebarCollapsed', 'false');
     switchConfigTab('balance');
@@ -5493,7 +5487,6 @@ function initializeSidebarToggle() {
   
   iconCash?.addEventListener('click', () => {
     sidebar.classList.remove('collapsed');
-    toggleBtn.textContent = '◀';
     toggleBtn.title = 'Collapse sidebar';
     localStorage.setItem('sidebarCollapsed', 'false');
     switchConfigTab('cashflow');
@@ -5501,7 +5494,6 @@ function initializeSidebarToggle() {
   
   iconScenarios?.addEventListener('click', () => {
     sidebar.classList.remove('collapsed');
-    toggleBtn.textContent = '◀';
     toggleBtn.title = 'Collapse sidebar';
     localStorage.setItem('sidebarCollapsed', 'false');
     switchConfigTab('scenarios');
