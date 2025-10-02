@@ -5664,11 +5664,42 @@ document.addEventListener('DOMContentLoaded', function () {
   const seasonalStrengthValueEl = document.getElementById('seasonalStrengthValue');
   const customSeasonalEl = document.getElementById('custom-seasonal');
   
+  // Seasonal preset patterns
+  const seasonalPresets = {
+    none: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    retail: [0.8, 0.9, 1.0, 1.0, 1.0, 1.0, 0.9, 0.9, 0.9, 1.1, 1.3, 1.5],
+    saas: [1.0, 1.0, 1.0, 1.05, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95],
+    construction: [0.7, 0.8, 0.9, 1.1, 1.2, 1.3, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8],
+    custom: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+  };
+  
+  const monthInputIds = ['jan-mult', 'feb-mult', 'mar-mult', 'apr-mult', 'may-mult', 'jun-mult', 
+                         'jul-mult', 'aug-mult', 'sep-mult', 'oct-mult', 'nov-mult', 'dec-mult'];
+  
   seasonalPatternEl?.addEventListener('change', function() {
-    // Show/hide custom seasonal controls
-    if (customSeasonalEl) {
-      customSeasonalEl.style.display = this.value === 'custom' ? 'block' : 'none';
+    const selectedPattern = this.value;
+    const multipliersContainer = document.getElementById('seasonal-multipliers');
+    
+    // Show/hide multipliers grid
+    if (multipliersContainer) {
+      if (selectedPattern === 'none') {
+        multipliersContainer.style.display = 'none';
+      } else {
+        multipliersContainer.style.display = 'block';
+        
+        // Load preset values into the grid
+        const presetValues = seasonalPresets[selectedPattern] || seasonalPresets.custom;
+        monthInputIds.forEach((id, index) => {
+          const input = document.getElementById(id);
+          if (input) {
+            input.value = presetValues[index];
+          }
+        });
+        
+        console.log(`Loaded ${selectedPattern} seasonal pattern:`, presetValues);
+      }
     }
+    
     rebuildAllTables();
     updateForecast();
   });
