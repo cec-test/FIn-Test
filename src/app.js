@@ -3860,10 +3860,17 @@ function detectCriticalPnLItems(pnlItems) {
  */
 function determineForecastingStrategy(uploadedData) {
   console.log('🧠 Determining optimal forecasting strategy...');
+  console.log('Uploaded data structure:', {
+    pnl: uploadedData.pnl ? uploadedData.pnl.length : 0,
+    balance: uploadedData.balance ? uploadedData.balance.length : 0,
+    cashflow: uploadedData.cashflow ? uploadedData.cashflow.length : 0
+  });
   
   const hasPnL = uploadedData.pnl && uploadedData.pnl.length > 0;
   const hasBalanceSheet = uploadedData.balance && uploadedData.balance.length > 0;
   const hasCashFlow = uploadedData.cashflow && uploadedData.cashflow.length > 0;
+  
+  console.log(`Data detection: P&L=${hasPnL}, BS=${hasBalanceSheet}, CF=${hasCashFlow}`);
   
   // Update global context
   availableDataContext.hasPnL = hasPnL;
