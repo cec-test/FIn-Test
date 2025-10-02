@@ -5407,12 +5407,72 @@ function initializeConfigTabs() {
   console.log(`Initialized config tabs, active tab: ${savedTab}`);
 }
 
+/**
+ * Initialize floating chat functionality
+ */
+function initializeFloatingChat() {
+  const chatBubble = document.getElementById('chatBubble');
+  const chatWidget = document.getElementById('chatWidget');
+  const minimizeBtn = document.getElementById('chatMinimizeBtn');
+  
+  if (!chatBubble || !chatWidget || !minimizeBtn) {
+    console.warn('Floating chat elements not found');
+    return;
+  }
+  
+  // Restore chat state from localStorage
+  const chatState = localStorage.getItem('chatWidgetOpen');
+  const isOpen = chatState === 'true';
+  
+  if (isOpen) {
+    chatWidget.classList.add('open');
+    chatBubble.style.display = 'none';
+  }
+  
+  // Bubble click - expand chat
+  chatBubble.addEventListener('click', () => {
+    chatWidget.classList.add('open');
+    chatBubble.style.display = 'none';
+    localStorage.setItem('chatWidgetOpen', 'true');
+    
+    // Focus input
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+      setTimeout(() => chatInput.focus(), 300);
+    }
+  });
+  
+  // Minimize button - collapse to bubble
+  minimizeBtn.addEventListener('click', () => {
+    chatWidget.classList.remove('open');
+    chatBubble.style.display = 'flex';
+    localStorage.setItem('chatWidgetOpen', 'false');
+  });
+  
+  // Show pulse on first visit
+  const hasSeenChat = localStorage.getItem('hasSeenChat');
+  if (!hasSeenChat) {
+    chatBubble.classList.add('pulse');
+    localStorage.setItem('hasSeenChat', 'true');
+    
+    // Remove pulse after 5 seconds
+    setTimeout(() => {
+      chatBubble.classList.remove('pulse');
+    }, 5000);
+  }
+  
+  console.log('✅ Floating chat initialized');
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   console.log('DOM loaded, initializing...');
   console.log('JavaScript is running!');
   
   // Initialize configuration tabs
   initializeConfigTabs();
+  
+  // Initialize floating chat
+  initializeFloatingChat();
   
   // Initialize custom tooltips
   initializeCustomTooltips();

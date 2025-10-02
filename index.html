@@ -772,17 +772,121 @@
             animation: pulse 2s infinite;
         }
         
-        /* Chat always visible - no collapsible styling */
-        .controls.chat-controls {
+        /* Floating Chat Bubble */
+        .chat-bubble {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            border-radius: 50%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            transition: all 0.3s ease;
         }
         
-        .controls.chat-controls h3 {
+        .chat-bubble:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 30px rgba(17, 153, 142, 0.4);
+        }
+        
+        .chat-bubble.has-notification::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 12px;
+            height: 12px;
+            background: #e74c3c;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        
+        @keyframes chatPulse {
+            0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+            50% { box-shadow: 0 4px 20px rgba(17, 153, 142, 0.6), 0 0 0 10px rgba(17, 153, 142, 0.1); }
+        }
+        
+        .chat-bubble.pulse {
+            animation: chatPulse 2s infinite;
+        }
+        
+        /* Floating Chat Widget */
+        .chat-widget {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 380px;
+            height: 550px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideUp 0.3s ease;
+        }
+        
+        .chat-widget.open {
+            display: flex;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .chat-widget-header {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
-            padding: 12px 15px;
-            margin: 0 0 12px 0;
-            border-radius: 8px;
-            background: rgba(0, 0, 0, 0.1);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .chat-widget-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .chat-minimize-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        
+        .chat-minimize-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .chat-widget-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
         
         /* Configuration Tabs Styles */
@@ -1302,31 +1406,6 @@
         <div class="content">
             <div class="layout">
                 <aside class="sidebar">
-                    <!-- Financial Chat Assistant - Always Visible at Top -->
-                    <div class="controls chat-controls">
-                        <h3>💬 Financial Assistant</h3>
-                        <div class="chat-container">
-                            <div class="chat-messages" id="chatMessages">
-                                <div class="chat-message assistant">
-                                    <div class="message-content">
-                                        👋 Hi! I'm your financial assistant. I can help you:
-                                        <ul>
-                                            <li>Understand your forecast settings</li>
-                                            <li>Analyze financial trends and patterns</li>
-                                            <li>Explain balance sheet calculations</li>
-                                            <li>Answer questions about your data</li>
-                                        </ul>
-                                        <strong>Tip:</strong> Expand sections below to configure your forecasts!
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="chat-input-container">
-                                <input type="text" id="chatInput" placeholder="Ask me anything about your financials..." />
-                                <button id="sendChatBtn">Send</button>
-                            </div>
-                        </div>
-                    </div>
-                    
                     <!-- Quick Actions -->
                     <div class="quick-actions">
                         <h3>⚡ Quick Actions</h3>
@@ -1845,6 +1924,39 @@
             </div>
             <div class="method-explanation">
                 <strong>Custom Pattern:</strong> Define your own monthly multipliers - use this for unique business cycles, event-driven businesses, or when you have specific seasonal data.
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Chat Bubble -->
+    <div class="chat-bubble" id="chatBubble" title="Open Financial Assistant">
+        💬
+    </div>
+    
+    <!-- Floating Chat Widget -->
+    <div class="chat-widget" id="chatWidget">
+        <div class="chat-widget-header">
+            <h3>💬 Financial Assistant</h3>
+            <button class="chat-minimize-btn" id="chatMinimizeBtn" title="Minimize">−</button>
+        </div>
+        <div class="chat-widget-body">
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-message assistant">
+                    <div class="message-content">
+                        👋 Hi! I'm your financial assistant. I can help you:
+                        <ul>
+                            <li>Understand your forecast settings</li>
+                            <li>Analyze financial trends and patterns</li>
+                            <li>Explain balance sheet calculations</li>
+                            <li>Answer questions about your data</li>
+                        </ul>
+                        <strong>Tip:</strong> Use the configuration tabs to adjust your forecasts!
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input-container">
+                <input type="text" id="chatInput" placeholder="Ask me anything about your financials..." />
+                <button id="sendChatBtn">Send</button>
             </div>
         </div>
     </div>
