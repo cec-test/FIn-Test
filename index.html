@@ -775,20 +775,24 @@
         
         .bs-info-icon {
             display: inline-block;
-            width: 16px;
-            height: 16px;
-            background: #6c757d;
+            width: 18px;
+            height: 18px;
+            background: #3498db;
             color: white;
             border-radius: 50%;
             text-align: center;
-            line-height: 16px;
-            font-size: 11px;
-            cursor: help;
-            transition: background 0.2s;
+            line-height: 18px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 5px;
+            margin-right: 5px;
+            vertical-align: middle;
+            transition: background-color 0.2s;
         }
         
         .bs-info-icon:hover {
-            background: #3498db;
+            background: #2980b9;
         }
         
         .bs-reset-btn {
@@ -1670,7 +1674,7 @@
                                 <div class="bs-control-row">
                                     <label>
                                         <span>DSO</span>
-                                        <span class="bs-info-icon" title="Days Sales Outstanding - Average time to collect payment from customers">i</span>
+                                        <span class="bs-info-icon" title="Days Sales Outstanding - Average time to collect payment from customers">?</span>
                                     </label>
                                     <input type="number" id="bsDSO" value="30" min="0" max="365" step="1">
                                     <span class="unit">days</span>
@@ -1678,7 +1682,7 @@
                                 <div class="bs-control-row">
                                     <label>
                                         <span>DPO</span>
-                                        <span class="bs-info-icon" title="Days Payable Outstanding - Average time to pay suppliers">i</span>
+                                        <span class="bs-info-icon" title="Days Payable Outstanding - Average time to pay suppliers">?</span>
                                     </label>
                                     <input type="number" id="bsDPO" value="30" min="0" max="365" step="1">
                                     <span class="unit">days</span>
@@ -1686,7 +1690,7 @@
                                 <div class="bs-control-row">
                                     <label>
                                         <span>DIO</span>
-                                        <span class="bs-info-icon" title="Days Inventory Outstanding - Average time inventory sits before being sold">i</span>
+                                        <span class="bs-info-icon" title="Days Inventory Outstanding - Average time inventory sits before being sold">?</span>
                                     </label>
                                     <input type="number" id="bsDIO" value="45" min="0" max="365" step="1">
                                     <span class="unit">days</span>
@@ -1700,7 +1704,7 @@
                                 <div class="bs-control-row">
                                     <label>
                                         <span>Depreciation Rate</span>
-                                        <span class="bs-info-icon" title="Annual depreciation rate for Property, Plant & Equipment">i</span>
+                                        <span class="bs-info-icon" title="Annual depreciation rate for Property, Plant & Equipment">?</span>
                                     </label>
                                     <input type="number" id="bsDepreciationRate" value="10" min="0" max="100" step="0.5">
                                     <span class="unit">%</span>
@@ -1708,7 +1712,7 @@
                                 <div class="bs-control-row">
                                     <label>
                                         <span>CapEx % of Revenue</span>
-                                        <span class="bs-info-icon" title="Capital Expenditures as percentage of revenue - new investments in fixed assets">i</span>
+                                        <span class="bs-info-icon" title="Capital Expenditures as percentage of revenue - new investments in fixed assets">?</span>
                                     </label>
                                     <input type="number" id="bsCapexPercentage" value="3" min="0" max="100" step="0.5">
                                     <span class="unit">%</span>
@@ -1722,7 +1726,7 @@
                                 <div class="bs-control-row">
                                     <label>
                                         <span>Dividend Policy</span>
-                                        <span class="bs-info-icon" title="Dividends paid as percentage of net income">i</span>
+                                        <span class="bs-info-icon" title="Dividends paid as percentage of net income">?</span>
                                     </label>
                                     <input type="number" id="bsDividendPolicy" value="0" min="0" max="100" step="1">
                                     <span class="unit">%</span>
@@ -1730,7 +1734,7 @@
                                 <div class="bs-control-row">
                                     <label>
                                         <span>Cash Target</span>
-                                        <span class="bs-info-icon" title="Minimum cash buffer in days of operating expenses">i</span>
+                                        <span class="bs-info-icon" title="Minimum cash buffer in days of operating expenses">?</span>
                                     </label>
                                     <input type="number" id="bsCashTarget" value="30" min="0" max="365" step="1">
                                     <span class="unit">days</span>
@@ -1744,7 +1748,7 @@
                                 <div class="bs-control-row">
                                     <label>
                                         <span>Accrued Expenses</span>
-                                        <span class="bs-info-icon" title="Accrued expenses as percentage of total expenses">i</span>
+                                        <span class="bs-info-icon" title="Accrued expenses as percentage of total expenses">?</span>
                                     </label>
                                     <input type="number" id="bsAccruedExpenses" value="5" min="0" max="100" step="0.5">
                                     <span class="unit">%</span>
@@ -1752,7 +1756,7 @@
                                 <div class="bs-control-row">
                                     <label>
                                         <span>Prepaid Expenses</span>
-                                        <span class="bs-info-icon" title="Prepaid expenses as percentage of revenue">i</span>
+                                        <span class="bs-info-icon" title="Prepaid expenses as percentage of revenue">?</span>
                                     </label>
                                     <input type="number" id="bsPrepaidExpenses" value="1" min="0" max="100" step="0.5">
                                     <span class="unit">%</span>
@@ -2039,6 +2043,43 @@
             </div>
             <div class="method-explanation">
                 <strong>Rolling Average:</strong> Based on historical average plus growth - great for cyclical businesses or when you want to smooth out volatility.
+            </div>
+        </div>
+    </div>
+
+    <!-- Balance Sheet Help Modal -->
+    <div id="balanceSheetHelpModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Balance Sheet Assumptions Explained</h3>
+                <span class="close" id="closeBSModal">&times;</span>
+            </div>
+            <div class="method-explanation">
+                <strong>DSO (Days Sales Outstanding):</strong> Average number of days it takes to collect payment from customers after a sale. Lower is better for cash flow. Typical range: 30-60 days.
+            </div>
+            <div class="method-explanation">
+                <strong>DPO (Days Payable Outstanding):</strong> Average number of days you take to pay suppliers. Higher means you hold onto cash longer. Typical range: 30-45 days.
+            </div>
+            <div class="method-explanation">
+                <strong>DIO (Days Inventory Outstanding):</strong> Average number of days inventory sits before being sold. Lower is better (less cash tied up). Typical range: 30-90 days depending on industry.
+            </div>
+            <div class="method-explanation">
+                <strong>Depreciation Rate:</strong> Annual percentage rate at which fixed assets lose value. Used to calculate depreciation expense and PPE. Typical range: 5-20% depending on asset type.
+            </div>
+            <div class="method-explanation">
+                <strong>CapEx % of Revenue:</strong> Capital expenditures (investments in fixed assets) as a percentage of revenue. Reflects growth and maintenance needs. Typical range: 2-10%.
+            </div>
+            <div class="method-explanation">
+                <strong>Dividend Policy:</strong> Percentage of net income paid to shareholders as dividends. Affects retained earnings and cash flow. Typical range: 0-50% (growth companies often pay 0%).
+            </div>
+            <div class="method-explanation">
+                <strong>Cash Target:</strong> Minimum cash buffer measured in days of operating expenses. Used for cash management and balancing. Typical range: 15-60 days.
+            </div>
+            <div class="method-explanation">
+                <strong>Accrued Expenses:</strong> Expenses incurred but not yet paid, as percentage of total expenses. Affects liabilities and cash flow timing. Typical range: 3-10%.
+            </div>
+            <div class="method-explanation">
+                <strong>Prepaid Expenses:</strong> Expenses paid in advance, as percentage of revenue. Affects assets and cash flow timing. Typical range: 0.5-3%.
             </div>
         </div>
     </div>

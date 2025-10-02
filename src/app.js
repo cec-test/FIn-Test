@@ -5836,6 +5836,32 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
+  // Balance sheet help modal handlers
+  const bsHelpModal = document.getElementById('balanceSheetHelpModal');
+  const closeBSModal = document.getElementById('closeBSModal');
+
+  // Add click handlers to all BS info icons
+  document.querySelectorAll('.bs-info-icon').forEach(icon => {
+    icon.addEventListener('click', function() {
+      if (bsHelpModal) {
+        bsHelpModal.style.display = 'block';
+      }
+    });
+  });
+
+  closeBSModal?.addEventListener('click', function() {
+    if (bsHelpModal) {
+      bsHelpModal.style.display = 'none';
+    }
+  });
+
+  // Close BS modal when clicking outside of it
+  window.addEventListener('click', function(event) {
+    if (event.target === bsHelpModal) {
+      bsHelpModal.style.display = 'none';
+    }
+  });
+
   // Run forecast button
   runBtn?.addEventListener('click', function() {
     console.log('Run Forecast clicked');
