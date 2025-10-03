@@ -3628,6 +3628,657 @@ const DEFAULT_BS_ASSUMPTIONS = {
 };
 
 /**
+ * ============================================================================
+ * SCENARIOS MANAGEMENT SYSTEM
+ * ============================================================================
+ * Enables users to create, save, and compare multiple forecast scenarios
+ * Future-ready for server storage (currently uses localStorage)
+ */
+
+// Storage keys
+const STORAGE_KEY_SCENARIOS = 'telescope_scenarios_v1';
+const STORAGE_KEY_ACTIVE_SCENARIO = 'telescope_active_scenario_v1';
+
+// Global scenarios storage
+let scenarios = [];
+let activeScenarioId = null;
+
+/**
+ * Scenario Templates - Pre-configured scenarios users can start from
+ */
+const scenarioTemplates = {
+  'best-case': {
+    name: 'Best Case',
+    description: 'Optimistic growth with improved margins and efficiency',
+    pnl: {
+      forecastMethod: 'exponential',
+      growthRate: 25,
+      seasonalityPreset: 'none',
+      customSeasonalMultipliers: Array(12).fill(1)
+    },
+    balanceSheet: {
+      dso: 25,              // Improved collections
+      dpo: 35,              // Extended payment terms
+      dio: 40,              // Better inventory management
+      depreciationRate: 10,
+      capexPercentage: 5,   // Higher growth investment
+      dividendPolicy: 0,
+      cashTarget: 45,       // Higher safety buffer
+      accruedExpensesPercentage: 5,
+      prepaidExpensesPercentage: 1,
+      workingCapitalGrowth: 8
+    }
+  },
+  'worst-case': {
+    name: 'Worst Case',
+    description: 'Conservative scenario with slow growth and cash preservation',
+    pnl: {
+      forecastMethod: 'linear',
+      growthRate: 3,
+      seasonalityPreset: 'none',
+      customSeasonalMultipliers: Array(12).fill(1)
+    },
+    balanceSheet: {
+      dso: 45,              // Slower collections
+      dpo: 25,              // Shorter payment terms
+      dio: 60,              // Higher inventory
+      depreciationRate: 10,
+      capexPercentage: 1,   // Minimal investment
+      dividendPolicy: 0,
+      cashTarget: 60,       // Maximum cash buffer
+      accruedExpensesPercentage: 5,
+      prepaidExpensesPercentage: 1,
+      workingCapitalGrowth: 2
+    }
+  },
+  'high-growth': {
+    name: 'High Growth',
+    description: 'Aggressive expansion with heavy investment',
+    pnl: {
+      forecastMethod: 'exponential',
+      growthRate: 40,
+      seasonalityPreset: 'none',
+      customSeasonalMultipliers: Array(12).fill(1)
+    },
+    balanceSheet: {
+      dso: 30,
+      dpo: 30,
+      dio: 45,
+      depreciationRate: 10,
+      capexPercentage: 8,   // Heavy investment in growth
+      dividendPolicy: 0,
+      cashTarget: 30,
+      accruedExpensesPercentage: 5,
+      prepaidExpensesPercentage: 1,
+      workingCapitalGrowth: 15
+    }
+  },
+  'cash-conservation': {
+    name: 'Cash Conservation',
+    description: 'Extend runway by optimizing working capital and reducing expenses',
+    pnl: {
+      forecastMethod: 'linear',
+      growthRate: 8,
+      seasonalityPreset: 'none',
+      customSeasonalMultipliers: Array(12).fill(1)
+    },
+    balanceSheet: {
+      dso: 20,              // Aggressive collections
+      dpo: 45,              // Extended payables
+      dio: 30,              // Lean inventory
+      depreciationRate: 10,
+      capexPercentage: 1,   // Minimal CapEx
+      dividendPolicy: 0,
+      cashTarget: 90,       // Maximum runway
+      accruedExpensesPercentage: 5,
+      prepaidExpensesPercentage: 1,
+      workingCapitalGrowth: 3
+    }
+  },
+  'recession': {
+    name: 'Recession',
+    description: 'Economic downturn with declining growth and tight margins',
+    pnl: {
+      forecastMethod: 'linear',
+      growthRate: -5,       // Negative growth
+      seasonalityPreset: 'none',
+      customSeasonalMultipliers: Array(12).fill(1)
+    },
+    balanceSheet: {
+      dso: 50,              // Customers pay slower
+      dpo: 30,              // We must pay faster
+      dio: 70,              // Inventory piles up
+      depreciationRate: 10,
+      capexPercentage: 0.5, // Almost no investment
+      dividendPolicy: 0,
+      cashTarget: 75,       // Hoard cash
+      accruedExpensesPercentage: 5,
+      prepaidExpensesPercentage: 1,
+      workingCapitalGrowth: 0
+    }
+  }
+};
+
+/**
+ * Generate UUID v4 for scenario IDs
+ */
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+/**
+ * Get current P&L assumptions from UI
+ */
+function getCurrentPnLAssumptions() {
+  return {
+    forecastPeriods: parseInt(document.getElementById('forecastPeriods')?.value) || 12,
+    forecastMethod: document.getElementById('forecastMethodSelect')?.value || 'linear',
+    growthRate: parseFloat(document.getElementById('customGrowthRate')?.value) || 10,
+    seasonalityPreset: document.getElementById('seasonalPattern')?.value || 'none',
+    customSeasonalMultipliers: getCustomSeasonalMultipliers()
+  };
+}
+
+/**
+ * Get current Balance Sheet assumptions
+ */
+function getCurrentBalanceSheetAssumptions() {
+  return { ...balanceSheetAssumptions };
+}
+
+/**
+ * Get custom seasonal multipliers from UI
+ */
+function getCustomSeasonalMultipliers() {
+  const multipliers = [];
+  for (let i = 0; i < 12; i++) {
+    const input = document.getElementById(`month-multiplier-${i}`);
+    multipliers.push(parseFloat(input?.value) || 1.0);
+  }
+  return multipliers;
+}
+
+/**
+ * CREATE - Create a new scenario
+ */
+function createScenario(name, options = {}) {
+  const { 
+    fromTemplate = null,
+    copyFromScenario = null,
+    description = ''
+  } = options;
+  
+  const newScenario = {
+    id: generateUUID(),
+    name: name,
+    description: description,
+    isTemplate: false,
+    isDefault: false,
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString(),
+    sourceTemplate: fromTemplate,
+    pnl: getCurrentPnLAssumptions(),
+    balanceSheet: getCurrentBalanceSheetAssumptions(),
+    adjustments: {},
+    cachedResults: null
+  };
+  
+  // If from template, override with template values
+  if (fromTemplate && scenarioTemplates[fromTemplate]) {
+    const template = scenarioTemplates[fromTemplate];
+    newScenario.name = name || template.name;
+    newScenario.description = description || template.description;
+    newScenario.pnl = { ...newScenario.pnl, ...template.pnl };
+    newScenario.balanceSheet = { ...newScenario.balanceSheet, ...template.balanceSheet };
+  }
+  
+  // If copying existing scenario
+  if (copyFromScenario) {
+    const source = scenarios.find(s => s.id === copyFromScenario);
+    if (source) {
+      newScenario.pnl = { ...source.pnl };
+      newScenario.balanceSheet = { ...source.balanceSheet };
+      newScenario.adjustments = { ...source.adjustments };
+    }
+  }
+  
+  scenarios.push(newScenario);
+  saveScenarios();
+  
+  console.log(`✅ Created scenario: "${newScenario.name}" (ID: ${newScenario.id})`);
+  return newScenario.id;
+}
+
+/**
+ * READ - Get scenario by ID
+ */
+function getScenario(scenarioId) {
+  return scenarios.find(s => s.id === scenarioId);
+}
+
+/**
+ * READ - Get all scenarios
+ */
+function getAllScenarios() {
+  return scenarios;
+}
+
+/**
+ * UPDATE - Update scenario
+ */
+function updateScenario(scenarioId, updates) {
+  const scenario = getScenario(scenarioId);
+  if (!scenario) {
+    console.warn(`Scenario not found: ${scenarioId}`);
+    return false;
+  }
+  
+  // Merge updates
+  if (updates.name !== undefined) scenario.name = updates.name;
+  if (updates.description !== undefined) scenario.description = updates.description;
+  if (updates.pnl) Object.assign(scenario.pnl, updates.pnl);
+  if (updates.balanceSheet) Object.assign(scenario.balanceSheet, updates.balanceSheet);
+  if (updates.adjustments) Object.assign(scenario.adjustments, updates.adjustments);
+  
+  scenario.lastModified = new Date().toISOString();
+  scenario.cachedResults = null; // Invalidate cache
+  
+  saveScenarios();
+  console.log(`✅ Updated scenario: "${scenario.name}"`);
+  return true;
+}
+
+/**
+ * DELETE - Delete scenario
+ */
+function deleteScenario(scenarioId) {
+  const scenario = getScenario(scenarioId);
+  
+  if (!scenario) {
+    console.warn(`Scenario not found: ${scenarioId}`);
+    return false;
+  }
+  
+  // Don't allow deleting default Base Case
+  if (scenario.isDefault) {
+    alert('Cannot delete the Base Case scenario');
+    return false;
+  }
+  
+  scenarios = scenarios.filter(s => s.id !== scenarioId);
+  
+  // If deleting active scenario, switch to Base Case
+  if (activeScenarioId === scenarioId) {
+    const baseCase = scenarios.find(s => s.isDefault);
+    setActiveScenario(baseCase?.id || scenarios[0]?.id);
+  }
+  
+  saveScenarios();
+  console.log(`✅ Deleted scenario: "${scenario.name}"`);
+  return true;
+}
+
+/**
+ * DUPLICATE - Duplicate an existing scenario
+ */
+function duplicateScenario(scenarioId) {
+  const source = getScenario(scenarioId);
+  if (!source) {
+    console.warn(`Scenario not found: ${scenarioId}`);
+    return null;
+  }
+  
+  const newId = createScenario(
+    `${source.name} (Copy)`,
+    { 
+      copyFromScenario: scenarioId,
+      description: source.description 
+    }
+  );
+  
+  console.log(`✅ Duplicated scenario: "${source.name}"`);
+  return newId;
+}
+
+/**
+ * Set active scenario and load its assumptions
+ */
+function setActiveScenario(scenarioId) {
+  const scenario = getScenario(scenarioId);
+  if (!scenario) {
+    console.warn(`Scenario not found: ${scenarioId}`);
+    return false;
+  }
+  
+  activeScenarioId = scenarioId;
+  
+  // Load scenario's assumptions into UI
+  loadScenarioAssumptionsIntoUI(scenario);
+  
+  // Save to localStorage
+  localStorage.setItem(STORAGE_KEY_ACTIVE_SCENARIO, scenarioId);
+  
+  // Update UI
+  updateScenariosConfigUI();
+  
+  console.log(`✅ Activated scenario: "${scenario.name}"`);
+  
+  return true;
+}
+
+/**
+ * Get active scenario
+ */
+function getActiveScenario() {
+  return getScenario(activeScenarioId);
+}
+
+/**
+ * Save current UI assumptions to active scenario
+ */
+function saveActiveScenarioAssumptions() {
+  if (!activeScenarioId) {
+    console.warn('No active scenario to save');
+    return;
+  }
+  
+  updateScenario(activeScenarioId, {
+    pnl: getCurrentPnLAssumptions(),
+    balanceSheet: getCurrentBalanceSheetAssumptions()
+  });
+}
+
+/**
+ * Load scenario assumptions into UI controls
+ */
+function loadScenarioAssumptionsIntoUI(scenario) {
+  if (!scenario) return;
+  
+  // Load P&L assumptions
+  const periodsEl = document.getElementById('forecastPeriods');
+  if (periodsEl) periodsEl.value = scenario.pnl.forecastPeriods || 12;
+  
+  const methodEl = document.getElementById('forecastMethodSelect');
+  if (methodEl) methodEl.value = scenario.pnl.forecastMethod || 'linear';
+  
+  const growthEl = document.getElementById('customGrowthRate');
+  if (growthEl) growthEl.value = scenario.pnl.growthRate || 10;
+  
+  const seasonalEl = document.getElementById('seasonalPattern');
+  if (seasonalEl) seasonalEl.value = scenario.pnl.seasonalityPreset || 'none';
+  
+  // Load seasonal multipliers
+  if (scenario.pnl.customSeasonalMultipliers) {
+    scenario.pnl.customSeasonalMultipliers.forEach((mult, i) => {
+      const input = document.getElementById(`month-multiplier-${i}`);
+      if (input) input.value = mult;
+    });
+  }
+  
+  // Load Balance Sheet assumptions
+  balanceSheetAssumptions = { ...scenario.balanceSheet };
+  
+  // Update BS UI inputs
+  const bsInputs = {
+    'bs-dso': 'dso',
+    'bs-dpo': 'dpo',
+    'bs-dio': 'dio',
+    'bs-depreciation-rate': 'depreciationRate',
+    'bs-capex-percentage': 'capexPercentage',
+    'bs-dividend-policy': 'dividendPolicy',
+    'bs-cash-target': 'cashTarget',
+    'bs-accrued-percentage': 'accruedExpensesPercentage',
+    'bs-prepaid-percentage': 'prepaidExpensesPercentage',
+    'bs-wc-growth': 'workingCapitalGrowth'
+  };
+  
+  Object.keys(bsInputs).forEach(inputId => {
+    const key = bsInputs[inputId];
+    const input = document.getElementById(inputId);
+    if (input && balanceSheetAssumptions[key] !== undefined) {
+      input.value = balanceSheetAssumptions[key];
+    }
+  });
+  
+  console.log(`📥 Loaded assumptions from scenario: "${scenario.name}"`);
+}
+
+/**
+ * Save scenarios to localStorage (future: API)
+ */
+function saveScenarios() {
+  try {
+    localStorage.setItem(STORAGE_KEY_SCENARIOS, JSON.stringify(scenarios));
+    console.log(`💾 Saved ${scenarios.length} scenarios to localStorage`);
+  } catch (error) {
+    console.error('Error saving scenarios:', error);
+  }
+}
+
+/**
+ * Load scenarios from localStorage (future: API)
+ */
+function loadScenarios() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_SCENARIOS);
+    
+    if (stored) {
+      scenarios = JSON.parse(stored);
+      console.log(`📥 Loaded ${scenarios.length} scenarios from localStorage`);
+    } else {
+      // Initialize with Base Case
+      initializeDefaultScenarios();
+    }
+    
+    // Load active scenario
+    const activeId = localStorage.getItem(STORAGE_KEY_ACTIVE_SCENARIO);
+    if (activeId && getScenario(activeId)) {
+      setActiveScenario(activeId);
+    } else {
+      // Default to Base Case
+      const baseCase = scenarios.find(s => s.isDefault);
+      if (baseCase) {
+        setActiveScenario(baseCase.id);
+      } else if (scenarios.length > 0) {
+        setActiveScenario(scenarios[0].id);
+      }
+    }
+  } catch (error) {
+    console.error('Error loading scenarios:', error);
+    initializeDefaultScenarios();
+  }
+}
+
+/**
+ * Initialize with default Base Case scenario
+ */
+function initializeDefaultScenarios() {
+  console.log('🎬 Initializing default scenarios...');
+  
+  const baseCaseId = createScenario('Base Case', {
+    description: 'Current realistic assumptions'
+  });
+  
+  const baseCase = getScenario(baseCaseId);
+  baseCase.isDefault = true;
+  
+  setActiveScenario(baseCaseId);
+  saveScenarios();
+  
+  console.log('✅ Base Case scenario initialized');
+}
+
+/**
+ * Update Scenarios Config UI
+ */
+function updateScenariosConfigUI() {
+  const container = document.getElementById('scenarios-list-container');
+  if (!container) return;
+  
+  const activeScenario = getActiveScenario();
+  
+  let html = '<div class="scenarios-list">';
+  
+  scenarios.forEach(scenario => {
+    const isActive = scenario.id === activeScenarioId;
+    const canDelete = !scenario.isDefault;
+    
+    html += `
+      <div class="scenario-item ${isActive ? 'active' : ''}">
+        <div class="scenario-radio">
+          <input 
+            type="radio" 
+            name="active-scenario" 
+            id="scenario-${scenario.id}"
+            value="${scenario.id}"
+            ${isActive ? 'checked' : ''}
+            onchange="handleScenarioSelect('${scenario.id}')"
+          />
+          <label for="scenario-${scenario.id}">
+            <div class="scenario-name">${scenario.name}</div>
+            ${scenario.description ? `<div class="scenario-description">${scenario.description}</div>` : ''}
+          </label>
+        </div>
+        <div class="scenario-actions">
+          <button 
+            class="scenario-action-btn" 
+            onclick="showEditScenarioModal('${scenario.id}')"
+            title="Edit name/description"
+          >✏️</button>
+          <button 
+            class="scenario-action-btn" 
+            onclick="handleDuplicateScenario('${scenario.id}')"
+            title="Duplicate scenario"
+          >📋</button>
+          <button 
+            class="scenario-action-btn ${!canDelete ? 'disabled' : ''}" 
+            onclick="handleDeleteScenario('${scenario.id}')"
+            title="${canDelete ? 'Delete scenario' : 'Cannot delete Base Case'}"
+            ${!canDelete ? 'disabled' : ''}
+          >🗑️</button>
+        </div>
+      </div>
+    `;
+  });
+  
+  html += '</div>';
+  
+  // Add create button
+  html += `
+    <div class="scenario-create-buttons">
+      <button class="btn-create-scenario" onclick="showCreateScenarioModal()">
+        + Create New Scenario
+      </button>
+      <button class="btn-load-template" onclick="showLoadTemplateModal()">
+        📥 Load Template
+      </button>
+    </div>
+  `;
+  
+  // Add active scenario indicator
+  if (activeScenario) {
+    html += `
+      <div class="active-scenario-indicator">
+        <strong>Active Scenario:</strong> ${activeScenario.name}
+        <div style="font-size: 0.85em; color: #666; margin-top: 4px;">
+          Edit assumptions in Model/P&L/Balance Sheet tabs
+        </div>
+      </div>
+    `;
+  }
+  
+  container.innerHTML = html;
+}
+
+/**
+ * Handle scenario selection (radio button change)
+ */
+function handleScenarioSelect(scenarioId) {
+  if (setActiveScenario(scenarioId)) {
+    // Re-run forecast with new scenario's assumptions
+    updateForecast();
+  }
+}
+
+/**
+ * Handle duplicate scenario
+ */
+function handleDuplicateScenario(scenarioId) {
+  const newId = duplicateScenario(scenarioId);
+  if (newId) {
+    updateScenariosConfigUI();
+    setActiveScenario(newId);
+  }
+}
+
+/**
+ * Handle delete scenario
+ */
+function handleDeleteScenario(scenarioId) {
+  const scenario = getScenario(scenarioId);
+  if (!scenario) return;
+  
+  if (confirm(`Are you sure you want to delete the scenario "${scenario.name}"?`)) {
+    if (deleteScenario(scenarioId)) {
+      updateScenariosConfigUI();
+    }
+  }
+}
+
+/**
+ * Show create scenario modal
+ */
+function showCreateScenarioModal() {
+  const modal = document.getElementById('create-scenario-modal');
+  if (!modal) {
+    createCreateScenarioModal();
+  }
+  
+  // Reset form
+  document.getElementById('new-scenario-name').value = '';
+  document.getElementById('new-scenario-description').value = '';
+  document.getElementById('scenario-source-current').checked = true;
+  
+  document.getElementById('create-scenario-modal').style.display = 'block';
+}
+
+/**
+ * Show edit scenario modal
+ */
+function showEditScenarioModal(scenarioId) {
+  const scenario = getScenario(scenarioId);
+  if (!scenario) return;
+  
+  const modal = document.getElementById('edit-scenario-modal');
+  if (!modal) {
+    createEditScenarioModal();
+  }
+  
+  // Populate form
+  document.getElementById('edit-scenario-id').value = scenarioId;
+  document.getElementById('edit-scenario-name').value = scenario.name;
+  document.getElementById('edit-scenario-description').value = scenario.description || '';
+  
+  document.getElementById('edit-scenario-modal').style.display = 'block';
+}
+
+/**
+ * Show load template modal
+ */
+function showLoadTemplateModal() {
+  const modal = document.getElementById('load-template-modal');
+  if (!modal) {
+    createLoadTemplateModal();
+  }
+  
+  document.getElementById('load-template-modal').style.display = 'block';
+}
+
+/**
  * Calculate totals from hierarchy
  */
 function calculateTotalsFromHierarchy(forecastedValues, hierarchy) {
@@ -5594,6 +6245,10 @@ document.addEventListener('DOMContentLoaded', function () {
   // Initialize custom tooltips
   initializeCustomTooltips();
   
+  // Initialize scenarios system
+  loadScenarios();
+  updateScenariosConfigUI();
+  
   // Simple test - count all elements
   const allElements = document.querySelectorAll('*');
   console.log('Total elements on page:', allElements.length);
@@ -5646,6 +6301,7 @@ document.addEventListener('DOMContentLoaded', function () {
   periodsEl?.addEventListener('change', function() {
     rebuildAllTables();
     updateForecast();
+    saveActiveScenarioAssumptions(); // Auto-save to active scenario
   });
   
   // Growth rate change handler - rebuild tables for updated forecasts
@@ -5653,6 +6309,7 @@ document.addEventListener('DOMContentLoaded', function () {
   growthRateEl?.addEventListener('change', function() {
     rebuildAllTables();
     updateForecast();
+    saveActiveScenarioAssumptions(); // Auto-save to active scenario
   });
 
   // S-curve controls change handlers
@@ -6049,3 +6706,103 @@ document.addEventListener('DOMContentLoaded', function () {
     calculateInsights();
   }, 1000);
 });
+
+/**
+ * ============================================================================
+ * SCENARIO MODAL HANDLERS
+ * ============================================================================
+ */
+
+/**
+ * Close modal helper
+ */
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+/**
+ * Handle create scenario from modal
+ */
+function handleCreateScenario() {
+  const name = document.getElementById('new-scenario-name').value.trim();
+  
+  if (!name) {
+    alert('Please enter a scenario name');
+    return;
+  }
+  
+  const description = document.getElementById('new-scenario-description').value.trim();
+  const source = document.querySelector('input[name="scenario-source"]:checked').value;
+  
+  let options = { description };
+  
+  if (source === 'template') {
+    const templateKey = document.getElementById('scenario-template-select').value;
+    options.fromTemplate = templateKey;
+  } else if (source === 'copy') {
+    const copyId = document.getElementById('scenario-copy-select').value;
+    options.copyFromScenario = copyId;
+  }
+  
+  const newId = createScenario(name, options);
+  
+  if (newId) {
+    closeModal('create-scenario-modal');
+    updateScenariosConfigUI();
+    setActiveScenario(newId);
+    updateForecast();
+  }
+}
+
+/**
+ * Handle save scenario edit
+ */
+function handleSaveScenarioEdit() {
+  const scenarioId = document.getElementById('edit-scenario-id').value;
+  const name = document.getElementById('edit-scenario-name').value.trim();
+  const description = document.getElementById('edit-scenario-description').value.trim();
+  
+  if (!name) {
+    alert('Please enter a scenario name');
+    return;
+  }
+  
+  if (updateScenario(scenarioId, { name, description })) {
+    closeModal('edit-scenario-modal');
+    updateScenariosConfigUI();
+  }
+}
+
+/**
+ * Handle load template
+ */
+function handleLoadTemplate(templateKey) {
+  const template = scenarioTemplates[templateKey];
+  if (!template) return;
+  
+  const name = prompt(`Enter name for new scenario:`, template.name);
+  if (!name) return;
+  
+  const newId = createScenario(name, {
+    fromTemplate: templateKey,
+    description: template.description
+  });
+  
+  if (newId) {
+    closeModal('load-template-modal');
+    updateScenariosConfigUI();
+    setActiveScenario(newId);
+    updateForecast();
+  }
+}
+
+/**
+ * Export all scenarios to Excel
+ */
+function exportAllScenarios() {
+  alert('Excel export coming soon! This will download an Excel file with all scenarios.');
+  // TODO: Implement with SheetJS
+}

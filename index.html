@@ -1507,6 +1507,261 @@
                 flex-direction: column;
             }
         }
+        
+        /* ============================================
+           SCENARIOS STYLING
+           ============================================ */
+        
+        /* Scenarios Config Panel */
+        .scenarios-config-container {
+            padding: 10px 0;
+        }
+        
+        .scenarios-list {
+            margin-bottom: 20px;
+        }
+        
+        .scenario-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .scenario-item:hover {
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .scenario-item.active {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            font-weight: 600;
+        }
+        
+        .scenario-radio {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .scenario-radio input[type="radio"] {
+            cursor: pointer;
+        }
+        
+        .scenario-radio label {
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        .scenario-name {
+            font-size: 1em;
+            color: #333;
+        }
+        
+        .scenario-description {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 4px;
+            font-style: italic;
+        }
+        
+        .scenario-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .scenario-action-btn {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .scenario-action-btn:hover:not(.disabled) {
+            background: rgba(0,0,0,0.1);
+        }
+        
+        .scenario-action-btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .scenario-create-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .btn-create-scenario,
+        .btn-load-template {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-create-scenario {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-create-scenario:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-load-template {
+            background: #fff;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+        
+        .btn-load-template:hover {
+            background: #f5f7ff;
+        }
+        
+        .active-scenario-indicator {
+            padding: 15px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #2196f3;
+        }
+        
+        /* Scenarios Comparison Tab */
+        .scenarios-comparison-container {
+            padding: 20px;
+        }
+        
+        .scenario-selector {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .scenario-selector h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .scenario-comparison-section {
+            margin-bottom: 30px;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .section-header h3 {
+            color: #333;
+        }
+        
+        .scenario-details-links {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .scenario-details-links h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        /* Template Cards */
+        .template-options {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        
+        .template-card {
+            padding: 20px;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .template-card:hover {
+            background: #fff;
+            border-color: #2196f3;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .template-card h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .template-card p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        /* Modal Buttons */
+        .btn-primary,
+        .btn-secondary {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+            margin-right: 10px;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .modal-actions {
+            border-top: 1px solid #e0e0e0;
+            padding-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -1783,20 +2038,16 @@
                                 </div>
                             </div>
                             
-                            <!-- Scenarios Configuration Panel (Placeholder) -->
+                            <!-- Scenarios Configuration Panel -->
                             <div class="config-panel" id="scenarios-config">
-                                <div class="config-placeholder">
-                                    <div class="placeholder-icon">📈</div>
-                                    <h4>Scenario Planning</h4>
-                                    <p>Create and compare multiple forecast scenarios.</p>
-                                    <p style="margin-top: 15px; font-style: italic;">Coming soon! This will include:</p>
-                                    <ul style="text-align: left; display: inline-block; margin-top: 10px;">
-                                        <li>Base Case / Optimistic / Conservative scenarios</li>
-                                        <li>What-if analysis (change assumptions, see impact)</li>
-                                        <li>Sensitivity analysis (how sensitive to key drivers)</li>
-                                        <li>Scenario comparison dashboards</li>
-                                        <li>Save and load scenario configurations</li>
-                                    </ul>
+                                <div class="scenarios-config-container">
+                                    <h4 style="margin-bottom: 15px; color: #333;">📊 Your Scenarios</h4>
+                                    <p style="font-size: 0.9em; color: #666; margin-bottom: 20px;">
+                                        Create and manage different forecast scenarios. Switch between scenarios to model different futures.
+                                    </p>
+                                    
+                                    <!-- Scenarios list will be populated dynamically -->
+                                    <div id="scenarios-list-container"></div>
                                 </div>
                             </div>
                         </div>
@@ -1810,6 +2061,7 @@
                         <button class="tab active" data-tab="monthly">Monthly Forecast</button>
                         <button class="tab" data-tab="quarterly">Quarterly Forecast</button>
                         <button class="tab" data-tab="yearly">Yearly Forecast</button>
+                        <button class="tab" data-tab="scenarios">Scenarios</button>
                     </div>
                     
                 
@@ -2019,6 +2271,36 @@
                 </div>
             </div>
             
+            <!-- Scenarios Comparison Tab -->
+            <div id="scenarios" class="tab-content">
+                <div class="forecast-info">
+                    <strong>Scenarios Comparison</strong> - Compare multiple forecast scenarios side-by-side
+                </div>
+                
+                <div class="scenarios-comparison-container">
+                    <!-- Scenario selection -->
+                    <div class="scenario-selector">
+                        <h3>Select Scenarios to Compare:</h3>
+                        <div id="scenario-comparison-checkboxes"></div>
+                    </div>
+                    
+                    <!-- Comparison table -->
+                    <div class="scenario-comparison-section">
+                        <div class="section-header">
+                            <h3>📊 Year 1 Key Metrics</h3>
+                            <button class="export-btn" onclick="exportAllScenarios()">📥 Export All Scenarios</button>
+                        </div>
+                        <div id="scenarios-comparison-table"></div>
+                    </div>
+                    
+                    <!-- Individual scenario links -->
+                    <div class="scenario-details-links">
+                        <h4>View Full Forecast:</h4>
+                        <div id="scenario-forecast-links"></div>
+                    </div>
+                </div>
+            </div>
+            
         </div>
     </div>
 
@@ -2138,6 +2420,132 @@
             <div class="chat-input-container">
                 <input type="text" id="chatInput" placeholder="Ask me anything about your financials..." />
                 <button id="sendChatBtn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Scenario Modal -->
+    <div id="create-scenario-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>Create New Scenario</h3>
+                <span class="close-modal" onclick="closeModal('create-scenario-modal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="new-scenario-name">Scenario Name:</label>
+                    <input type="text" id="new-scenario-name" placeholder="e.g., Q4 Product Launch" style="width: 100%; padding: 8px; margin-top: 5px;">
+                </div>
+                
+                <div class="form-group" style="margin-top: 15px;">
+                    <label for="new-scenario-description">Description (optional):</label>
+                    <textarea id="new-scenario-description" rows="3" placeholder="Brief description of this scenario..." style="width: 100%; padding: 8px; margin-top: 5px;"></textarea>
+                </div>
+                
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Start from:</label>
+                    <div style="margin-top: 10px;">
+                        <div>
+                            <input type="radio" id="scenario-source-current" name="scenario-source" value="current" checked>
+                            <label for="scenario-source-current">Current settings (Base Case)</label>
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <input type="radio" id="scenario-source-template" name="scenario-source" value="template">
+                            <label for="scenario-source-template">Template:</label>
+                            <select id="scenario-template-select" style="margin-left: 10px; padding: 5px;">
+                                <option value="best-case">Best Case</option>
+                                <option value="worst-case">Worst Case</option>
+                                <option value="high-growth">High Growth</option>
+                                <option value="cash-conservation">Cash Conservation</option>
+                                <option value="recession">Recession</option>
+                            </select>
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <input type="radio" id="scenario-source-copy" name="scenario-source" value="copy">
+                            <label for="scenario-source-copy">Copy existing:</label>
+                            <select id="scenario-copy-select" style="margin-left: 10px; padding: 5px;">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-actions" style="margin-top: 25px; text-align: right;">
+                    <button class="btn-secondary" onclick="closeModal('create-scenario-modal')">Cancel</button>
+                    <button class="btn-primary" onclick="handleCreateScenario()">Create Scenario</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Scenario Modal -->
+    <div id="edit-scenario-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>Edit Scenario</h3>
+                <span class="close-modal" onclick="closeModal('edit-scenario-modal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-scenario-id">
+                
+                <div class="form-group">
+                    <label for="edit-scenario-name">Scenario Name:</label>
+                    <input type="text" id="edit-scenario-name" style="width: 100%; padding: 8px; margin-top: 5px;">
+                </div>
+                
+                <div class="form-group" style="margin-top: 15px;">
+                    <label for="edit-scenario-description">Description:</label>
+                    <textarea id="edit-scenario-description" rows="3" style="width: 100%; padding: 8px; margin-top: 5px;"></textarea>
+                </div>
+                
+                <div class="modal-actions" style="margin-top: 25px; text-align: right;">
+                    <button class="btn-secondary" onclick="closeModal('edit-scenario-modal')">Cancel</button>
+                    <button class="btn-primary" onclick="handleSaveScenarioEdit()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Template Modal -->
+    <div id="load-template-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>Load Scenario Template</h3>
+                <span class="close-modal" onclick="closeModal('load-template-modal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 20px;">Select a template to create a new scenario with pre-configured assumptions:</p>
+                
+                <div class="template-options">
+                    <div class="template-card" onclick="handleLoadTemplate('best-case')">
+                        <h4>💚 Best Case</h4>
+                        <p>Optimistic growth (25%) with improved margins and working capital efficiency</p>
+                    </div>
+                    
+                    <div class="template-card" onclick="handleLoadTemplate('worst-case')">
+                        <h4>📉 Worst Case</h4>
+                        <p>Conservative growth (3%) with slow collections and cash preservation focus</p>
+                    </div>
+                    
+                    <div class="template-card" onclick="handleLoadTemplate('high-growth')">
+                        <h4>🚀 High Growth</h4>
+                        <p>Aggressive expansion (40%) with heavy investment in CapEx and working capital</p>
+                    </div>
+                    
+                    <div class="template-card" onclick="handleLoadTemplate('cash-conservation')">
+                        <h4>💰 Cash Conservation</h4>
+                        <p>Extend runway with aggressive collections, extended payables, and minimal CapEx</p>
+                    </div>
+                    
+                    <div class="template-card" onclick="handleLoadTemplate('recession')">
+                        <h4>⚠️ Recession</h4>
+                        <p>Economic downturn with negative growth (-5%), slow payments, and cash hoarding</p>
+                    </div>
+                </div>
+                
+                <div class="modal-actions" style="margin-top: 25px; text-align: right;">
+                    <button class="btn-secondary" onclick="closeModal('load-template-modal')">Cancel</button>
+                </div>
             </div>
         </div>
     </div>
