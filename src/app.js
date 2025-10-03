@@ -7139,7 +7139,7 @@ function updateLineChartWithRange(periodType) {
 }
 
 /**
- * Generate chart data with date range filtering
+ * Generate chart data with date range filtering (includes actuals + forecasts)
  */
 function generateChartDataWithRange(periodType, selectedItems, startIndex, endIndex) {
   const data = {
@@ -7147,17 +7147,79 @@ function generateChartDataWithRange(periodType, selectedItems, startIndex, endIn
     datasets: []
   };
   
-  // Generate labels based on period type
+  // Get forecast periods setting
+  const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+  
+  // Generate labels based on period type (actuals + forecasts)
   let allLabels = [];
   if (periodType === 'monthly') {
+    // Start with actuals
     allLabels = (dateColumns || []).slice();
-  } else {
-    // For quarterly/yearly, get aggregated labels
-    const firstItem = selectedItems[0];
-    if (firstItem && firstItem.actualValues.length > 0) {
-      const agg = aggregateActuals(firstItem.statement, firstItem.actualValues);
-      const out = periodType === 'quarterly' ? agg.toQuarterOutputs() : agg.toYearOutputs();
-      allLabels = out.labels || [];
+    
+    // Add forecast labels
+    let baseDate = new Date();
+    if (allLabels.length > 0) {
+      // Parse last actual date to continue from there
+      const lastActual = allLabels[allLabels.length - 1];
+      // Handle formats like "Jan 2025" or "Jan, 2025"
+      const match = lastActual.match(/(\w+)[,\s]+(\d{4})/);
+      if (match) {
+        const monthName = match[1];
+        const year = parseInt(match[2]);
+        baseDate = new Date(`${monthName} 1, ${year}`);
+        baseDate.setMonth(baseDate.getMonth() + 1); // Start from next month
+      }
+    }
+    
+    // Generate forecast date labels
+    for (let i = 0; i < forecastPeriods; i++) {
+      const date = new Date(baseDate);
+      date.setMonth(baseDate.getMonth() + i);
+      const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+      const year = date.getFullYear();
+      allLabels.push(`${monthName} ${year}`);
+    }
+  } else if (periodType === 'quarterly') {
+    // For quarterly, aggregate actuals + forecasts
+    const actualsCount = dateColumns?.length || 0;
+    const totalMonths = actualsCount + forecastPeriods;
+    const quarters = Math.ceil(totalMonths / 3);
+    
+    let baseDate = new Date();
+    if (dateColumns && dateColumns.length > 0) {
+      const firstActual = dateColumns[0];
+      const match = firstActual.match(/(\w+)[,\s]+(\d{4})/);
+      if (match) {
+        const monthName = match[1];
+        const year = parseInt(match[2]);
+        baseDate = new Date(`${monthName} 1, ${year}`);
+      }
+    }
+    
+    for (let i = 0; i < quarters; i++) {
+      const date = new Date(baseDate);
+      date.setMonth(baseDate.getMonth() + (i * 3));
+      const year = date.getFullYear();
+      const quarter = Math.floor(date.getMonth() / 3) + 1;
+      allLabels.push(`Q${quarter} ${year}`);
+    }
+  } else if (periodType === 'yearly') {
+    // For yearly, aggregate actuals + forecasts
+    const actualsCount = dateColumns?.length || 0;
+    const totalMonths = actualsCount + forecastPeriods;
+    const years = Math.ceil(totalMonths / 12);
+    
+    let baseYear = new Date().getFullYear();
+    if (dateColumns && dateColumns.length > 0) {
+      const firstActual = dateColumns[0];
+      const match = firstActual.match(/(\d{4})/);
+      if (match) {
+        baseYear = parseInt(match[1]);
+      }
+    }
+    
+    for (let i = 0; i < years; i++) {
+      allLabels.push(`${baseYear + i}`);
     }
   }
   
@@ -7165,17 +7227,45 @@ function generateChartDataWithRange(periodType, selectedItems, startIndex, endIn
   const actualEndIndex = endIndex !== null ? endIndex + 1 : allLabels.length;
   data.labels = allLabels.slice(startIndex, actualEndIndex);
   
-  // Generate datasets for each selected item
+  // Generate datasets for each selected item (combine actuals + forecasts)
   selectedItems.forEach((item, index) => {
-    let values = [];
+    let allValues = [];
     
     if (periodType === 'monthly') {
-      values = (item.actualValues || []).slice(startIndex, actualEndIndex);
-    } else {
-      const agg = aggregateActuals(item.statement, item.actualValues);
-      const out = periodType === 'quarterly' ? agg.toQuarterOutputs() : agg.toYearOutputs();
-      values = (out.values || []).slice(startIndex, actualEndIndex);
+      // Combine actuals + forecasts
+      const actuals = item.actualValues || [];
+      const forecasts = getForecastValuesForItem(item, forecastPeriods);
+      allValues = [...actuals, ...forecasts];
+    } else if (periodType === 'quarterly') {
+      // Get actuals and forecasts, then aggregate
+      const actuals = item.actualValues || [];
+      const forecasts = getForecastValuesForItem(item, forecastPeriods);
+      const combined = [...actuals, ...forecasts];
+      
+      // Aggregate to quarters
+      const quarterlyValues = [];
+      for (let i = 0; i < combined.length; i += 3) {
+        const quarterSum = combined.slice(i, i + 3).reduce((sum, val) => sum + val, 0);
+        quarterlyValues.push(quarterSum);
+      }
+      allValues = quarterlyValues;
+    } else if (periodType === 'yearly') {
+      // Get actuals and forecasts, then aggregate
+      const actuals = item.actualValues || [];
+      const forecasts = getForecastValuesForItem(item, forecastPeriods);
+      const combined = [...actuals, ...forecasts];
+      
+      // Aggregate to years
+      const yearlyValues = [];
+      for (let i = 0; i < combined.length; i += 12) {
+        const yearSum = combined.slice(i, i + 12).reduce((sum, val) => sum + val, 0);
+        yearlyValues.push(yearSum);
+      }
+      allValues = yearlyValues;
     }
+    
+    // Apply date range filter
+    const values = allValues.slice(startIndex, actualEndIndex);
     
     data.datasets.push({
       label: item.name,
@@ -7215,12 +7305,12 @@ function populateDateRangeDropdowns(periodType) {
     if (dateLabels.length > 0) {
       // Parse the last actual date and start forecasts from the next month
       const lastActual = dateLabels[dateLabels.length - 1];
-      const match = lastActual.match(/(\w+)\s+(\d+)/);
+      // Handle formats like "Jan 2025" or "Jan, 2025"
+      const match = lastActual.match(/(\w+)[,\s]+(\d{4})/);
       if (match) {
         const monthName = match[1];
         const year = parseInt(match[2]);
-        const monthIndex = new Date(`${monthName} 1, ${year}`).getMonth();
-        baseDate = new Date(year, monthIndex, 1);
+        baseDate = new Date(`${monthName} 1, ${year}`);
         baseDate.setMonth(baseDate.getMonth() + 1); // Start from next month
       }
     }
@@ -7244,12 +7334,12 @@ function populateDateRangeDropdowns(periodType) {
     if (dateColumns && dateColumns.length > 0) {
       // Parse first actual date
       const firstActual = dateColumns[0];
-      const match = firstActual.match(/(\w+)\s+(\d+)/);
+      // Handle formats like "Jan 2025" or "Jan, 2025"
+      const match = firstActual.match(/(\w+)[,\s]+(\d{4})/);
       if (match) {
         const monthName = match[1];
         const year = parseInt(match[2]);
-        const monthIndex = new Date(`${monthName} 1, ${year}`).getMonth();
-        baseDate = new Date(year, monthIndex, 1);
+        baseDate = new Date(`${monthName} 1, ${year}`);
       }
     }
     
@@ -7271,9 +7361,9 @@ function populateDateRangeDropdowns(periodType) {
     if (dateColumns && dateColumns.length > 0) {
       // Parse first actual date to get starting year
       const firstActual = dateColumns[0];
-      const match = firstActual.match(/(\d+)/);
+      const match = firstActual.match(/(\d{4})/);
       if (match) {
-        baseYear = parseInt(match[0]);
+        baseYear = parseInt(match[1]);
       }
     }
     
