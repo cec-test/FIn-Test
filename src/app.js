@@ -1958,36 +1958,8 @@ function populateLineItemDropdowns() {
 }
 
 function updateLineChart(periodType) {
-  const chartContainer = document.getElementById(`${periodType}LineChart`);
-  if (!chartContainer) return;
-  
-  // Get selected line items
-  const selectedItems = [];
-  for (let i = 1; i <= 3; i++) {
-    const select = document.getElementById(`${periodType}LineItem${i}`);
-    if (select && select.value) {
-      const [statementType, itemName] = select.value.split('::');
-      const lineItem = uploadedLineItems[statementType]?.find(item => item.name === itemName);
-      if (lineItem) {
-        selectedItems.push({
-          name: itemName,
-          statement: statementType,
-          actualValues: lineItem.actualValues || []
-        });
-      }
-    }
-  }
-  
-  if (selectedItems.length === 0) {
-    chartContainer.innerHTML = '<div class="loading">Select line items to display chart</div>';
-    return;
-  }
-  
-  // Generate chart data
-  const chartData = generateChartData(periodType, selectedItems);
-  
-  // Create SVG chart
-  createSVGChart(chartContainer, chartData, periodType);
+  // Use the date range aware version
+  updateLineChartWithRange(periodType);
 }
 
 function generateChartData(periodType, selectedItems) {
@@ -7054,6 +7026,11 @@ function expandChart(periodType) {
   expandedStart.value = startPeriod || '';
   expandedEnd.value = endPeriod || '';
   
+  // Add change listeners to expanded modal dropdowns
+  expandedItem1.onchange = updateExpandedChart;
+  expandedItem2.onchange = updateExpandedChart;
+  expandedItem3.onchange = updateExpandedChart;
+  
   // Update the expanded chart
   updateExpandedChart();
   
@@ -7067,37 +7044,147 @@ function expandChart(periodType) {
 function updateExpandedChart() {
   if (!currentExpandedPeriodType) return;
   
-  // Get selected items and date range from expanded modal
-  const item1 = document.getElementById('expandedLineItem1').value;
-  const item2 = document.getElementById('expandedLineItem2').value;
-  const item3 = document.getElementById('expandedLineItem3').value;
+  const chartContainer = document.getElementById('expandedLineChart');
+  if (!chartContainer) return;
+  
+  // Get selected line items
+  const selectedItems = [];
+  const colors = ['#3498db', '#e74c3c', '#27ae60'];
+  
+  for (let i = 1; i <= 3; i++) {
+    const select = document.getElementById(`expandedLineItem${i}`);
+    if (select && select.value) {
+      const [statementType, itemName] = select.value.split('::');
+      const lineItem = uploadedLineItems[statementType]?.find(item => item.name === itemName);
+      if (lineItem) {
+        selectedItems.push({
+          name: itemName,
+          statement: statementType,
+          actualValues: lineItem.actualValues || [],
+          color: colors[i - 1]
+        });
+      }
+    }
+  }
+  
+  if (selectedItems.length === 0) {
+    chartContainer.innerHTML = '<div class="loading">Select line items to display chart</div>';
+    return;
+  }
+  
+  // Get date range
   const startPeriod = document.getElementById('expandedChartStartPeriod').value;
   const endPeriod = document.getElementById('expandedChartEndPeriod').value;
-  
-  // Convert to integers if values exist
   const start = startPeriod === '' ? 0 : parseInt(startPeriod);
   const end = endPeriod === '' ? null : parseInt(endPeriod);
   
-  // Render chart in expanded view
-  renderLineChart('expanded', currentExpandedPeriodType, item1, item2, item3, start, end);
+  // Generate chart data with date range
+  const chartData = generateChartDataWithRange(currentExpandedPeriodType, selectedItems, start, end);
+  
+  // Create SVG chart
+  createSVGChart(chartContainer, chartData, currentExpandedPeriodType);
 }
 
 /**
  * Update chart with date range (for inline charts)
  */
 function updateChart(periodType) {
-  const item1 = document.getElementById(`${periodType}LineItem1`).value;
-  const item2 = document.getElementById(`${periodType}LineItem2`).value;
-  const item3 = document.getElementById(`${periodType}LineItem3`).value;
-  const startPeriod = document.getElementById(`${periodType}ChartStartPeriod`).value;
-  const endPeriod = document.getElementById(`${periodType}ChartEndPeriod`).value;
+  // Just call the existing updateLineChart with date range consideration
+  updateLineChartWithRange(periodType);
+}
+
+/**
+ * Update line chart with date range support
+ */
+function updateLineChartWithRange(periodType) {
+  const chartContainer = document.getElementById(`${periodType}LineChart`);
+  if (!chartContainer) return;
   
-  // Convert to integers if values exist
-  const start = startPeriod === '' ? 0 : parseInt(startPeriod);
-  const end = endPeriod === '' ? null : parseInt(endPeriod);
+  // Get selected line items
+  const selectedItems = [];
+  const colors = ['#3498db', '#e74c3c', '#27ae60'];
   
-  // Render chart with date range
-  renderLineChart(periodType, periodType, item1, item2, item3, start, end);
+  for (let i = 1; i <= 3; i++) {
+    const select = document.getElementById(`${periodType}LineItem${i}`);
+    if (select && select.value) {
+      const [statementType, itemName] = select.value.split('::');
+      const lineItem = uploadedLineItems[statementType]?.find(item => item.name === itemName);
+      if (lineItem) {
+        selectedItems.push({
+          name: itemName,
+          statement: statementType,
+          actualValues: lineItem.actualValues || [],
+          color: colors[i - 1]
+        });
+      }
+    }
+  }
+  
+  if (selectedItems.length === 0) {
+    chartContainer.innerHTML = '<div class="loading">Select line items to display chart</div>';
+    return;
+  }
+  
+  // Get date range
+  const startPeriod = document.getElementById(`${periodType}ChartStartPeriod`)?.value;
+  const endPeriod = document.getElementById(`${periodType}ChartEndPeriod`)?.value;
+  const start = startPeriod === '' || !startPeriod ? 0 : parseInt(startPeriod);
+  const end = endPeriod === '' || !endPeriod ? null : parseInt(endPeriod);
+  
+  // Generate chart data with date range
+  const chartData = generateChartDataWithRange(periodType, selectedItems, start, end);
+  
+  // Create SVG chart
+  createSVGChart(chartContainer, chartData, periodType);
+}
+
+/**
+ * Generate chart data with date range filtering
+ */
+function generateChartDataWithRange(periodType, selectedItems, startIndex, endIndex) {
+  const data = {
+    labels: [],
+    datasets: []
+  };
+  
+  // Generate labels based on period type
+  let allLabels = [];
+  if (periodType === 'monthly') {
+    allLabels = (dateColumns || []).slice();
+  } else {
+    // For quarterly/yearly, get aggregated labels
+    const firstItem = selectedItems[0];
+    if (firstItem && firstItem.actualValues.length > 0) {
+      const agg = aggregateActuals(firstItem.statement, firstItem.actualValues);
+      const out = periodType === 'quarterly' ? agg.toQuarterOutputs() : agg.toYearOutputs();
+      allLabels = out.labels || [];
+    }
+  }
+  
+  // Apply date range filter
+  const actualEndIndex = endIndex !== null ? endIndex + 1 : allLabels.length;
+  data.labels = allLabels.slice(startIndex, actualEndIndex);
+  
+  // Generate datasets for each selected item
+  selectedItems.forEach((item, index) => {
+    let values = [];
+    
+    if (periodType === 'monthly') {
+      values = (item.actualValues || []).slice(startIndex, actualEndIndex);
+    } else {
+      const agg = aggregateActuals(item.statement, item.actualValues);
+      const out = periodType === 'quarterly' ? agg.toQuarterOutputs() : agg.toYearOutputs();
+      values = (out.values || []).slice(startIndex, actualEndIndex);
+    }
+    
+    data.datasets.push({
+      label: item.name,
+      data: values,
+      color: item.color
+    });
+  });
+  
+  return data;
 }
 
 /**
