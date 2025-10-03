@@ -4273,6 +4273,29 @@ function showCreateScenarioModal() {
   document.getElementById('new-scenario-description').value = '';
   document.getElementById('scenario-source-current').checked = true;
   
+  // Populate copy existing dropdown with current scenarios
+  const copySelect = document.getElementById('scenario-copy-select');
+  if (copySelect) {
+    copySelect.innerHTML = '';
+    
+    // Add scenarios (excluding the one being created)
+    scenarios.forEach(scenario => {
+      const option = document.createElement('option');
+      option.value = scenario.id;
+      option.textContent = scenario.name;
+      copySelect.appendChild(option);
+    });
+    
+    // If no scenarios, add placeholder
+    if (scenarios.length === 0) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'No scenarios available';
+      option.disabled = true;
+      copySelect.appendChild(option);
+    }
+  }
+  
   document.getElementById('create-scenario-modal').style.display = 'block';
 }
 

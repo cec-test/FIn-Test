@@ -2504,14 +2504,15 @@
                 <div class="form-group" style="margin-top: 15px;">
                     <label>Start from:</label>
                     <div style="margin-top: 10px;">
-                        <div>
+                        <div style="margin-bottom: 8px;">
                             <input type="radio" id="scenario-source-current" name="scenario-source" value="current" checked>
-                            <label for="scenario-source-current">Current settings (Base Case)</label>
+                            <label for="scenario-source-current">Current settings</label>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 8px;">(Use active scenario's assumptions)</span>
                         </div>
-                        <div style="margin-top: 8px;">
+                        <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
                             <input type="radio" id="scenario-source-template" name="scenario-source" value="template">
-                            <label for="scenario-source-template">Template:</label>
-                            <select id="scenario-template-select" style="margin-left: 10px; padding: 5px;">
+                            <label for="scenario-source-template" style="margin: 0; min-width: 100px;">Template:</label>
+                            <select id="scenario-template-select" style="flex: 1; max-width: 250px;">
                                 <option value="best-case">Best Case</option>
                                 <option value="worst-case">Worst Case</option>
                                 <option value="high-growth">High Growth</option>
@@ -2519,12 +2520,15 @@
                                 <option value="recession">Recession</option>
                             </select>
                         </div>
-                        <div style="margin-top: 8px;">
+                        <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
                             <input type="radio" id="scenario-source-copy" name="scenario-source" value="copy">
-                            <label for="scenario-source-copy">Copy existing:</label>
-                            <select id="scenario-copy-select" style="margin-left: 10px; padding: 5px;">
+                            <label for="scenario-source-copy" style="margin: 0; min-width: 100px;">Copy existing:</label>
+                            <select id="scenario-copy-select" style="flex: 1; max-width: 250px;">
                                 <!-- Populated dynamically -->
                             </select>
+                        </div>
+                        <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 0.85em; color: #666;">
+                            💡 <strong>Tip:</strong> "Copy existing" lets you duplicate a scenario you already created and customized.
                         </div>
                     </div>
                 </div>
