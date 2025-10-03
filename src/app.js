@@ -1951,6 +1951,9 @@ function populateLineItemDropdowns() {
         select.addEventListener('change', () => updateLineChart(periodType));
       }
     }
+    
+    // Populate date range dropdowns for this period type
+    populateDateRangeDropdowns(periodType);
   });
 }
 
@@ -7020,21 +7023,14 @@ function expandChart(periodType) {
   const startPeriod = document.getElementById(`${periodType}ChartStartPeriod`).value;
   const endPeriod = document.getElementById(`${periodType}ChartEndPeriod`).value;
   
-  // Set expanded modal values
-  document.getElementById('expandedLineItem1').value = item1;
-  document.getElementById('expandedLineItem2').value = item2;
-  document.getElementById('expandedLineItem3').value = item3;
-  document.getElementById('expandedChartStartPeriod').value = startPeriod || '0';
-  document.getElementById('expandedChartEndPeriod').value = endPeriod || '';
-  
-  // Copy options to expanded dropdowns
+  // Copy options to expanded dropdowns (line items)
   const expandedItem1 = document.getElementById('expandedLineItem1');
   const expandedItem2 = document.getElementById('expandedLineItem2');
   const expandedItem3 = document.getElementById('expandedLineItem3');
   
   const sourceItem1 = document.getElementById(`${periodType}LineItem1`);
   
-  // Clear and populate
+  // Clear and populate line items
   expandedItem1.innerHTML = sourceItem1.innerHTML;
   expandedItem2.innerHTML = sourceItem1.innerHTML;
   expandedItem3.innerHTML = sourceItem1.innerHTML;
@@ -7043,6 +7039,20 @@ function expandChart(periodType) {
   expandedItem1.value = item1;
   expandedItem2.value = item2;
   expandedItem3.value = item3;
+  
+  // Copy date range options to expanded dropdowns
+  const expandedStart = document.getElementById('expandedChartStartPeriod');
+  const expandedEnd = document.getElementById('expandedChartEndPeriod');
+  const sourceStart = document.getElementById(`${periodType}ChartStartPeriod`);
+  const sourceEnd = document.getElementById(`${periodType}ChartEndPeriod`);
+  
+  // Clear and populate date ranges
+  expandedStart.innerHTML = sourceStart.innerHTML;
+  expandedEnd.innerHTML = sourceEnd.innerHTML;
+  
+  // Set date range values
+  expandedStart.value = startPeriod || '';
+  expandedEnd.value = endPeriod || '';
   
   // Update the expanded chart
   updateExpandedChart();
@@ -7061,11 +7071,15 @@ function updateExpandedChart() {
   const item1 = document.getElementById('expandedLineItem1').value;
   const item2 = document.getElementById('expandedLineItem2').value;
   const item3 = document.getElementById('expandedLineItem3').value;
-  const startPeriod = parseInt(document.getElementById('expandedChartStartPeriod').value) || 0;
-  const endPeriod = parseInt(document.getElementById('expandedChartEndPeriod').value) || null;
+  const startPeriod = document.getElementById('expandedChartStartPeriod').value;
+  const endPeriod = document.getElementById('expandedChartEndPeriod').value;
+  
+  // Convert to integers if values exist
+  const start = startPeriod === '' ? 0 : parseInt(startPeriod);
+  const end = endPeriod === '' ? null : parseInt(endPeriod);
   
   // Render chart in expanded view
-  renderLineChart('expanded', currentExpandedPeriodType, item1, item2, item3, startPeriod, endPeriod);
+  renderLineChart('expanded', currentExpandedPeriodType, item1, item2, item3, start, end);
 }
 
 /**
@@ -7075,9 +7089,82 @@ function updateChart(periodType) {
   const item1 = document.getElementById(`${periodType}LineItem1`).value;
   const item2 = document.getElementById(`${periodType}LineItem2`).value;
   const item3 = document.getElementById(`${periodType}LineItem3`).value;
-  const startPeriod = parseInt(document.getElementById(`${periodType}ChartStartPeriod`).value) || 0;
-  const endPeriod = parseInt(document.getElementById(`${periodType}ChartEndPeriod`).value) || null;
+  const startPeriod = document.getElementById(`${periodType}ChartStartPeriod`).value;
+  const endPeriod = document.getElementById(`${periodType}ChartEndPeriod`).value;
+  
+  // Convert to integers if values exist
+  const start = startPeriod === '' ? 0 : parseInt(startPeriod);
+  const end = endPeriod === '' ? null : parseInt(endPeriod);
   
   // Render chart with date range
-  renderLineChart(periodType, periodType, item1, item2, item3, startPeriod, endPeriod);
+  renderLineChart(periodType, periodType, item1, item2, item3, start, end);
+}
+
+/**
+ * Populate date range dropdowns with MMM YYYY formatted dates
+ */
+function populateDateRangeDropdowns(periodType) {
+  const startSelect = document.getElementById(`${periodType}ChartStartPeriod`);
+  const endSelect = document.getElementById(`${periodType}ChartEndPeriod`);
+  
+  if (!startSelect || !endSelect) return;
+  
+  // Clear existing options
+  startSelect.innerHTML = '<option value="">All periods</option>';
+  endSelect.innerHTML = '<option value="">End</option>';
+  
+  // Get the appropriate date labels based on period type
+  let dateLabels = [];
+  
+  if (periodType === 'monthly') {
+    // Use actual date columns from uploaded data
+    dateLabels = dateColumns || [];
+    
+    // If no actuals, generate forecast dates
+    if (dateLabels.length === 0) {
+      const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+      const baseDate = new Date();
+      for (let i = 0; i < forecastPeriods; i++) {
+        const date = new Date(baseDate);
+        date.setMonth(baseDate.getMonth() + i);
+        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+        const year = date.getFullYear();
+        dateLabels.push(`${monthName} ${year}`);
+      }
+    }
+  } else if (periodType === 'quarterly') {
+    // Generate quarterly labels
+    const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+    const quarters = Math.ceil(forecastPeriods / 3);
+    const baseDate = new Date();
+    for (let i = 0; i < quarters; i++) {
+      const date = new Date(baseDate);
+      date.setMonth(baseDate.getMonth() + (i * 3));
+      const year = date.getFullYear();
+      const quarter = Math.floor(date.getMonth() / 3) + 1;
+      dateLabels.push(`Q${quarter} ${year}`);
+    }
+  } else if (periodType === 'yearly') {
+    // Generate yearly labels
+    const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+    const years = Math.ceil(forecastPeriods / 12);
+    const baseDate = new Date();
+    for (let i = 0; i < years; i++) {
+      const year = baseDate.getFullYear() + i;
+      dateLabels.push(`${year}`);
+    }
+  }
+  
+  // Populate both dropdowns with the labels
+  dateLabels.forEach((label, index) => {
+    const startOption = document.createElement('option');
+    startOption.value = index;
+    startOption.textContent = label;
+    startSelect.appendChild(startOption);
+    
+    const endOption = document.createElement('option');
+    endOption.value = index;
+    endOption.textContent = label;
+    endSelect.appendChild(endOption);
+  });
 }

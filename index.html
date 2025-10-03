@@ -2211,9 +2211,13 @@
                                         <div class="chart-date-range">
                                             <label style="font-size: 0.85em; color: #666;">Date Range:</label>
                                             <div style="display: flex; gap: 8px; align-items: center;">
-                                                <input type="number" id="monthlyChartStartPeriod" placeholder="Start" min="0" style="width: 70px; padding: 4px 8px;" value="0">
+                                                <select id="monthlyChartStartPeriod" style="padding: 4px 8px;">
+                                                    <option value="">All periods</option>
+                                                </select>
                                                 <span>to</span>
-                                                <input type="number" id="monthlyChartEndPeriod" placeholder="End" min="1" style="width: 70px; padding: 4px 8px;">
+                                                <select id="monthlyChartEndPeriod" style="padding: 4px 8px;">
+                                                    <option value="">End</option>
+                                                </select>
                                                 <button class="btn-secondary" onclick="updateChart('monthly')" style="padding: 4px 12px; font-size: 0.85em;">Update</button>
                                             </div>
                                         </div>
@@ -2275,9 +2279,13 @@
                                         <div class="chart-date-range">
                                             <label style="font-size: 0.85em; color: #666;">Date Range:</label>
                                             <div style="display: flex; gap: 8px; align-items: center;">
-                                                <input type="number" id="quarterlyChartStartPeriod" placeholder="Start" min="0" style="width: 70px; padding: 4px 8px;" value="0">
+                                                <select id="quarterlyChartStartPeriod" style="padding: 4px 8px;">
+                                                    <option value="">All periods</option>
+                                                </select>
                                                 <span>to</span>
-                                                <input type="number" id="quarterlyChartEndPeriod" placeholder="End" min="1" style="width: 70px; padding: 4px 8px;">
+                                                <select id="quarterlyChartEndPeriod" style="padding: 4px 8px;">
+                                                    <option value="">End</option>
+                                                </select>
                                                 <button class="btn-secondary" onclick="updateChart('quarterly')" style="padding: 4px 12px; font-size: 0.85em;">Update</button>
                                             </div>
                                         </div>
@@ -2339,9 +2347,13 @@
                                         <div class="chart-date-range">
                                             <label style="font-size: 0.85em; color: #666;">Date Range:</label>
                                             <div style="display: flex; gap: 8px; align-items: center;">
-                                                <input type="number" id="yearlyChartStartPeriod" placeholder="Start" min="0" style="width: 70px; padding: 4px 8px;" value="0">
+                                                <select id="yearlyChartStartPeriod" style="padding: 4px 8px;">
+                                                    <option value="">All periods</option>
+                                                </select>
                                                 <span>to</span>
-                                                <input type="number" id="yearlyChartEndPeriod" placeholder="End" min="1" style="width: 70px; padding: 4px 8px;">
+                                                <select id="yearlyChartEndPeriod" style="padding: 4px 8px;">
+                                                    <option value="">End</option>
+                                                </select>
                                                 <button class="btn-secondary" onclick="updateChart('yearly')" style="padding: 4px 12px; font-size: 0.85em;">Update</button>
                                             </div>
                                         </div>
@@ -2729,9 +2741,13 @@
                     <div class="chart-date-range">
                         <label style="font-size: 0.85em; color: #666;">Date Range:</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="number" id="expandedChartStartPeriod" placeholder="Start" min="0" style="width: 70px; padding: 4px 8px;" value="0">
+                            <select id="expandedChartStartPeriod" style="padding: 4px 8px;">
+                                <option value="">All periods</option>
+                            </select>
                             <span>to</span>
-                            <input type="number" id="expandedChartEndPeriod" placeholder="End" min="1" style="width: 70px; padding: 4px 8px;">
+                            <select id="expandedChartEndPeriod" style="padding: 4px 8px;">
+                                <option value="">End</option>
+                            </select>
                             <button class="btn-secondary" onclick="updateExpandedChart()" style="padding: 4px 12px; font-size: 0.85em;">Update</button>
                         </div>
                     </div>
