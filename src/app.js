@@ -241,6 +241,12 @@ function showTab(tabName, clickedBtn) {
   if (selectedContent) selectedContent.classList.add('active');
 
   if (clickedBtn) clickedBtn.classList.add('active');
+  
+  // Update scenarios tab when shown
+  if (tabName === 'scenarios') {
+    updateScenariosComparisonTab();
+    generateScenariosComparison();
+  }
 }
 
 /**
@@ -4222,11 +4228,35 @@ function handleDeleteScenario(scenarioId) {
   const scenario = getScenario(scenarioId);
   if (!scenario) return;
   
-  if (confirm(`Are you sure you want to delete the scenario "${scenario.name}"?`)) {
+  // Show custom confirmation modal
+  const modal = document.getElementById('confirm-delete-modal');
+  const message = document.getElementById('confirm-delete-message');
+  const confirmBtn = document.getElementById('confirm-delete-btn');
+  
+  if (!modal || !message || !confirmBtn) {
+    // Fallback to browser confirm
+    if (confirm(`Are you sure you want to delete the scenario "${scenario.name}"?`)) {
+      if (deleteScenario(scenarioId)) {
+        updateScenariosConfigUI();
+      }
+    }
+    return;
+  }
+  
+  message.textContent = `Are you sure you want to delete "${scenario.name}"?`;
+  
+  // Remove old event listeners and add new one
+  const newConfirmBtn = confirmBtn.cloneNode(true);
+  confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+  
+  newConfirmBtn.onclick = function() {
     if (deleteScenario(scenarioId)) {
       updateScenariosConfigUI();
+      closeModal('confirm-delete-modal');
     }
-  }
+  };
+  
+  modal.style.display = 'block';
 }
 
 /**
@@ -6783,20 +6813,17 @@ function handleLoadTemplate(templateKey) {
   const template = scenarioTemplates[templateKey];
   if (!template) return;
   
-  const name = prompt(`Enter name for new scenario:`, template.name);
-  if (!name) return;
+  // Close template modal and open create modal with pre-filled template
+  closeModal('load-template-modal');
   
-  const newId = createScenario(name, {
-    fromTemplate: templateKey,
-    description: template.description
-  });
+  // Pre-fill create scenario modal
+  document.getElementById('new-scenario-name').value = template.name;
+  document.getElementById('new-scenario-description').value = template.description;
+  document.getElementById('scenario-source-template').checked = true;
+  document.getElementById('scenario-template-select').value = templateKey;
   
-  if (newId) {
-    closeModal('load-template-modal');
-    updateScenariosConfigUI();
-    setActiveScenario(newId);
-    updateForecast();
-  }
+  // Show create modal
+  document.getElementById('create-scenario-modal').style.display = 'block';
 }
 
 /**
