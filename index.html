@@ -2716,49 +2716,46 @@
 
     <!-- Expanded Chart Modal -->
     <div id="expanded-chart-modal" class="modal">
-        <div class="modal-content" style="max-width: 90%; max-height: 90vh; width: 1200px;">
-            <div class="modal-header">
-                <h3 id="expanded-chart-title">Chart</h3>
+        <div class="modal-content" style="max-width: 95%; max-height: 95vh; width: 1400px;">
+            <div class="modal-header" style="padding: 12px 20px;">
+                <h3 id="expanded-chart-title" style="margin: 0; font-size: 1.2em;">Chart</h3>
                 <span class="close-modal" onclick="closeModal('expanded-chart-modal')">&times;</span>
             </div>
-            <div class="modal-body" style="padding: 20px;">
-                <!-- Chart controls -->
-                <div class="chart-controls" style="margin-bottom: 20px;">
-                    <div class="chart-control-item">
+            <div class="modal-body" style="padding: 12px 20px 20px 20px;">
+                <!-- Chart controls - compact layout -->
+                <div class="chart-controls" style="margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center;">
+                    <div class="chart-control-item" style="gap: 6px;">
                         <div class="color-indicator" style="background-color: #3498db;"></div>
-                        <select id="expandedLineItem1">
+                        <select id="expandedLineItem1" style="font-size: 0.85em; padding: 4px 8px;">
                             <option value="">Select line item 1</option>
                         </select>
                     </div>
-                    <div class="chart-control-item">
+                    <div class="chart-control-item" style="gap: 6px;">
                         <div class="color-indicator" style="background-color: #e74c3c;"></div>
-                        <select id="expandedLineItem2">
+                        <select id="expandedLineItem2" style="font-size: 0.85em; padding: 4px 8px;">
                             <option value="">Select line item 2</option>
                         </select>
                     </div>
-                    <div class="chart-control-item">
+                    <div class="chart-control-item" style="gap: 6px;">
                         <div class="color-indicator" style="background-color: #27ae60;"></div>
-                        <select id="expandedLineItem3">
+                        <select id="expandedLineItem3" style="font-size: 0.85em; padding: 4px 8px;">
                             <option value="">Select line item 3</option>
                         </select>
                     </div>
-                    <div class="chart-date-range">
-                        <label style="font-size: 0.85em; color: #666;">Date Range:</label>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <select id="expandedChartStartPeriod" style="padding: 4px 8px;">
-                                <option value="">All periods</option>
-                            </select>
-                            <span>to</span>
-                            <select id="expandedChartEndPeriod" style="padding: 4px 8px;">
-                                <option value="">End</option>
-                            </select>
-                            <button class="btn-secondary" onclick="updateExpandedChart()" style="padding: 4px 12px; font-size: 0.85em;">Update</button>
-                        </div>
+                    <div class="chart-date-range" style="display: flex; gap: 6px; align-items: center; white-space: nowrap;">
+                        <select id="expandedChartStartPeriod" style="padding: 4px 8px; font-size: 0.85em; min-width: 100px;">
+                            <option value="">All periods</option>
+                        </select>
+                        <span style="font-size: 0.85em; color: #666;">to</span>
+                        <select id="expandedChartEndPeriod" style="padding: 4px 8px; font-size: 0.85em; min-width: 100px;">
+                            <option value="">End</option>
+                        </select>
+                        <button class="btn-secondary" onclick="updateExpandedChart()" style="padding: 4px 12px; font-size: 0.85em;">Update</button>
                     </div>
                 </div>
                 
-                <!-- Expanded chart -->
-                <div id="expandedLineChart" class="line-chart" style="height: 600px; width: 100%;">
+                <!-- Expanded chart - taller and fully visible -->
+                <div id="expandedLineChart" class="line-chart" style="height: calc(95vh - 140px); width: 100%; min-height: 500px;">
                     <div class="loading">Select line items to display chart</div>
                 </div>
             </div>

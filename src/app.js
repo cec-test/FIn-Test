@@ -7188,7 +7188,7 @@ function generateChartDataWithRange(periodType, selectedItems, startIndex, endIn
 }
 
 /**
- * Populate date range dropdowns with MMM YYYY formatted dates
+ * Populate date range dropdowns with MMM YYYY formatted dates (actuals + forecasts)
  */
 function populateDateRangeDropdowns(periodType) {
   const startSelect = document.getElementById(`${periodType}ChartStartPeriod`);
@@ -7204,26 +7204,55 @@ function populateDateRangeDropdowns(periodType) {
   let dateLabels = [];
   
   if (periodType === 'monthly') {
-    // Use actual date columns from uploaded data
-    dateLabels = dateColumns || [];
+    // Start with actual date columns from uploaded data
+    dateLabels = (dateColumns || []).slice();
     
-    // If no actuals, generate forecast dates
-    if (dateLabels.length === 0) {
-      const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
-      const baseDate = new Date();
-      for (let i = 0; i < forecastPeriods; i++) {
-        const date = new Date(baseDate);
-        date.setMonth(baseDate.getMonth() + i);
-        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-        const year = date.getFullYear();
-        dateLabels.push(`${monthName} ${year}`);
+    // Add forecast dates to the end
+    const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+    
+    // Determine the last actual date or start from current date
+    let baseDate = new Date();
+    if (dateLabels.length > 0) {
+      // Parse the last actual date and start forecasts from the next month
+      const lastActual = dateLabels[dateLabels.length - 1];
+      const match = lastActual.match(/(\w+)\s+(\d+)/);
+      if (match) {
+        const monthName = match[1];
+        const year = parseInt(match[2]);
+        const monthIndex = new Date(`${monthName} 1, ${year}`).getMonth();
+        baseDate = new Date(year, monthIndex, 1);
+        baseDate.setMonth(baseDate.getMonth() + 1); // Start from next month
       }
     }
+    
+    // Generate forecast dates
+    for (let i = 0; i < forecastPeriods; i++) {
+      const date = new Date(baseDate);
+      date.setMonth(baseDate.getMonth() + i);
+      const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+      const year = date.getFullYear();
+      dateLabels.push(`${monthName} ${year}`);
+    }
   } else if (periodType === 'quarterly') {
-    // Generate quarterly labels
+    // For quarterly, combine actuals + forecasts
+    const actualsCount = dateColumns?.length || 0;
     const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
-    const quarters = Math.ceil(forecastPeriods / 3);
-    const baseDate = new Date();
+    const totalMonths = actualsCount + forecastPeriods;
+    const quarters = Math.ceil(totalMonths / 3);
+    
+    let baseDate = new Date();
+    if (dateColumns && dateColumns.length > 0) {
+      // Parse first actual date
+      const firstActual = dateColumns[0];
+      const match = firstActual.match(/(\w+)\s+(\d+)/);
+      if (match) {
+        const monthName = match[1];
+        const year = parseInt(match[2]);
+        const monthIndex = new Date(`${monthName} 1, ${year}`).getMonth();
+        baseDate = new Date(year, monthIndex, 1);
+      }
+    }
+    
     for (let i = 0; i < quarters; i++) {
       const date = new Date(baseDate);
       date.setMonth(baseDate.getMonth() + (i * 3));
@@ -7232,13 +7261,24 @@ function populateDateRangeDropdowns(periodType) {
       dateLabels.push(`Q${quarter} ${year}`);
     }
   } else if (periodType === 'yearly') {
-    // Generate yearly labels
+    // For yearly, combine actuals + forecasts
+    const actualsCount = dateColumns?.length || 0;
     const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
-    const years = Math.ceil(forecastPeriods / 12);
-    const baseDate = new Date();
+    const totalMonths = actualsCount + forecastPeriods;
+    const years = Math.ceil(totalMonths / 12);
+    
+    let baseYear = new Date().getFullYear();
+    if (dateColumns && dateColumns.length > 0) {
+      // Parse first actual date to get starting year
+      const firstActual = dateColumns[0];
+      const match = firstActual.match(/(\d+)/);
+      if (match) {
+        baseYear = parseInt(match[0]);
+      }
+    }
+    
     for (let i = 0; i < years; i++) {
-      const year = baseDate.getFullYear() + i;
-      dateLabels.push(`${year}`);
+      dateLabels.push(`${baseYear + i}`);
     }
   }
   
