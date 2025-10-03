@@ -6903,83 +6903,85 @@ function generateScenariosComparison() {
     return;
   }
   
-  // Build comparison table
-  let html = '<table class="comparison-table" style="width: 100%; border-collapse: collapse; margin-top: 20px;">';
+  // Build comparison using card layout (more compact)
+  let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">';
   
-  // Header row
-  html += '<thead><tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">';
-  html += '<th style="padding: 12px; text-align: left; border-right: 1px solid #ddd;">Assumption</th>';
   selectedScenarios.forEach(scenario => {
-    html += `<th style="padding: 12px; text-align: left;">${scenario.name}</th>`;
+    const isActive = scenario.id === activeScenarioId;
+    
+    html += `
+      <div style="background: ${isActive ? '#e3f2fd' : 'white'}; border: 2px solid ${isActive ? '#2196f3' : '#e0e0e0'}; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 2px solid ${isActive ? '#2196f3' : '#e0e0e0'};">
+          <h3 style="margin: 0; color: #333;">${scenario.name}</h3>
+          ${isActive ? '<span style="background: #2196f3; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">ACTIVE</span>' : ''}
+        </div>
+        
+        ${scenario.description ? `<p style="font-size: 0.9em; color: #666; margin-bottom: 15px; font-style: italic;">${scenario.description}</p>` : ''}
+        
+        <div style="margin-bottom: 20px;">
+          <h4 style="color: #2196f3; margin-bottom: 10px; font-size: 0.95em;">📊 P&L Assumptions</h4>
+          <div style="display: grid; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee;">
+              <span style="color: #666; font-size: 0.9em;">Method:</span>
+              <strong style="font-size: 0.9em;">${scenario.pnl.forecastMethod || 'N/A'}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee;">
+              <span style="color: #666; font-size: 0.9em;">Growth Rate:</span>
+              <strong style="font-size: 0.9em;">${scenario.pnl.growthRate}%</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee;">
+              <span style="color: #666; font-size: 0.9em;">Periods:</span>
+              <strong style="font-size: 0.9em;">${scenario.pnl.forecastPeriods} months</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 6px 0;">
+              <span style="color: #666; font-size: 0.9em;">Seasonality:</span>
+              <strong style="font-size: 0.9em;">${scenario.pnl.seasonalityPreset || 'none'}</strong>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <h4 style="color: #4caf50; margin-bottom: 10px; font-size: 0.95em;">💰 Balance Sheet</h4>
+          <div style="display: grid; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee;">
+              <span style="color: #666; font-size: 0.9em;">DSO:</span>
+              <strong style="font-size: 0.9em;">${scenario.balanceSheet.dso} days</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee;">
+              <span style="color: #666; font-size: 0.9em;">DPO:</span>
+              <strong style="font-size: 0.9em;">${scenario.balanceSheet.dpo} days</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee;">
+              <span style="color: #666; font-size: 0.9em;">DIO:</span>
+              <strong style="font-size: 0.9em;">${scenario.balanceSheet.dio} days</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee;">
+              <span style="color: #666; font-size: 0.9em;">Depreciation:</span>
+              <strong style="font-size: 0.9em;">${scenario.balanceSheet.depreciationRate}%</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee;">
+              <span style="color: #666; font-size: 0.9em;">CapEx:</span>
+              <strong style="font-size: 0.9em;">${scenario.balanceSheet.capexPercentage}%</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 6px 0;">
+              <span style="color: #666; font-size: 0.9em;">Cash Target:</span>
+              <strong style="font-size: 0.9em;">${scenario.balanceSheet.cashTarget} days</strong>
+            </div>
+          </div>
+        </div>
+        
+        ${!isActive ? `<button class="btn-secondary" onclick="setActiveScenario('${scenario.id}'); updateForecast();" style="width: 100%; margin-top: 15px;">Make Active</button>` : ''}
+      </div>
+    `;
   });
-  html += '</tr></thead><tbody>';
   
-  // P&L Assumptions
-  html += '<tr style="background: #e3f2fd;"><td colspan="' + (selectedScenarios.length + 1) + '" style="padding: 8px; font-weight: bold;">📊 P&L Assumptions</td></tr>';
-  
-  const pnlMetrics = [
-    { key: 'forecastPeriods', label: 'Forecast Periods', suffix: ' months' },
-    { key: 'forecastMethod', label: 'Forecast Method', suffix: '' },
-    { key: 'growthRate', label: 'Growth Rate', suffix: '%' },
-    { key: 'seasonalityPreset', label: 'Seasonality', suffix: '' }
-  ];
-  
-  pnlMetrics.forEach(metric => {
-    html += '<tr style="border-bottom: 1px solid #eee;">';
-    html += `<td style="padding: 10px; border-right: 1px solid #ddd; font-weight: 500;">${metric.label}</td>`;
-    selectedScenarios.forEach(scenario => {
-      const value = scenario.pnl[metric.key] !== undefined ? scenario.pnl[metric.key] : 'N/A';
-      html += `<td style="padding: 10px;">${value}${metric.suffix}</td>`;
-    });
-    html += '</tr>';
-  });
-  
-  // Balance Sheet Assumptions
-  html += '<tr style="background: #e8f5e9;"><td colspan="' + (selectedScenarios.length + 1) + '" style="padding: 8px; font-weight: bold;">💰 Balance Sheet Assumptions</td></tr>';
-  
-  const bsMetrics = [
-    { key: 'dso', label: 'Days Sales Outstanding', suffix: ' days' },
-    { key: 'dpo', label: 'Days Payable Outstanding', suffix: ' days' },
-    { key: 'dio', label: 'Days Inventory Outstanding', suffix: ' days' },
-    { key: 'depreciationRate', label: 'Depreciation Rate (annual)', suffix: '%' },
-    { key: 'capexPercentage', label: 'CapEx % of Revenue (annual)', suffix: '%' },
-    { key: 'dividendPolicy', label: 'Dividend Policy', suffix: '%' },
-    { key: 'cashTarget', label: 'Cash Target', suffix: ' days' }
-  ];
-  
-  bsMetrics.forEach(metric => {
-    html += '<tr style="border-bottom: 1px solid #eee;">';
-    html += `<td style="padding: 10px; border-right: 1px solid #ddd; font-weight: 500;">${metric.label}</td>`;
-    selectedScenarios.forEach(scenario => {
-      const value = scenario.balanceSheet[metric.key] !== undefined ? scenario.balanceSheet[metric.key] : 'N/A';
-      html += `<td style="padding: 10px;">${value}${metric.suffix}</td>`;
-    });
-    html += '</tr>';
-  });
-  
-  html += '</tbody></table>';
+  html += '</div>';
   
   tableContainer.innerHTML = html;
   
-  // Add scenario info cards
+  // Clear the links container since we integrated everything into the cards above
   if (linksContainer) {
-    let linksHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 20px;">';
-    
-    selectedScenarios.forEach(scenario => {
-      const isActive = scenario.id === activeScenarioId;
-      linksHtml += `
-        <div style="padding: 15px; background: ${isActive ? '#e3f2fd' : '#f8f9fa'}; border-radius: 8px; border: 2px solid ${isActive ? '#2196f3' : '#e0e0e0'};">
-          <h4 style="margin-bottom: 10px; color: #333;">${scenario.name} ${isActive ? '(Active)' : ''}</h4>
-          <p style="font-size: 0.85em; color: #666; margin-bottom: 10px;">${scenario.description || 'No description'}</p>
-          <button class="btn-secondary" onclick="setActiveScenario('${scenario.id}'); updateForecast();" style="width: 100%; margin-top: 5px;">
-            ${isActive ? '✓ Active' : 'Make Active'}
-          </button>
-        </div>
-      `;
-    });
-    
-    linksHtml += '</div>';
-    linksContainer.innerHTML = linksHtml;
+    linksContainer.innerHTML = '';
   }
 }
 
