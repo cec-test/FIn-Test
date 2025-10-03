@@ -4253,77 +4253,86 @@ class BalanceSheetCalculationEngine {
   }
 
   /**
-   * Accounts Receivable = (Revenue / 365) * DSO
+   * Accounts Receivable = (Annual Revenue / 365) * DSO
+   * Annualizes monthly revenue before applying DSO formula
    */
   calculateAccountsReceivable(mapping, pnlData) {
     if (!mapping || !mapping.pnlDriver) {
       return { value: 0, method: 'no_pnl_driver', note: 'No P&L driver mapped' };
     }
     
-    const revenue = this.getPnLValue(mapping.pnlDriver, pnlData);
-    if (revenue === null) {
+    const monthlyRevenue = this.getPnLValue(mapping.pnlDriver, pnlData);
+    if (monthlyRevenue === null) {
       return { value: 0, method: 'pnl_value_not_found', note: `P&L driver "${mapping.pnlDriver}" not found` };
     }
     
+    // Annualize monthly revenue for proper DSO calculation
+    const annualizedRevenue = monthlyRevenue * 12;
     const dso = this.assumptions.dso;
-    const arValue = (revenue / 365) * dso;
+    const arValue = (annualizedRevenue / 365) * dso;
     
     return {
       value: Math.max(0, arValue), // Don't allow negative AR
       method: 'days_sales_outstanding',
-      note: `${revenue.toLocaleString()} revenue / 365 * ${dso} DSO`,
+      note: `(${monthlyRevenue.toLocaleString()} monthly revenue × 12) / 365 × ${dso} DSO`,
       driver: mapping.pnlDriver,
-      driverValue: revenue
+      driverValue: monthlyRevenue
     };
   }
 
   /**
-   * Inventory = (COGS / 365) * DIO
+   * Inventory = (Annual COGS / 365) * DIO
+   * Annualizes monthly COGS before applying DIO formula
    */
   calculateInventory(mapping, pnlData) {
     if (!mapping || !mapping.pnlDriver) {
       return { value: 0, method: 'no_pnl_driver', note: 'No P&L driver mapped' };
     }
     
-    const cogs = this.getPnLValue(mapping.pnlDriver, pnlData);
-    if (cogs === null) {
+    const monthlyCogs = this.getPnLValue(mapping.pnlDriver, pnlData);
+    if (monthlyCogs === null) {
       return { value: 0, method: 'pnl_value_not_found', note: `P&L driver "${mapping.pnlDriver}" not found` };
     }
     
+    // Annualize monthly COGS for proper DIO calculation
+    const annualizedCogs = monthlyCogs * 12;
     const dio = this.assumptions.dio;
-    const inventoryValue = (cogs / 365) * dio;
+    const inventoryValue = (annualizedCogs / 365) * dio;
     
     return {
       value: Math.max(0, inventoryValue),
       method: 'days_inventory_outstanding',
-      note: `${cogs.toLocaleString()} COGS / 365 * ${dio} DIO`,
+      note: `(${monthlyCogs.toLocaleString()} monthly COGS × 12) / 365 × ${dio} DIO`,
       driver: mapping.pnlDriver,
-      driverValue: cogs
+      driverValue: monthlyCogs
     };
   }
 
   /**
-   * Accounts Payable = (Operating Expenses / 365) * DPO
+   * Accounts Payable = (Annual Operating Expenses / 365) * DPO
+   * Annualizes monthly OpEx before applying DPO formula
    */
   calculateAccountsPayable(mapping, pnlData) {
     if (!mapping || !mapping.pnlDriver) {
       return { value: 0, method: 'no_pnl_driver', note: 'No P&L driver mapped' };
     }
     
-    const opex = this.getPnLValue(mapping.pnlDriver, pnlData);
-    if (opex === null) {
+    const monthlyOpex = this.getPnLValue(mapping.pnlDriver, pnlData);
+    if (monthlyOpex === null) {
       return { value: 0, method: 'pnl_value_not_found', note: `P&L driver "${mapping.pnlDriver}" not found` };
     }
     
+    // Annualize monthly OpEx for proper DPO calculation
+    const annualizedOpex = monthlyOpex * 12;
     const dpo = this.assumptions.dpo;
-    const apValue = (opex / 365) * dpo;
+    const apValue = (annualizedOpex / 365) * dpo;
     
     return {
       value: Math.max(0, apValue),
       method: 'days_payable_outstanding',
-      note: `${opex.toLocaleString()} OpEx / 365 * ${dpo} DPO`,
+      note: `(${monthlyOpex.toLocaleString()} monthly OpEx × 12) / 365 × ${dpo} DPO`,
       driver: mapping.pnlDriver,
-      driverValue: opex
+      driverValue: monthlyOpex
     };
   }
 
@@ -4374,22 +4383,30 @@ class BalanceSheetCalculationEngine {
 
   /**
    * Property, Plant & Equipment = Previous + CapEx - Depreciation
+   * CapEx calculated as percentage of annualized revenue, then divided by 12 for monthly
+   * Depreciation calculated as annual rate applied to previous PPE, then divided by 12 for monthly
    */
   calculatePPE(mapping, pnlData, previousValue) {
-    const revenue = this.getPnLValue('total revenue', pnlData) || this.getPnLValue('revenue', pnlData) || 0;
-    const capex = revenue * (this.assumptions.capexPercentage / 100);
+    const monthlyRevenue = this.getPnLValue('total revenue', pnlData) || this.getPnLValue('revenue', pnlData) || 0;
+    
+    // CapEx: Apply annual percentage to annualized revenue, then get monthly portion
+    const annualizedRevenue = monthlyRevenue * 12;
+    const annualCapex = annualizedRevenue * (this.assumptions.capexPercentage / 100);
+    const monthlyCapex = annualCapex / 12;
+    
+    // Depreciation: From P&L if available, otherwise calculate from annual rate applied monthly
     const depreciation = this.getPnLValue('depreciation', pnlData) || 
-                        (previousValue?.value || 0) * (this.assumptions.depreciationRate / 100 / 12); // Monthly depreciation
+                        (previousValue?.value || 0) * (this.assumptions.depreciationRate / 100 / 12);
     const previousPPE = previousValue?.value || 0;
     
-    const newPPE = Math.max(0, previousPPE + capex - depreciation);
+    const newPPE = Math.max(0, previousPPE + monthlyCapex - depreciation);
     
     return {
       value: newPPE,
       method: 'capex_depreciation',
-      note: `${previousPPE.toLocaleString()} + ${capex.toLocaleString()} CapEx - ${depreciation.toLocaleString()} Depreciation`,
+      note: `${previousPPE.toLocaleString()} + ${monthlyCapex.toLocaleString()} monthly CapEx - ${depreciation.toLocaleString()} depreciation`,
       driver: 'revenue + depreciation',
-      driverValue: revenue
+      driverValue: monthlyRevenue
     };
   }
 
@@ -4777,16 +4794,18 @@ class CashFlowCalculationEngine {
         });
       }
     } else {
-      // Fallback: estimate CapEx as % of revenue
-      const revenue = this.getPnLValue(this.criticalItems.revenue?.name || 'revenue');
-      capex = revenue * (this.assumptions.capexPercentage / 100);
+      // Fallback: estimate CapEx as % of annualized revenue (monthly portion)
+      const monthlyRevenue = this.getPnLValue(this.criticalItems.revenue?.name || 'revenue');
+      const annualizedRevenue = monthlyRevenue * 12;
+      const annualCapex = annualizedRevenue * (this.assumptions.capexPercentage / 100);
+      capex = annualCapex / 12; // Monthly CapEx
       
       if (capex > 0) {
         total -= capex;
         lineItems.push({
           name: 'Capital Expenditures',
           value: -capex,
-          note: `Estimated as ${this.assumptions.capexPercentage}% of revenue`,
+          note: `Estimated as ${this.assumptions.capexPercentage}% of annual revenue (monthly portion)`,
           isSubtotal: false
         });
       }
