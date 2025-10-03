@@ -1486,11 +1486,37 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            overflow: hidden;
+            padding: 10px;
         }
         
         .line-chart svg {
             width: 100%;
             height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .btn-expand-chart {
+            padding: 6px 12px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-expand-chart:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        .chart-date-range {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
         }
         
         .line-chart .loading {
@@ -2159,7 +2185,10 @@
                                 </div>
                             </div>
                                 <div class="insights-section">
-                                    <h4>Line Chart</h4>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                        <h4 style="margin: 0;">Line Chart</h4>
+                                        <button class="btn-expand-chart" onclick="expandChart('monthly')" title="Expand chart">🔍 Expand</button>
+                                    </div>
                                     <div class="chart-controls">
                                         <div class="chart-control-item">
                                             <div class="color-indicator" style="background-color: #3498db;"></div>
@@ -2178,6 +2207,15 @@
                                             <select id="monthlyLineItem3">
                                                 <option value="">Select line item 3</option>
                                             </select>
+                                        </div>
+                                        <div class="chart-date-range">
+                                            <label style="font-size: 0.85em; color: #666;">Date Range:</label>
+                                            <div style="display: flex; gap: 8px; align-items: center;">
+                                                <input type="number" id="monthlyChartStartPeriod" placeholder="Start" min="0" style="width: 70px; padding: 4px 8px;" value="0">
+                                                <span>to</span>
+                                                <input type="number" id="monthlyChartEndPeriod" placeholder="End" min="1" style="width: 70px; padding: 4px 8px;">
+                                                <button class="btn-secondary" onclick="updateChart('monthly')" style="padding: 4px 12px; font-size: 0.85em;">Update</button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div id="monthlyLineChart" class="line-chart">
@@ -2211,7 +2249,10 @@
                                 </div>
                             </div>
                                 <div class="insights-section">
-                                    <h4>Line Chart</h4>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                        <h4 style="margin: 0;">Line Chart</h4>
+                                        <button class="btn-expand-chart" onclick="expandChart('quarterly')" title="Expand chart">🔍 Expand</button>
+                                    </div>
                                     <div class="chart-controls">
                                         <div class="chart-control-item">
                                             <div class="color-indicator" style="background-color: #3498db;"></div>
@@ -2230,6 +2271,15 @@
                                             <select id="quarterlyLineItem3">
                                                 <option value="">Select line item 3</option>
                                             </select>
+                                        </div>
+                                        <div class="chart-date-range">
+                                            <label style="font-size: 0.85em; color: #666;">Date Range:</label>
+                                            <div style="display: flex; gap: 8px; align-items: center;">
+                                                <input type="number" id="quarterlyChartStartPeriod" placeholder="Start" min="0" style="width: 70px; padding: 4px 8px;" value="0">
+                                                <span>to</span>
+                                                <input type="number" id="quarterlyChartEndPeriod" placeholder="End" min="1" style="width: 70px; padding: 4px 8px;">
+                                                <button class="btn-secondary" onclick="updateChart('quarterly')" style="padding: 4px 12px; font-size: 0.85em;">Update</button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div id="quarterlyLineChart" class="line-chart">
@@ -2263,7 +2313,10 @@
                                 </div>
                             </div>
                                 <div class="insights-section">
-                                    <h4>Line Chart</h4>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                        <h4 style="margin: 0;">Line Chart</h4>
+                                        <button class="btn-expand-chart" onclick="expandChart('yearly')" title="Expand chart">🔍 Expand</button>
+                                    </div>
                                     <div class="chart-controls">
                                         <div class="chart-control-item">
                                             <div class="color-indicator" style="background-color: #3498db;"></div>
@@ -2282,6 +2335,15 @@
                                             <select id="yearlyLineItem3">
                                                 <option value="">Select line item 3</option>
                                             </select>
+                                        </div>
+                                        <div class="chart-date-range">
+                                            <label style="font-size: 0.85em; color: #666;">Date Range:</label>
+                                            <div style="display: flex; gap: 8px; align-items: center;">
+                                                <input type="number" id="yearlyChartStartPeriod" placeholder="Start" min="0" style="width: 70px; padding: 4px 8px;" value="0">
+                                                <span>to</span>
+                                                <input type="number" id="yearlyChartEndPeriod" placeholder="End" min="1" style="width: 70px; padding: 4px 8px;">
+                                                <button class="btn-secondary" onclick="updateChart('yearly')" style="padding: 4px 12px; font-size: 0.85em;">Update</button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div id="yearlyLineChart" class="line-chart">
@@ -2631,6 +2693,53 @@
                 <div class="modal-actions" style="margin-top: 25px; text-align: right;">
                     <button class="btn-secondary" onclick="closeModal('confirm-delete-modal')">Cancel</button>
                     <button id="confirm-delete-btn" class="btn-danger" style="background: #dc3545; color: white;">Delete Scenario</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expanded Chart Modal -->
+    <div id="expanded-chart-modal" class="modal">
+        <div class="modal-content" style="max-width: 90%; max-height: 90vh; width: 1200px;">
+            <div class="modal-header">
+                <h3 id="expanded-chart-title">Chart</h3>
+                <span class="close-modal" onclick="closeModal('expanded-chart-modal')">&times;</span>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <!-- Chart controls -->
+                <div class="chart-controls" style="margin-bottom: 20px;">
+                    <div class="chart-control-item">
+                        <div class="color-indicator" style="background-color: #3498db;"></div>
+                        <select id="expandedLineItem1">
+                            <option value="">Select line item 1</option>
+                        </select>
+                    </div>
+                    <div class="chart-control-item">
+                        <div class="color-indicator" style="background-color: #e74c3c;"></div>
+                        <select id="expandedLineItem2">
+                            <option value="">Select line item 2</option>
+                        </select>
+                    </div>
+                    <div class="chart-control-item">
+                        <div class="color-indicator" style="background-color: #27ae60;"></div>
+                        <select id="expandedLineItem3">
+                            <option value="">Select line item 3</option>
+                        </select>
+                    </div>
+                    <div class="chart-date-range">
+                        <label style="font-size: 0.85em; color: #666;">Date Range:</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="number" id="expandedChartStartPeriod" placeholder="Start" min="0" style="width: 70px; padding: 4px 8px;" value="0">
+                            <span>to</span>
+                            <input type="number" id="expandedChartEndPeriod" placeholder="End" min="1" style="width: 70px; padding: 4px 8px;">
+                            <button class="btn-secondary" onclick="updateExpandedChart()" style="padding: 4px 12px; font-size: 0.85em;">Update</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Expanded chart -->
+                <div id="expandedLineChart" class="line-chart" style="height: 600px; width: 100%;">
+                    <div class="loading">Select line items to display chart</div>
                 </div>
             </div>
         </div>

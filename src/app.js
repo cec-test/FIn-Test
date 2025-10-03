@@ -6992,3 +6992,92 @@ function exportAllScenarios() {
   alert('Excel export coming soon! This will download an Excel file with all scenarios.');
   // TODO: Implement with SheetJS
 }
+
+/**
+ * ============================================================================
+ * CHART EXPANSION AND DATE RANGE FUNCTIONS
+ * ============================================================================
+ */
+
+let currentExpandedPeriodType = null;
+
+/**
+ * Expand chart to larger modal
+ */
+function expandChart(periodType) {
+  currentExpandedPeriodType = periodType;
+  
+  const modal = document.getElementById('expanded-chart-modal');
+  const title = document.getElementById('expanded-chart-title');
+  
+  // Set title
+  title.textContent = `${periodType.charAt(0).toUpperCase() + periodType.slice(1)} Line Chart`;
+  
+  // Copy current selections to expanded modal
+  const item1 = document.getElementById(`${periodType}LineItem1`).value;
+  const item2 = document.getElementById(`${periodType}LineItem2`).value;
+  const item3 = document.getElementById(`${periodType}LineItem3`).value;
+  const startPeriod = document.getElementById(`${periodType}ChartStartPeriod`).value;
+  const endPeriod = document.getElementById(`${periodType}ChartEndPeriod`).value;
+  
+  // Set expanded modal values
+  document.getElementById('expandedLineItem1').value = item1;
+  document.getElementById('expandedLineItem2').value = item2;
+  document.getElementById('expandedLineItem3').value = item3;
+  document.getElementById('expandedChartStartPeriod').value = startPeriod || '0';
+  document.getElementById('expandedChartEndPeriod').value = endPeriod || '';
+  
+  // Copy options to expanded dropdowns
+  const expandedItem1 = document.getElementById('expandedLineItem1');
+  const expandedItem2 = document.getElementById('expandedLineItem2');
+  const expandedItem3 = document.getElementById('expandedLineItem3');
+  
+  const sourceItem1 = document.getElementById(`${periodType}LineItem1`);
+  
+  // Clear and populate
+  expandedItem1.innerHTML = sourceItem1.innerHTML;
+  expandedItem2.innerHTML = sourceItem1.innerHTML;
+  expandedItem3.innerHTML = sourceItem1.innerHTML;
+  
+  // Set values
+  expandedItem1.value = item1;
+  expandedItem2.value = item2;
+  expandedItem3.value = item3;
+  
+  // Update the expanded chart
+  updateExpandedChart();
+  
+  // Show modal
+  modal.style.display = 'block';
+}
+
+/**
+ * Update expanded chart
+ */
+function updateExpandedChart() {
+  if (!currentExpandedPeriodType) return;
+  
+  // Get selected items and date range from expanded modal
+  const item1 = document.getElementById('expandedLineItem1').value;
+  const item2 = document.getElementById('expandedLineItem2').value;
+  const item3 = document.getElementById('expandedLineItem3').value;
+  const startPeriod = parseInt(document.getElementById('expandedChartStartPeriod').value) || 0;
+  const endPeriod = parseInt(document.getElementById('expandedChartEndPeriod').value) || null;
+  
+  // Render chart in expanded view
+  renderLineChart('expanded', currentExpandedPeriodType, item1, item2, item3, startPeriod, endPeriod);
+}
+
+/**
+ * Update chart with date range (for inline charts)
+ */
+function updateChart(periodType) {
+  const item1 = document.getElementById(`${periodType}LineItem1`).value;
+  const item2 = document.getElementById(`${periodType}LineItem2`).value;
+  const item3 = document.getElementById(`${periodType}LineItem3`).value;
+  const startPeriod = parseInt(document.getElementById(`${periodType}ChartStartPeriod`).value) || 0;
+  const endPeriod = parseInt(document.getElementById(`${periodType}ChartEndPeriod`).value) || null;
+  
+  // Render chart with date range
+  renderLineChart(periodType, periodType, item1, item2, item3, startPeriod, endPeriod);
+}
