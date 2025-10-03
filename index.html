@@ -1762,6 +1762,47 @@
             border-top: 1px solid #e0e0e0;
             padding-top: 20px;
         }
+        
+        /* Modal Input Styling */
+        .modal input[type="text"],
+        .modal textarea,
+        .modal select {
+            width: 100%;
+            padding: 8px 12px;
+            margin-top: 5px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+            color: #333;
+            box-sizing: border-box;
+        }
+        
+        .modal input[type="text"]:focus,
+        .modal textarea:focus,
+        .modal select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .modal textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        
+        /* Fix modal scrolling for tall content */
+        .modal-content {
+            max-height: 85vh;
+            overflow-y: auto;
+            margin: 5% auto;
+        }
+        
+        .modal-body {
+            max-height: calc(85vh - 150px);
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -2434,12 +2475,12 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label for="new-scenario-name">Scenario Name:</label>
-                    <input type="text" id="new-scenario-name" placeholder="e.g., Q4 Product Launch" style="width: 100%; padding: 8px; margin-top: 5px;">
+                    <input type="text" id="new-scenario-name" placeholder="e.g., Q4 Product Launch">
                 </div>
                 
                 <div class="form-group" style="margin-top: 15px;">
                     <label for="new-scenario-description">Description (optional):</label>
-                    <textarea id="new-scenario-description" rows="3" placeholder="Brief description of this scenario..." style="width: 100%; padding: 8px; margin-top: 5px;"></textarea>
+                    <textarea id="new-scenario-description" rows="3" placeholder="Brief description of this scenario..."></textarea>
                 </div>
                 
                 <div class="form-group" style="margin-top: 15px;">
@@ -2490,12 +2531,12 @@
                 
                 <div class="form-group">
                     <label for="edit-scenario-name">Scenario Name:</label>
-                    <input type="text" id="edit-scenario-name" style="width: 100%; padding: 8px; margin-top: 5px;">
+                    <input type="text" id="edit-scenario-name">
                 </div>
                 
                 <div class="form-group" style="margin-top: 15px;">
                     <label for="edit-scenario-description">Description:</label>
-                    <textarea id="edit-scenario-description" rows="3" style="width: 100%; padding: 8px; margin-top: 5px;"></textarea>
+                    <textarea id="edit-scenario-description" rows="3"></textarea>
                 </div>
                 
                 <div class="modal-actions" style="margin-top: 25px; text-align: right;">

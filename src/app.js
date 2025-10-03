@@ -6800,6 +6800,140 @@ function handleLoadTemplate(templateKey) {
 }
 
 /**
+ * Update Scenarios Comparison Tab
+ */
+function updateScenariosComparisonTab() {
+  // Update checkboxes
+  const checkboxContainer = document.getElementById('scenario-comparison-checkboxes');
+  if (!checkboxContainer) return;
+  
+  let checkboxHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">';
+  
+  scenarios.forEach(scenario => {
+    checkboxHtml += `
+      <label style="display: flex; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 4px; cursor: pointer;">
+        <input type="checkbox" 
+          class="scenario-compare-checkbox" 
+          value="${scenario.id}" 
+          ${scenario.isDefault ? 'checked' : ''}
+          style="margin-right: 8px;">
+        <span>${scenario.name}</span>
+      </label>
+    `;
+  });
+  
+  checkboxHtml += '</div>';
+  checkboxHtml += '<button class="btn-primary" onclick="generateScenariosComparison()" style="margin-top: 15px;">Compare Selected Scenarios</button>';
+  
+  checkboxContainer.innerHTML = checkboxHtml;
+}
+
+/**
+ * Generate scenarios comparison table
+ */
+function generateScenariosComparison() {
+  const tableContainer = document.getElementById('scenarios-comparison-table');
+  const linksContainer = document.getElementById('scenario-forecast-links');
+  
+  if (!tableContainer) return;
+  
+  // Get selected scenarios
+  const checkboxes = document.querySelectorAll('.scenario-compare-checkbox:checked');
+  const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+  
+  if (selectedIds.length === 0) {
+    tableContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">Please select at least one scenario to compare.</p>';
+    return;
+  }
+  
+  const selectedScenarios = selectedIds.map(id => getScenario(id)).filter(s => s);
+  
+  if (selectedScenarios.length === 0) {
+    tableContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">No scenarios found.</p>';
+    return;
+  }
+  
+  // Build comparison table
+  let html = '<table class="comparison-table" style="width: 100%; border-collapse: collapse; margin-top: 20px;">';
+  
+  // Header row
+  html += '<thead><tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">';
+  html += '<th style="padding: 12px; text-align: left; border-right: 1px solid #ddd;">Assumption</th>';
+  selectedScenarios.forEach(scenario => {
+    html += `<th style="padding: 12px; text-align: left;">${scenario.name}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+  
+  // P&L Assumptions
+  html += '<tr style="background: #e3f2fd;"><td colspan="' + (selectedScenarios.length + 1) + '" style="padding: 8px; font-weight: bold;">📊 P&L Assumptions</td></tr>';
+  
+  const pnlMetrics = [
+    { key: 'forecastPeriods', label: 'Forecast Periods', suffix: ' months' },
+    { key: 'forecastMethod', label: 'Forecast Method', suffix: '' },
+    { key: 'growthRate', label: 'Growth Rate', suffix: '%' },
+    { key: 'seasonalityPreset', label: 'Seasonality', suffix: '' }
+  ];
+  
+  pnlMetrics.forEach(metric => {
+    html += '<tr style="border-bottom: 1px solid #eee;">';
+    html += `<td style="padding: 10px; border-right: 1px solid #ddd; font-weight: 500;">${metric.label}</td>`;
+    selectedScenarios.forEach(scenario => {
+      const value = scenario.pnl[metric.key] !== undefined ? scenario.pnl[metric.key] : 'N/A';
+      html += `<td style="padding: 10px;">${value}${metric.suffix}</td>`;
+    });
+    html += '</tr>';
+  });
+  
+  // Balance Sheet Assumptions
+  html += '<tr style="background: #e8f5e9;"><td colspan="' + (selectedScenarios.length + 1) + '" style="padding: 8px; font-weight: bold;">💰 Balance Sheet Assumptions</td></tr>';
+  
+  const bsMetrics = [
+    { key: 'dso', label: 'Days Sales Outstanding', suffix: ' days' },
+    { key: 'dpo', label: 'Days Payable Outstanding', suffix: ' days' },
+    { key: 'dio', label: 'Days Inventory Outstanding', suffix: ' days' },
+    { key: 'depreciationRate', label: 'Depreciation Rate (annual)', suffix: '%' },
+    { key: 'capexPercentage', label: 'CapEx % of Revenue (annual)', suffix: '%' },
+    { key: 'dividendPolicy', label: 'Dividend Policy', suffix: '%' },
+    { key: 'cashTarget', label: 'Cash Target', suffix: ' days' }
+  ];
+  
+  bsMetrics.forEach(metric => {
+    html += '<tr style="border-bottom: 1px solid #eee;">';
+    html += `<td style="padding: 10px; border-right: 1px solid #ddd; font-weight: 500;">${metric.label}</td>`;
+    selectedScenarios.forEach(scenario => {
+      const value = scenario.balanceSheet[metric.key] !== undefined ? scenario.balanceSheet[metric.key] : 'N/A';
+      html += `<td style="padding: 10px;">${value}${metric.suffix}</td>`;
+    });
+    html += '</tr>';
+  });
+  
+  html += '</tbody></table>';
+  
+  tableContainer.innerHTML = html;
+  
+  // Add scenario info cards
+  if (linksContainer) {
+    let linksHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 20px;">';
+    
+    selectedScenarios.forEach(scenario => {
+      const isActive = scenario.id === activeScenarioId;
+      linksHtml += `
+        <div style="padding: 15px; background: ${isActive ? '#e3f2fd' : '#f8f9fa'}; border-radius: 8px; border: 2px solid ${isActive ? '#2196f3' : '#e0e0e0'};">
+          <h4 style="margin-bottom: 10px; color: #333;">${scenario.name} ${isActive ? '(Active)' : ''}</h4>
+          <p style="font-size: 0.85em; color: #666; margin-bottom: 10px;">${scenario.description || 'No description'}</p>
+          <button class="btn-secondary" onclick="setActiveScenario('${scenario.id}'); updateForecast();" style="width: 100%; margin-top: 5px;">
+            ${isActive ? '✓ Active' : 'Make Active'}
+          </button>
+        </div>
+      `;
+    });
+    
+    linksHtml += '</div>';
+    linksContainer.innerHTML = linksHtml;
+  }
+}
+
+/**
  * Export all scenarios to Excel
  */
 function exportAllScenarios() {
