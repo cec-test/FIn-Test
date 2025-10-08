@@ -2027,14 +2027,35 @@ function createSVGChart(container, data, periodType) {
   let width, height, padding;
   
   if (isExpanded) {
-    // For expanded view: use 90% of container to ensure no overflow/scrollbars
+    // For expanded view: calculate based on ACTUAL available space in modal-body
     const containerRect = container.getBoundingClientRect();
-    // Use 90% of container dimensions to leave room for all padding/borders
-    width = Math.floor(containerRect.width * 0.90);
-    height = Math.floor(containerRect.height * 0.90);
-    // Ensure minimums
-    width = Math.max(width, 600);
-    height = Math.max(height, 400);
+    const modalBody = container.closest('.modal-body');
+    
+    // If inside modal-body, use the parent's constrained height instead
+    let availableHeight;
+    if (modalBody) {
+      const modalBodyRect = modalBody.getBoundingClientRect();
+      // Modal body has padding (12px top, 20px bottom) and chart controls (~50px)
+      const modalBodyPadding = 12 + 20; // top + bottom padding
+      const controlsHeight = 60; // Approximate height of chart controls
+      availableHeight = modalBodyRect.height - modalBodyPadding - controlsHeight;
+    } else {
+      availableHeight = containerRect.height;
+    }
+    
+    // Container has 10px padding on all sides
+    const containerPadding = 20; // 10px × 2
+    const availableWidth = containerRect.width - containerPadding;
+    availableHeight = availableHeight - containerPadding;
+    
+    // Use 85% of available space for safety (more conservative)
+    width = Math.floor(availableWidth * 0.85);
+    height = Math.floor(availableHeight * 0.85);
+    
+    // Ensure reasonable minimums
+    width = Math.max(width, 500);
+    height = Math.max(height, 300);
+    
     padding = 80; // More padding for Y-axis labels
   } else {
     // For inline view: use current hardcoded dimensions
