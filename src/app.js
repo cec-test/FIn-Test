@@ -761,9 +761,8 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
   const lineItems = uploadedLineItems[statementKey] || [];
   lineItems.forEach((item) => {
     const isTotal = /\btotal\b/i.test(item.name);
-    const heuristicSubheader = (!item.actualValues || item.actualValues.length === 0) && !isTotal;
-    const manualSubheader = isSubheaderOverridden(statementKey, item.name);
-    const isSubheader = manualSubheader || heuristicSubheader;
+    // Only use manual subheader override - no auto-detection
+    const isSubheader = isSubheaderOverridden(statementKey, item.name);
     const rowClass = isTotal ? 'total-row' : (isSubheader ? 'subheader-row' : '');
     const nameCellClass = 'metric-name';
     const nameStyle = isSubheader ? 'text-decoration: underline; font-weight: 700;' : '';
