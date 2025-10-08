@@ -2074,9 +2074,10 @@ function createSVGChart(container, data, periodType) {
     return;
   }
   
-  // Set Y-axis minimum to 0, and add padding to max
+  // Set Y-axis to start at 0, with padding above max value
   const paddedMin = 0; // Always start Y-axis at $0
-  const paddedMax = maxValue * 1.1; // Add 10% padding above max value
+  const valueRange = maxValue - Math.max(0, minValue);
+  const paddedMax = maxValue + (valueRange * 0.1); // Add 10% padding above max value
   const paddedRange = paddedMax - paddedMin;
   
   // Helper function to convert value to y coordinate
