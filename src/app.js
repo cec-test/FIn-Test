@@ -2029,9 +2029,9 @@ function createSVGChart(container, data, periodType) {
   if (isExpanded) {
     // For expanded view: use actual container dimensions to prevent scrolling
     const containerRect = container.getBoundingClientRect();
-    // Account for container padding (10px on all sides = 20px total) + small buffer
-    width = Math.max(containerRect.width - 40, 600); // Subtract padding + buffer
-    height = Math.max(containerRect.height - 40, 400); // Subtract padding + buffer
+    // Aggressive buffer to prevent any scrollbars (account for padding, borders, margins)
+    width = Math.max(containerRect.width - 60, 600); // Subtract 60px buffer
+    height = Math.max(containerRect.height - 60, 400); // Subtract 60px buffer
     padding = 80; // More padding for Y-axis labels
   } else {
     // For inline view: use current hardcoded dimensions
