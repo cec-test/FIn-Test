@@ -7499,8 +7499,8 @@ function generateChartDataWithRange(periodType, selectedItems, startIndex, endIn
     
     // Generate forecast date labels
     for (let i = 0; i < forecastPeriods; i++) {
-      const date = new Date(baseDate);
-      date.setMonth(baseDate.getMonth() + i);
+      const date = new Date(baseDate.getTime()); // Clone the base date
+      date.setMonth(date.getMonth() + i); // Increment from the cloned date
       const monthName = date.toLocaleDateString('en-US', { month: 'short' });
       const year = date.getFullYear();
       allLabels.push(`${monthName} ${year}`);
@@ -7523,8 +7523,8 @@ function generateChartDataWithRange(periodType, selectedItems, startIndex, endIn
     }
     
     for (let i = 0; i < quarters; i++) {
-      const date = new Date(baseDate);
-      date.setMonth(baseDate.getMonth() + (i * 3));
+      const date = new Date(baseDate.getTime()); // Clone the base date
+      date.setMonth(date.getMonth() + (i * 3)); // Increment from the cloned date
       const year = date.getFullYear();
       const quarter = Math.floor(date.getMonth() / 3) + 1;
       allLabels.push(`Q${quarter} ${year}`);
@@ -7595,7 +7595,7 @@ function generateChartDataWithRange(periodType, selectedItems, startIndex, endIn
     
     data.datasets.push({
       label: item.name,
-      data: values,
+      values: values, // Fixed: changed from "data" to "values" to match createSVGChart
       color: item.color
     });
   });
@@ -7643,8 +7643,8 @@ function populateDateRangeDropdowns(periodType) {
     
     // Generate forecast dates
     for (let i = 0; i < forecastPeriods; i++) {
-      const date = new Date(baseDate);
-      date.setMonth(baseDate.getMonth() + i);
+      const date = new Date(baseDate.getTime()); // Clone the base date
+      date.setMonth(date.getMonth() + i); // Increment from the cloned date
       const monthName = date.toLocaleDateString('en-US', { month: 'short' });
       const year = date.getFullYear();
       dateLabels.push(`${monthName} ${year}`);
@@ -7670,8 +7670,8 @@ function populateDateRangeDropdowns(periodType) {
     }
     
     for (let i = 0; i < quarters; i++) {
-      const date = new Date(baseDate);
-      date.setMonth(baseDate.getMonth() + (i * 3));
+      const date = new Date(baseDate.getTime()); // Clone the base date
+      date.setMonth(date.getMonth() + (i * 3)); // Increment from the cloned date
       const year = date.getFullYear();
       const quarter = Math.floor(date.getMonth() / 3) + 1;
       dateLabels.push(`Q${quarter} ${year}`);
