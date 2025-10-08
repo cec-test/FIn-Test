@@ -41,6 +41,58 @@ function setSubheaderOverride(statementKey, name, value) {
   saveSubheaderOverrides(map);
 }
 
+// Custom growth rates storage
+const CUSTOM_GROWTH_RATES_KEY = 'custom_growth_rates_v1';
+
+function loadCustomGrowthRates() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_GROWTH_RATES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function saveCustomGrowthRates(rates) {
+  try { localStorage.setItem(CUSTOM_GROWTH_RATES_KEY, JSON.stringify(rates)); } catch (_) {}
+}
+
+function getCustomGrowthRate(statementKey, itemName) {
+  const rates = loadCustomGrowthRates();
+  const key = overrideKey(statementKey, itemName);
+  return rates[key] !== undefined ? rates[key] : null;
+}
+
+function setCustomGrowthRate(statementKey, itemName, rate) {
+  const rates = loadCustomGrowthRates();
+  const key = overrideKey(statementKey, itemName);
+  if (rate !== null && rate !== undefined) {
+    rates[key] = parseFloat(rate);
+  } else {
+    delete rates[key];
+  }
+  saveCustomGrowthRates(rates);
+}
+
+function deleteCustomGrowthRate(statementKey, itemName) {
+  setCustomGrowthRate(statementKey, itemName, null);
+}
+
+// P&L-driven balance sheet items that cannot have custom rates
+const PNL_DRIVEN_BS_ITEMS = [
+  'accounts receivable', 'receivables', 'a/r', 'ar',
+  'inventory', 'inventories',
+  'accounts payable', 'payables', 'a/p', 'ap',
+  'property, plant & equipment', 'ppe', 'fixed assets',
+  'retained earnings',
+  'cash', 'cash and cash equivalents'
+];
+
+function isPnLDrivenItem(itemName) {
+  const nameLower = (itemName || '').toLowerCase();
+  return PNL_DRIVEN_BS_ITEMS.some(pattern => nameLower.includes(pattern));
+}
+
 /**
  * Date parsing and aggregation helpers
  */
@@ -502,27 +554,36 @@ function getYearMonths(yearIndex, actualLabels) {
 /**
  * Get forecast values for an item based on current forecast settings
  */
-function getForecastValuesForItem(item, periods) {
+function getForecastValuesForItem(item, periods, statementKey = 'pnl') {
   const actualValues = item.actualValues || [];
   const forecastMethod = document.getElementById('forecastMethod')?.value || 'custom';
-  const growthRate = parseFloat(document.getElementById('customGrowthRate')?.value) || 5;
+  const globalGrowthRate = parseFloat(document.getElementById('customGrowthRate')?.value) || 5;
+  const applyOperatingLeverage = document.getElementById('applyOperatingLeverage')?.checked !== false;
   
   const forecastValues = [];
   
-  // Calculate growth rates based on method
-  let revGrowth, expGrowth;
+  // Check for custom growth rate first
+  const customRate = getCustomGrowthRate(statementKey, item.name);
+  let monthlyRate;
   
-  // Convert annual growth rate to period-specific rates for all methods
-  const annualRate = growthRate / 100;
-  const annualExpRate = (growthRate * 0.8) / 100;
-  
-  // For monthly calculations, convert annual to monthly
-  revGrowth = annualRate / 12;  // Monthly rate
-  expGrowth = annualExpRate / 12;  // Monthly rate
-  
-  // Determine if this is revenue or expense item
-  const isRevenueItem = /\b(revenue|sales|income)\b/i.test(item.name);
-  const growthRateToUse = isRevenueItem ? revGrowth : expGrowth;
+  if (customRate !== null) {
+    // Use custom rate - exact rate, no 80% rule
+    monthlyRate = customRate / 100 / 12;
+  } else {
+    // Use global rate with optional 80% rule
+    if (statementKey === 'pnl' && applyOperatingLeverage) {
+      // Apply 80% rule for P&L expenses
+      const isRevenueItem = /\b(revenue|sales|income)\b/i.test(item.name);
+      if (isRevenueItem) {
+        monthlyRate = globalGrowthRate / 100 / 12; // Full rate for revenue
+      } else {
+        monthlyRate = (globalGrowthRate * 0.8) / 100 / 12; // 80% rate for expenses
+      }
+    } else {
+      // No 80% rule for balance sheet/cash flow, or when toggle is off
+      monthlyRate = globalGrowthRate / 100 / 12;
+    }
+  }
   
   const lastActual = actualValues[actualValues.length - 1] || 0;
   
@@ -535,34 +596,34 @@ function getForecastValuesForItem(item, periods) {
     
     if (forecastMethod === 'exponential') {
       // Exponential growth: Value = Previous × (1 + Monthly Rate)^periods
-      baseForecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
+      baseForecastValue = lastActual * Math.pow(1 + monthlyRate, i + 1);
     } else if (forecastMethod === 'logarithmic') {
       // Logarithmic growth: Value = Base × ln(periods + 1) × Monthly Rate
-      baseForecastValue = lastActual * Math.log(i + 2) * growthRateToUse;
+      baseForecastValue = lastActual * Math.log(i + 2) * monthlyRate;
     } else if (forecastMethod === 'scurve') {
       // S-curve growth: Only apply to "Total Revenue" items
       const isTotalRevenue = /\btotal.*revenue\b/i.test(item.name);
       if (isTotalRevenue) {
         // S-curve growth: Value = Max × (1 / (1 + e^(-k × (periods - midpoint))))
-        const maxValue = parseFloat(document.getElementById('scurveMaxValue')?.value) || (lastActual * Math.pow(1 + growthRateToUse * 12, periods));
+        const maxValue = parseFloat(document.getElementById('scurveMaxValue')?.value) || (lastActual * Math.pow(1 + monthlyRate * 12, periods));
         const midpoint = parseFloat(document.getElementById('scurveMidpoint')?.value) || Math.round(periods * 0.4);
-        const k = growthRateToUse * 2; // Growth constant derived from growth rate
+        const k = monthlyRate * 2; // Growth constant derived from growth rate
         const exponent = -k * ((i + 1) - midpoint);
         baseForecastValue = maxValue * (1 / (1 + Math.exp(exponent)));
       } else {
         // For non-total revenue items, use linear growth
-        baseForecastValue = lastActual + (lastActual * growthRateToUse * (i + 1));
+        baseForecastValue = lastActual + (lastActual * monthlyRate * (i + 1));
       }
     } else if (forecastMethod === 'rolling') {
       // Rolling average + growth: Historical Average + (Historical Average × Monthly Rate × Period)
       const historicalAverage = actualValues.reduce((sum, val) => sum + val, 0) / actualValues.length;
-      baseForecastValue = historicalAverage + (historicalAverage * growthRateToUse * (i + 1));
+      baseForecastValue = historicalAverage + (historicalAverage * monthlyRate * (i + 1));
     } else if (forecastMethod === 'custom') {
       // Linear growth: Value = Previous + (Previous × Monthly Rate × Period)
-      baseForecastValue = lastActual + (lastActual * growthRateToUse * (i + 1));
+      baseForecastValue = lastActual + (lastActual * monthlyRate * (i + 1));
     } else {
       // Fallback to exponential
-      baseForecastValue = lastActual * Math.pow(1 + growthRateToUse, i + 1);
+      baseForecastValue = lastActual * Math.pow(1 + monthlyRate, i + 1);
     }
     
     // Apply seasonality
@@ -766,10 +827,16 @@ function createDynamicTable(containerId, statementKey, periodType, scope) {
     const rowClass = isTotal ? 'total-row' : (isSubheader ? 'subheader-row' : '');
     const nameCellClass = 'metric-name';
     const nameStyle = isSubheader ? 'text-decoration: underline; font-weight: 700;' : '';
+    
+    // Check if item has custom growth rate
+    const customRate = getCustomGrowthRate(statementKey, item.name);
+    const hasCustomRate = customRate !== null;
+    const customRateIcon = hasCustomRate ? `<span style="color: #2196f3; margin-left: 4px; cursor: help;" title="Custom growth rate: ${customRate}%/year">⚙️</span>` : '';
+    
     tableHTML += `
       <tr class="${rowClass}">
         <td class="${nameCellClass}" style="${nameStyle}">
-          ${item.name}
+          ${item.name}${customRateIcon}
           <label style="margin-left:8px; font-weight:400; font-size:0.8rem; color:#6c757d;">
             <input type="checkbox" class="toggle-subheader" data-statement="${statementKey}" data-name="${item.name.replace(/"/g, '&quot;')}" ${isSubheader ? 'checked' : ''} /> Subheader
           </label>

@@ -2011,6 +2011,41 @@
                                     <input type="range" id="seasonalStrength" min="0" max="100" value="50" style="width: 120px;">
                                     <span id="seasonalStrengthValue">50%</span>
                                 </div>
+                                
+                                <!-- Operating Leverage Toggle -->
+                                <div class="control-item" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                                    <label>
+                                        <input type="checkbox" id="applyOperatingLeverage" checked style="width: auto; margin-right: 8px;">
+                                        Apply Operating Leverage (80% Rule)
+                                        <span class="help-button" id="operatingLeverageHelp" title="Click for explanation of the 80% rule">?</span>
+                                    </label>
+                                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px; margin-left: 24px;">
+                                        When enabled, expense items grow at 80% of the revenue growth rate
+                                    </div>
+                                </div>
+                                
+                                <!-- Custom Independent Growth Rates -->
+                                <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
+                                        <h4 style="margin: 0; font-size: 1rem; color: #2c3e50;">📈 Custom Independent Growth Rates</h4>
+                                        <span class="help-button" id="customRatesHelp" title="Click for help on custom growth rates">?</span>
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">
+                                        Override the global growth rate for specific line items. Custom rates ignore the 80% rule.
+                                    </div>
+                                    
+                                    <div id="customRatesList" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                                        <!-- Custom rates will be added here dynamically -->
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <select id="addCustomRateDropdown" style="flex: 1; max-width: 300px;">
+                                            <option value="">+ Add Line Item</option>
+                                        </select>
+                                        <input type="number" id="customRateInput" placeholder="Annual %" step="0.1" style="width: 100px;" disabled>
+                                        <button id="addCustomRateBtn" class="btn-secondary" style="padding: 6px 12px;" disabled>Add</button>
+                                    </div>
+                                </div>
                             </div>
                             </div>
                             
@@ -2529,6 +2564,90 @@
             </div>
             <div class="method-explanation">
                 <strong>Custom Pattern:</strong> Define your own monthly multipliers - use this for unique business cycles, event-driven businesses, or when you have specific seasonal data.
+            </div>
+        </div>
+    </div>
+
+    <!-- Operating Leverage (80% Rule) Help Modal -->
+    <div id="operatingLeverageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Operating Leverage (80% Rule) Explained</h3>
+                <span class="close" id="closeOperatingLeverageModal">&times;</span>
+            </div>
+            <div class="method-explanation" style="background: #e3f2fd; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                <strong>📊 What is the 80% Rule?</strong><br>
+                When enabled, expense items automatically grow at <strong>80% of the revenue growth rate</strong>. This reflects the concept of <em>operating leverage</em> in financial modeling.
+            </div>
+            <div class="method-explanation">
+                <strong>💡 Why does this exist?</strong><br>
+                As companies scale, revenue typically grows faster than costs due to:
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li><strong>Fixed costs</strong> stay flat (rent doesn't double when revenue doubles)</li>
+                    <li><strong>Economies of scale</strong> make operations more efficient</li>
+                    <li><strong>Automation & leverage</strong> reduce per-unit costs</li>
+                </ul>
+                This leads to <strong>expanding profit margins</strong> over time, which is a key driver of business value.
+            </div>
+            <div class="method-explanation">
+                <strong>📈 Example:</strong><br>
+                If global growth rate = <strong>5%/year</strong>:
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li><strong>Revenue items</strong> (Revenue, Sales, Income) → grow at <span style="color: #2196f3; font-weight: 600;">5%</span></li>
+                    <li><strong>Expense items</strong> (COGS, OpEx, etc.) → grow at <span style="color: #ff9800; font-weight: 600;">4%</span> (80% of 5%)</li>
+                </ul>
+            </div>
+            <div class="method-explanation">
+                <strong>⚙️ When to disable:</strong><br>
+                Turn off this rule if:
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>You want precise 1:1 control over all growth rates</li>
+                    <li>Your expenses scale linearly with revenue (no leverage)</li>
+                    <li>You're modeling a mature, stable business with flat margins</li>
+                </ul>
+            </div>
+            <div style="background: #fff3cd; padding: 12px; border-radius: 6px; border-left: 4px solid #ffc107; font-size: 0.9em;">
+                <strong>⚠️ Note:</strong> Custom growth rates always use the <strong>exact rate you enter</strong> and ignore the 80% rule.
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Growth Rates Help Modal -->
+    <div id="customRatesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Custom Independent Growth Rates</h3>
+                <span class="close" id="closeCustomRatesModal">&times;</span>
+            </div>
+            <div class="method-explanation" style="background: #e8f5e9; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                <strong>📈 What are custom growth rates?</strong><br>
+                Override the global growth rate for specific line items that need unique forecasting assumptions.
+            </div>
+            <div class="method-explanation">
+                <strong>💡 How it works:</strong><br>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Select any P&L line item from the dropdown</li>
+                    <li>Enter a custom annual growth rate (e.g., 8%)</li>
+                    <li>The item will use the <strong>global forecast method</strong> (exponential, linear, etc.) but with <strong>your custom rate</strong></li>
+                    <li>Custom rates <strong>ignore the 80% rule</strong> - you get exactly what you enter</li>
+                    <li>Seasonality still applies normally</li>
+                </ul>
+            </div>
+            <div class="method-explanation">
+                <strong>📊 Common use cases:</strong><br>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li><strong>Fast-growing product line:</strong> Set Revenue Product A to 15% while overall revenue is 5%</li>
+                    <li><strong>Declining expenses:</strong> Set Software Costs to -3% (reduction)</li>
+                    <li><strong>Flat forecast:</strong> Set Rent to 0% (no growth)</li>
+                    <li><strong>Different cost structures:</strong> Set COGS to 3% while OpEx uses global 5%</li>
+                </ul>
+            </div>
+            <div class="method-explanation" style="background: #fff3cd; padding: 12px; border-radius: 6px; border-left: 4px solid #ffc107;">
+                <strong>⚠️ Restrictions:</strong><br>
+                Some balance sheet items (like Accounts Receivable, Inventory) <strong>cannot</strong> have custom rates because they're calculated from P&L formulas (Revenue × DSO, COGS × DIO, etc.).
+            </div>
+            <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; font-size: 0.9em; margin-top: 15px;">
+                <strong>💡 Tip:</strong> Items with custom rates show a <strong>⚙️ gear icon</strong> in the table. Hover to see the rate!
             </div>
         </div>
     </div>
