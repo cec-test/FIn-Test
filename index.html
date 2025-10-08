@@ -1851,6 +1851,31 @@
             max-height: calc(85vh - 150px);
             overflow-y: auto;
         }
+        
+        /* Subheader Styles */
+        .subheader-row {
+            background-color: #f8f9fa;
+        }
+        
+        .confidence-badge {
+            display: inline-block;
+            font-size: 0.75em;
+        }
+        
+        .confidence-high {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .confidence-medium {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .confidence-low {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -2709,6 +2734,30 @@
                 <div class="modal-actions" style="margin-top: 25px; text-align: right;">
                     <button class="btn-secondary" onclick="closeModal('confirm-delete-modal')">Cancel</button>
                     <button id="confirm-delete-btn" class="btn-danger" style="background: #dc3545; color: white;">Delete Scenario</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subheader Confirmation Modal -->
+    <div id="subheader-confirmation-modal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>🎯 Confirm Subheaders</h3>
+                <span class="close-modal" onclick="closeModal('subheader-confirmation-modal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p style="color: #666; margin-bottom: 20px;">
+                    We detected potential section subheaders in your file. Review and confirm which items are category labels (not data items).
+                </p>
+                
+                <div id="subheader-candidates-list" style="max-height: 400px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 6px;">
+                    <!-- Candidates will be dynamically inserted here -->
+                </div>
+                
+                <div class="modal-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn-secondary" onclick="closeModal('subheader-confirmation-modal')">Skip</button>
+                    <button id="confirm-subheaders-btn" class="btn-primary">Confirm Subheaders</button>
                 </div>
             </div>
         </div>
