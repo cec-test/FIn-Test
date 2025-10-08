@@ -7485,15 +7485,12 @@ function generateChartDataWithRange(periodType, selectedItems, startIndex, endIn
     // Add forecast labels
     let baseDate = new Date();
     if (allLabels.length > 0) {
-      // Parse last actual date to continue from there
+      // Parse last actual date using the existing parser
       const lastActual = allLabels[allLabels.length - 1];
-      // Handle formats like "Jan 2025" or "Jan, 2025"
-      const match = lastActual.match(/(\w+)[,\s]+(\d{4})/);
-      if (match) {
-        const monthName = match[1];
-        const year = parseInt(match[2]);
-        baseDate = new Date(`${monthName} 1, ${year}`);
-        baseDate.setMonth(baseDate.getMonth() + 1); // Start from next month
+      const parsedDate = parseHeaderToYearMonth(lastActual);
+      if (parsedDate) {
+        // Create date from year and month (month is 0-indexed)
+        baseDate = new Date(parsedDate.year, parsedDate.month + 1, 1); // +1 to start from next month
       }
     }
     
@@ -7514,11 +7511,10 @@ function generateChartDataWithRange(periodType, selectedItems, startIndex, endIn
     let baseDate = new Date();
     if (dateColumns && dateColumns.length > 0) {
       const firstActual = dateColumns[0];
-      const match = firstActual.match(/(\w+)[,\s]+(\d{4})/);
-      if (match) {
-        const monthName = match[1];
-        const year = parseInt(match[2]);
-        baseDate = new Date(`${monthName} 1, ${year}`);
+      const parsedDate = parseHeaderToYearMonth(firstActual);
+      if (parsedDate) {
+        // Create date from year and month (month is 0-indexed)
+        baseDate = new Date(parsedDate.year, parsedDate.month, 1);
       }
     }
     
@@ -7631,13 +7627,10 @@ function populateDateRangeDropdowns(periodType) {
     if (dateLabels.length > 0) {
       // Parse the last actual date and start forecasts from the next month
       const lastActual = dateLabels[dateLabels.length - 1];
-      // Handle formats like "Jan 2025" or "Jan, 2025"
-      const match = lastActual.match(/(\w+)[,\s]+(\d{4})/);
-      if (match) {
-        const monthName = match[1];
-        const year = parseInt(match[2]);
-        baseDate = new Date(`${monthName} 1, ${year}`);
-        baseDate.setMonth(baseDate.getMonth() + 1); // Start from next month
+      const parsedDate = parseHeaderToYearMonth(lastActual);
+      if (parsedDate) {
+        // Create date from year and month, then move to next month
+        baseDate = new Date(parsedDate.year, parsedDate.month + 1, 1);
       }
     }
     
@@ -7660,12 +7653,10 @@ function populateDateRangeDropdowns(periodType) {
     if (dateColumns && dateColumns.length > 0) {
       // Parse first actual date
       const firstActual = dateColumns[0];
-      // Handle formats like "Jan 2025" or "Jan, 2025"
-      const match = firstActual.match(/(\w+)[,\s]+(\d{4})/);
-      if (match) {
-        const monthName = match[1];
-        const year = parseInt(match[2]);
-        baseDate = new Date(`${monthName} 1, ${year}`);
+      const parsedDate = parseHeaderToYearMonth(firstActual);
+      if (parsedDate) {
+        // Create date from year and month (month is 0-indexed)
+        baseDate = new Date(parsedDate.year, parsedDate.month, 1);
       }
     }
     
