@@ -2105,6 +2105,50 @@ function createSVGChart(container, data, periodType) {
   yAxis.setAttribute('stroke-width', '1');
   svg.appendChild(yAxis);
   
+  // Add Y-axis labels and grid lines
+  const numYTicks = isExpanded ? 7 : 5; // More ticks in expanded view
+  const yAxisFontSize = isExpanded ? '11' : '9';
+  
+  for (let i = 0; i <= numYTicks; i++) {
+    const ratio = i / numYTicks;
+    const value = paddedMin + (paddedRange * ratio);
+    const y = padding + chartHeight - (ratio * chartHeight);
+    
+    // Draw horizontal grid line
+    const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    gridLine.setAttribute('x1', padding);
+    gridLine.setAttribute('y1', y);
+    gridLine.setAttribute('x2', padding + chartWidth);
+    gridLine.setAttribute('y2', y);
+    gridLine.setAttribute('stroke', '#f0f0f0');
+    gridLine.setAttribute('stroke-width', '1');
+    gridLine.setAttribute('stroke-dasharray', '2,2');
+    svg.appendChild(gridLine);
+    
+    // Draw Y-axis tick mark
+    const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    tick.setAttribute('x1', padding - 5);
+    tick.setAttribute('y1', y);
+    tick.setAttribute('x2', padding);
+    tick.setAttribute('y2', y);
+    tick.setAttribute('stroke', '#666');
+    tick.setAttribute('stroke-width', '1');
+    svg.appendChild(tick);
+    
+    // Add Y-axis label (formatted as currency, rounded to whole number)
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', padding - 10);
+    label.setAttribute('y', y + 3);
+    label.setAttribute('text-anchor', 'end');
+    label.setAttribute('font-size', yAxisFontSize);
+    label.setAttribute('fill', '#666');
+    // Format as currency: round to nearest whole number, add commas and $
+    const roundedValue = Math.round(value);
+    const formattedValue = '$' + roundedValue.toLocaleString('en-US');
+    label.textContent = formattedValue;
+    svg.appendChild(label);
+  }
+  
   // Draw lines for each dataset
   data.datasets.forEach(dataset => {
     const pathData = [];
