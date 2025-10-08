@@ -2029,9 +2029,9 @@ function createSVGChart(container, data, periodType) {
   if (isExpanded) {
     // For expanded view: use actual container dimensions to prevent scrolling
     const containerRect = container.getBoundingClientRect();
-    // Subtract a small buffer to ensure it fits without scrollbars
-    width = Math.max(containerRect.width - 20, 600); // Min 600px, subtract 20px buffer
-    height = Math.max(containerRect.height - 20, 400); // Min 400px, subtract 20px buffer
+    // Account for container padding (10px on all sides = 20px total) + small buffer
+    width = Math.max(containerRect.width - 40, 600); // Subtract padding + buffer
+    height = Math.max(containerRect.height - 40, 400); // Subtract padding + buffer
     padding = 80; // More padding for Y-axis labels
   } else {
     // For inline view: use current hardcoded dimensions
@@ -2050,7 +2050,11 @@ function createSVGChart(container, data, periodType) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', width);
   svg.setAttribute('height', height);
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.style.background = 'white';
+  svg.style.maxWidth = '100%';
+  svg.style.maxHeight = '100%';
+  svg.style.display = 'block'; // Prevents extra space below SVG
   
   // Find min/max values across all datasets
   let minValue = Infinity;
