@@ -2984,15 +2984,120 @@ async function showMappingConfirmation(autoMappings, criticalBS, criticalPnL, da
     modal.style.cssText = `
       background: white;
       border-radius: 12px;
-      max-width: 700px;
+      max-width: 800px;
       width: 100%;
-      max-height: 80vh;
+      max-height: 85vh;
       overflow-y: auto;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     `;
     
-    // Build mapping rows
-    const mappingRows = Object.keys(autoMappings).map(bsItem => {
+    // Define the 5 critical P&L drivers that should ALWAYS be shown
+    const CRITICAL_DRIVERS = [
+      {
+        key: 'revenue',
+        label: 'Revenue Driver',
+        description: 'Drives: Accounts Receivable, Prepaid Expenses, CapEx',
+        bsMapping: (bs) => bs.accountsReceivable || bs.prepaidExpenses || bs.deferredRevenue,
+        pnlMapping: (pnl) => pnl.revenue,
+        patterns: ['total revenue', 'net revenue', 'revenue', 'total sales', 'sales']
+      },
+      {
+        key: 'cogs',
+        label: 'COGS Driver',
+        description: 'Drives: Inventory',
+        bsMapping: (bs) => bs.inventory,
+        pnlMapping: (pnl) => pnl.cogs,
+        patterns: ['cost of goods sold', 'cogs', 'cost of sales']
+      },
+      {
+        key: 'opex',
+        label: 'Operating Expenses Driver',
+        description: 'Drives: Accounts Payable, Accrued Expenses',
+        bsMapping: (bs) => bs.accountsPayable || bs.accruedExpenses,
+        pnlMapping: (pnl) => pnl.operatingExpenses,
+        patterns: ['operating expenses', 'opex', 'total expenses']
+      },
+      {
+        key: 'netIncome',
+        label: 'Net Income Driver',
+        description: 'Drives: Retained Earnings, Dividends',
+        bsMapping: (bs) => bs.retainedEarnings,
+        pnlMapping: (pnl) => pnl.netIncome,
+        patterns: ['net income', 'net profit', 'net earnings', 'bottom line']
+      },
+      {
+        key: 'depreciation',
+        label: 'Depreciation Driver',
+        description: 'Drives: PPE, Cash Flow (non-cash add-back)',
+        bsMapping: (bs) => bs.ppe,
+        pnlMapping: (pnl) => pnl.depreciation,
+        patterns: ['depreciation', 'depreciation expense', 'd&a', 'depreciation and amortization']
+      }
+    ];
+    
+    // Build critical driver rows (always shown)
+    const pnlItems = data.pnl || [];
+    const criticalDriverRows = CRITICAL_DRIVERS.map(driver => {
+      // Try to find the current mapping
+      let currentMapping = null;
+      let confidence = 0;
+      
+      // Check if this driver is already in autoMappings
+      const relatedMapping = Object.values(autoMappings).find(m => {
+        if (driver.key === 'revenue' && ['accounts_receivable', 'prepaid_expenses', 'deferred_revenue'].includes(m.balanceSheetCategory)) return true;
+        if (driver.key === 'cogs' && m.balanceSheetCategory === 'inventory') return true;
+        if (driver.key === 'opex' && ['accounts_payable', 'accrued_expenses'].includes(m.balanceSheetCategory)) return true;
+        if (driver.key === 'netIncome' && m.balanceSheetCategory === 'retained_earnings') return true;
+        if (driver.key === 'depreciation' && m.balanceSheetCategory === 'property_plant_equipment') return true;
+        return false;
+      });
+      
+      if (relatedMapping) {
+        currentMapping = relatedMapping.pnlDriver;
+        confidence = relatedMapping.confidence || 0.95;
+      } else {
+        // Try pattern matching
+        const matched = pnlItems.find(item => {
+          const itemName = item.name.toLowerCase();
+          return driver.patterns.some(pattern => itemName.includes(pattern));
+        });
+        if (matched) {
+          currentMapping = matched.name;
+          confidence = 0.85;
+        }
+      }
+      
+      const confidenceColor = confidence >= 0.7 ? '#27ae60' : confidence > 0 ? '#f39c12' : '#e74c3c';
+      const confidenceLabel = confidence >= 0.7 ? 'High' : confidence > 0 ? 'Medium' : 'Not Found';
+      const pnlOptions = buildPnLOptions(pnlItems, currentMapping);
+      
+      return `
+        <div style="margin-bottom: 15px; padding: 12px; background: white; border-radius: 4px; border: 1px solid #e9ecef;">
+          <div style="margin-bottom: 8px;">
+            <strong style="color: #2c3e50;">${driver.label}</strong>
+            <br><span style="color: #6c757d; font-size: 0.85rem;">${driver.description}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <select id="critical-mapping-${driver.key}" style="flex: 1; padding: 8px; border: 2px solid #dee2e6; border-radius: 6px; font-size: 0.95rem;">
+              ${pnlOptions}
+            </select>
+            <div style="min-width: 100px; text-align: right;">
+              <span style="color: ${confidenceColor}; font-size: 0.85rem; font-weight: 600;">
+                ${confidence > 0 ? `${(confidence * 100).toFixed(0)}% ${confidenceLabel}` : 'Not Found'}
+              </span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Build additional mapping rows for other detected items (if any beyond the 5 critical)
+    const otherMappingRows = Object.keys(autoMappings).filter(bsItem => {
+      const mapping = autoMappings[bsItem];
+      // Exclude items already covered by critical drivers
+      return !['accounts_receivable', 'inventory', 'accounts_payable', 'accrued_expenses', 
+               'prepaid_expenses', 'deferred_revenue', 'retained_earnings', 'property_plant_equipment'].includes(mapping.balanceSheetCategory);
+    }).map(bsItem => {
       const mapping = autoMappings[bsItem];
       const pnlOptions = buildPnLOptions(data.pnl || [], mapping.pnlDriver);
       
@@ -3019,18 +3124,30 @@ async function showMappingConfirmation(autoMappings, criticalBS, criticalPnL, da
       <div style="padding: 30px;">
         <h2 style="color: #2c3e50; margin-bottom: 10px;">🎯 Confirm P&L Mappings</h2>
         <p style="color: #6c757d; margin-bottom: 25px;">
-          We auto-detected ${Object.keys(autoMappings).length} key balance sheet items and their P&L drivers. 
-          Review and confirm or adjust as needed.
+          Review and adjust the 5 critical P&L drivers that power your balance sheet forecasts.
         </p>
         
-        <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-          ${mappingRows.length > 0 ? mappingRows : '<p style="color: #6c757d;">No critical items detected. Balance sheet will use growth rates.</p>'}
+        <!-- CRITICAL P&L DRIVERS (ALWAYS SHOWN) -->
+        <div style="margin-bottom: 25px;">
+          <h4 style="color: #3498db; margin-bottom: 10px;">⭐ Critical P&L Drivers (Always Editable)</h4>
+          <div style="background: #f0f8ff; padding: 15px; border-radius: 6px; border-left: 4px solid #3498db;">
+            ${criticalDriverRows}
+          </div>
         </div>
+        
+        ${otherMappingRows.length > 0 ? `
+          <div style="margin-bottom: 25px;">
+            <h4 style="color: #27ae60; margin-bottom: 10px;">✅ Additional Balance Sheet Mappings</h4>
+            <div style="background: #f8fff8; padding: 15px; border-radius: 6px; border-left: 4px solid #27ae60;">
+              ${otherMappingRows}
+            </div>
+          </div>
+        ` : ''}
         
         <div style="background: #e3f2fd; border: 1px solid #2196f3; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
           <div style="font-size: 0.9rem; color: #1976d2;">
-            <strong>ℹ️ Note:</strong> Other balance sheet items (${(data.balance?.length || 0) - Object.keys(autoMappings).length}) will use simple growth rates. 
-            This keeps setup fast while maintaining accuracy for the most important items.
+            <strong>ℹ️ Note:</strong> The 5 critical P&L drivers above are always shown for your review. 
+            You can adjust any or all of them. Other balance sheet items (${(data.balance?.length || 0) - 5}) will use simple growth rates.
           </div>
         </div>
         
@@ -3056,7 +3173,52 @@ async function showMappingConfirmation(autoMappings, criticalBS, criticalPnL, da
     
     // Handle confirm
     document.getElementById('confirmMappingsBtn').addEventListener('click', () => {
-      // Collect any user changes to mappings
+      // Step 1: Capture the 5 critical driver selections
+      CRITICAL_DRIVERS.forEach(driver => {
+        const selectId = `critical-mapping-${driver.key}`;
+        const select = document.getElementById(selectId);
+        if (select) {
+          const selectedPnL = select.value;
+          
+          // Update all balance sheet items that use this driver
+          Object.keys(autoMappings).forEach(bsItem => {
+            const mapping = autoMappings[bsItem];
+            
+            // Map critical driver to balance sheet categories
+            let shouldUpdate = false;
+            if (driver.key === 'revenue' && 
+                ['accounts_receivable', 'prepaid_expenses', 'deferred_revenue'].includes(mapping.balanceSheetCategory)) {
+              shouldUpdate = true;
+            }
+            if (driver.key === 'cogs' && mapping.balanceSheetCategory === 'inventory') {
+              shouldUpdate = true;
+            }
+            if (driver.key === 'opex' && 
+                ['accounts_payable', 'accrued_expenses'].includes(mapping.balanceSheetCategory)) {
+              shouldUpdate = true;
+            }
+            if (driver.key === 'netIncome' && mapping.balanceSheetCategory === 'retained_earnings') {
+              shouldUpdate = true;
+            }
+            if (driver.key === 'depreciation' && mapping.balanceSheetCategory === 'property_plant_equipment') {
+              shouldUpdate = true;
+            }
+            
+            if (shouldUpdate) {
+              const oldDriver = mapping.pnlDriver;
+              mapping.pnlDriver = selectedPnL || null;
+              mapping.confidence = selectedPnL ? 1.0 : 0;
+              mapping.userOverride = true;
+              
+              if (oldDriver !== selectedPnL) {
+                console.log(`✏️ User updated ${driver.key} driver for "${bsItem}": "${selectedPnL || 'none'}"`);
+              }
+            }
+          });
+        }
+      });
+      
+      // Step 2: Collect any user changes to other mappings
       Object.keys(autoMappings).forEach(bsItem => {
         const selectId = `mapping-${bsItem.replace(/\s+/g, '-')}`;
         const select = document.getElementById(selectId);
@@ -3064,7 +3226,7 @@ async function showMappingConfirmation(autoMappings, criticalBS, criticalPnL, da
           const selectedPnL = select.value;
           if (selectedPnL && autoMappings[bsItem]) {
             autoMappings[bsItem].pnlDriver = selectedPnL;
-            autoMappings[bsItem].userOverride = select.value !== autoMappings[bsItem].pnlDriver;
+            autoMappings[bsItem].userOverride = true;
           }
         }
       });
