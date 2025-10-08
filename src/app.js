@@ -2021,9 +2021,24 @@ function generateChartData(periodType, selectedItems) {
 }
 
 function createSVGChart(container, data, periodType) {
-  const width = 400;
-  const height = 180;
-  const padding = 40;
+  // Detect if this is the expanded modal by checking container ID or size
+  const isExpanded = container.id === 'expandedLineChart';
+  
+  let width, height, padding;
+  
+  if (isExpanded) {
+    // For expanded view: use 80% of viewport with padding
+    const containerRect = container.getBoundingClientRect();
+    width = containerRect.width > 0 ? containerRect.width : window.innerWidth * 0.8;
+    height = containerRect.height > 0 ? containerRect.height : window.innerHeight * 0.8;
+    padding = 60; // More padding for larger chart
+  } else {
+    // For inline view: use current hardcoded dimensions
+    width = 400;
+    height = 180;
+    padding = 40;
+  }
+  
   const chartWidth = width - padding * 2;
   const chartHeight = height - padding * 2;
   
@@ -2135,15 +2150,19 @@ function createSVGChart(container, data, periodType) {
   });
   
   // Add labels
+  const labelFontSize = isExpanded ? '12' : '10';
+  const labelFrequency = isExpanded ? Math.ceil(data.labels.length / 12) : Math.ceil(data.labels.length / 6);
+  const maxLabelLength = isExpanded ? 15 : 8;
+  
   data.labels.forEach((label, index) => {
-    if (index % Math.ceil(data.labels.length / 6) === 0) { // Show every nth label to avoid crowding
+    if (index % labelFrequency === 0) { // Show every nth label to avoid crowding
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       text.setAttribute('x', indexToX(index));
       text.setAttribute('y', height - 5);
       text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('font-size', '10');
+      text.setAttribute('font-size', labelFontSize);
       text.setAttribute('fill', '#666');
-      text.textContent = label.length > 8 ? label.substring(0, 8) + '...' : label;
+      text.textContent = label.length > maxLabelLength ? label.substring(0, maxLabelLength) + '...' : label;
       svg.appendChild(text);
     }
   });
@@ -7089,6 +7108,11 @@ function closeModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.style.display = 'none';
+    
+    // Clean up resize listener when closing expanded chart modal
+    if (modalId === 'expanded-chart-modal') {
+      window.removeEventListener('resize', handleExpandedChartResize);
+    }
   }
 }
 
@@ -7377,6 +7401,24 @@ function expandChart(periodType) {
   
   // Show modal
   modal.style.display = 'block';
+  
+  // Add resize listener for dynamic chart resizing
+  window.addEventListener('resize', handleExpandedChartResize);
+}
+
+/**
+ * Handle window resize for expanded chart
+ */
+let resizeTimeout;
+function handleExpandedChartResize() {
+  // Debounce resize events
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    const modal = document.getElementById('expanded-chart-modal');
+    if (modal && modal.style.display === 'block') {
+      updateExpandedChart();
+    }
+  }, 250); // Wait 250ms after resize stops
 }
 
 /**
