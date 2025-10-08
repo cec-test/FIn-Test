@@ -2035,9 +2035,9 @@ function createSVGChart(container, data, periodType) {
     let availableHeight;
     if (modalBody) {
       const modalBodyRect = modalBody.getBoundingClientRect();
-      // Modal body has padding (12px top, 20px bottom) and chart controls (~50px)
+      // Modal body has padding (12px top, 20px bottom) and chart controls (~70px with margins)
       const modalBodyPadding = 12 + 20; // top + bottom padding
-      const controlsHeight = 60; // Approximate height of chart controls
+      const controlsHeight = 80; // More realistic height estimate for chart controls + margins
       availableHeight = modalBodyRect.height - modalBodyPadding - controlsHeight;
     } else {
       availableHeight = containerRect.height;
@@ -2048,9 +2048,9 @@ function createSVGChart(container, data, periodType) {
     const availableWidth = containerRect.width - containerPadding;
     availableHeight = availableHeight - containerPadding;
     
-    // Use 85% of available space for safety (more conservative)
-    width = Math.floor(availableWidth * 0.85);
-    height = Math.floor(availableHeight * 0.85);
+    // Use 90% of available space (less aggressive than before)
+    width = Math.floor(availableWidth * 0.90);
+    height = Math.floor(availableHeight * 0.90);
     
     // Ensure reasonable minimums
     width = Math.max(width, 500);
