@@ -49,19 +49,33 @@ const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct
 function parseHeaderToYearMonth(header) {
   if (!header) return null;
   const trimmed = String(header).trim();
-  // Try MMM YYYY
+  
+  // Try MMM DD, YYYY (e.g., "Jan 31, 2025")
+  let match = trimmed.match(/^(\w+)\s+(\d{1,2}),?\s+(\d{4})$/);
+  if (match) {
+    const monthName = match[1];
+    const year = Number(match[3]);
+    const monthIndex = MONTHS_SHORT.findIndex(m => new RegExp(`^${m}`, 'i').test(monthName));
+    if (monthIndex >= 0) {
+      return { year, month: monthIndex };
+    }
+  }
+  
+  // Try MMM YYYY (e.g., "Jan 2025")
   const mmm = MONTHS_SHORT.findIndex(m => new RegExp(`^${m}\\s+\\d{4}$`, 'i').test(trimmed));
   if (mmm >= 0) {
     const year = Number(trimmed.replace(/[^0-9]/g, '').slice(-4));
     return { year, month: mmm };
   }
+  
   // Try YYYY-MM or YYYY/MM
-  let match = trimmed.match(/^(\d{4})[-\/](\d{1,2})$/);
+  match = trimmed.match(/^(\d{4})[-\/](\d{1,2})$/);
   if (match) {
     const year = Number(match[1]);
     const month = Number(match[2]) - 1;
     return { year, month };
   }
+  
   // Try MM/DD/YYYY or M/D/YYYY
   match = trimmed.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{4})$/);
   if (match) {
@@ -69,6 +83,7 @@ function parseHeaderToYearMonth(header) {
     const year = Number(match[3]);
     return { year, month };
   }
+  
   // Fallback: Date.parse
   const d = new Date(trimmed);
   if (!isNaN(d.getTime())) {
@@ -7500,7 +7515,10 @@ function generateChartDataWithRange(periodType, selectedItems, startIndex, endIn
       date.setMonth(date.getMonth() + i); // Increment from the cloned date
       const monthName = date.toLocaleDateString('en-US', { month: 'short' });
       const year = date.getFullYear();
-      allLabels.push(`${monthName} ${year}`);
+      const month = date.getMonth();
+      // Get last day of month: create date for first day of next month, then subtract 1 day
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      allLabels.push(`${monthName} ${lastDay}, ${year}`);
     }
   } else if (periodType === 'quarterly') {
     // For quarterly, aggregate actuals + forecasts
@@ -7640,7 +7658,10 @@ function populateDateRangeDropdowns(periodType) {
       date.setMonth(date.getMonth() + i); // Increment from the cloned date
       const monthName = date.toLocaleDateString('en-US', { month: 'short' });
       const year = date.getFullYear();
-      dateLabels.push(`${monthName} ${year}`);
+      const month = date.getMonth();
+      // Get last day of month: create date for first day of next month, then subtract 1 day
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      dateLabels.push(`${monthName} ${lastDay}, ${year}`);
     }
   } else if (periodType === 'quarterly') {
     // For quarterly, combine actuals + forecasts
