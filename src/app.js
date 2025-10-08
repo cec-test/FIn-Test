@@ -2027,16 +2027,17 @@ function createSVGChart(container, data, periodType) {
   let width, height, padding;
   
   if (isExpanded) {
-    // For expanded view: use 80% of viewport with padding
+    // For expanded view: use actual container dimensions to prevent scrolling
     const containerRect = container.getBoundingClientRect();
-    width = containerRect.width > 0 ? containerRect.width : window.innerWidth * 0.8;
-    height = containerRect.height > 0 ? containerRect.height : window.innerHeight * 0.8;
-    padding = 60; // More padding for larger chart
+    // Subtract a small buffer to ensure it fits without scrollbars
+    width = Math.max(containerRect.width - 20, 600); // Min 600px, subtract 20px buffer
+    height = Math.max(containerRect.height - 20, 400); // Min 400px, subtract 20px buffer
+    padding = 80; // More padding for Y-axis labels
   } else {
     // For inline view: use current hardcoded dimensions
     width = 400;
     height = 180;
-    padding = 40;
+    padding = 50; // Increased padding for Y-axis labels
   }
   
   const chartWidth = width - padding * 2;
@@ -2069,10 +2070,9 @@ function createSVGChart(container, data, periodType) {
     return;
   }
   
-  // Add some padding to the value range
-  const valueRange = maxValue - minValue;
-  const paddedMin = minValue - valueRange * 0.1;
-  const paddedMax = maxValue + valueRange * 0.1;
+  // Set Y-axis minimum to 0, and add padding to max
+  const paddedMin = 0; // Always start Y-axis at $0
+  const paddedMax = maxValue * 1.1; // Add 10% padding above max value
   const paddedRange = paddedMax - paddedMin;
   
   // Helper function to convert value to y coordinate
