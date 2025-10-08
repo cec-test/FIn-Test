@@ -2070,6 +2070,28 @@ function createSVGChart(container, data, periodType) {
   // Clear container
   container.innerHTML = '';
   
+  // Create tooltip div
+  const tooltip = document.createElement('div');
+  tooltip.style.position = 'absolute';
+  tooltip.style.display = 'none';
+  tooltip.style.background = 'rgba(0, 0, 0, 0.85)';
+  tooltip.style.color = 'white';
+  tooltip.style.padding = '8px 12px';
+  tooltip.style.borderRadius = '6px';
+  tooltip.style.fontSize = '13px';
+  tooltip.style.fontWeight = '500';
+  tooltip.style.pointerEvents = 'none';
+  tooltip.style.zIndex = '10000';
+  tooltip.style.whiteSpace = 'nowrap';
+  tooltip.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+  container.appendChild(tooltip);
+  
+  // Create SVG wrapper for positioning
+  const svgWrapper = document.createElement('div');
+  svgWrapper.style.position = 'relative';
+  svgWrapper.style.width = '100%';
+  svgWrapper.style.height = '100%';
+  
   // Create SVG
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', width);
@@ -2209,7 +2231,7 @@ function createSVGChart(container, data, periodType) {
       path.setAttribute('fill', 'none');
       svg.appendChild(path);
       
-      // Add dots for data points
+      // Add dots for data points with hover tooltips
       dataset.values.forEach((value, index) => {
         const x = indexToX(index);
         const y = valueToY(value);
@@ -2218,8 +2240,47 @@ function createSVGChart(container, data, periodType) {
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
           circle.setAttribute('cx', x);
           circle.setAttribute('cy', y);
-          circle.setAttribute('r', '3');
+          circle.setAttribute('r', '4');
           circle.setAttribute('fill', dataset.color);
+          circle.setAttribute('stroke', 'white');
+          circle.setAttribute('stroke-width', '2');
+          circle.style.cursor = 'pointer';
+          circle.style.transition = 'r 0.2s ease';
+          
+          // Hover effects and tooltip
+          circle.addEventListener('mouseenter', (e) => {
+            // Enlarge circle on hover
+            circle.setAttribute('r', '6');
+            
+            // Format value as currency
+            const formattedValue = '$' + Math.round(value).toLocaleString('en-US');
+            const label = data.labels[index];
+            
+            // Set tooltip content
+            tooltip.innerHTML = `<div style="font-weight: 600; margin-bottom: 2px;">${dataset.label}</div><div style="font-size: 12px; opacity: 0.9;">${label}</div><div style="font-size: 15px; font-weight: 700; margin-top: 4px;">${formattedValue}</div>`;
+            tooltip.style.display = 'block';
+            
+            // Position tooltip near the point
+            const containerRect = container.getBoundingClientRect();
+            const svgRect = svg.getBoundingClientRect();
+            
+            // Calculate position relative to container
+            const tooltipX = svgRect.left - containerRect.left + x;
+            const tooltipY = svgRect.top - containerRect.top + y;
+            
+            tooltip.style.left = tooltipX + 'px';
+            tooltip.style.top = (tooltipY - 80) + 'px'; // Position above point
+            tooltip.style.transform = 'translateX(-50%)'; // Center horizontally
+          });
+          
+          circle.addEventListener('mouseleave', () => {
+            // Reset circle size
+            circle.setAttribute('r', '4');
+            
+            // Hide tooltip
+            tooltip.style.display = 'none';
+          });
+          
           svg.appendChild(circle);
         }
       });
@@ -2244,7 +2305,8 @@ function createSVGChart(container, data, periodType) {
     }
   });
   
-  container.appendChild(svg);
+  svgWrapper.appendChild(svg);
+  container.appendChild(svgWrapper);
 }
 
 /**
