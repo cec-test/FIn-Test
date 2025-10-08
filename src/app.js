@@ -1534,6 +1534,12 @@ function applyActualsFromObject(data) {
   
   // Recompute forecasts
   updateForecast();
+  
+  // Initialize custom growth rates UI
+  if (typeof populateCustomRatesDropdown === 'function') {
+    populateCustomRatesDropdown();
+    renderCustomRatesList();
+  }
 }
 
 function rebuildAllTables() {
@@ -6823,6 +6829,128 @@ function initializeFloatingChat() {
   console.log('✅ Floating chat initialized');
 }
 
+/**
+ * Custom Growth Rates UI Management
+ */
+
+function populateCustomRatesDropdown() {
+  const dropdown = document.getElementById('addCustomRateDropdown');
+  if (!dropdown) return;
+  
+  // Clear existing options
+  dropdown.innerHTML = '<option value="">+ Add Line Item</option>';
+  
+  // Get P&L items only (no balance sheet or cash flow)
+  const pnlItems = uploadedLineItems.pnl || [];
+  const existingRates = loadCustomGrowthRates();
+  
+  pnlItems.forEach(item => {
+    const key = overrideKey('pnl', item.name);
+    const alreadyAdded = existingRates[key] !== undefined;
+    const isPnLDriven = isPnLDrivenItem(item.name);
+    const isSubheader = isSubheaderOverridden('pnl', item.name);
+    
+    // Skip if already has custom rate, is P&L-driven, or is a subheader
+    if (alreadyAdded || isPnLDriven || isSubheader) return;
+    
+    const option = document.createElement('option');
+    option.value = item.name;
+    option.textContent = item.name;
+    dropdown.appendChild(option);
+  });
+}
+
+function renderCustomRatesList() {
+  const listContainer = document.getElementById('customRatesList');
+  if (!listContainer) return;
+  
+  const rates = loadCustomGrowthRates();
+  const entries = Object.entries(rates);
+  
+  if (entries.length === 0) {
+    listContainer.innerHTML = '<div style="color: #999; font-style: italic; font-size: 0.9em;">No custom rates set</div>';
+    return;
+  }
+  
+  listContainer.innerHTML = '';
+  
+  entries.forEach(([key, rate]) => {
+    // Parse key: "pnl::revenue" -> { statement: 'pnl', name: 'revenue' }
+    const [statement, ...nameParts] = key.split('::');
+    const itemName = nameParts.join('::'); // Handle names with "::" in them
+    
+    // Find the actual item name (case-sensitive)
+    const allItems = uploadedLineItems[statement] || [];
+    const actualItem = allItems.find(item => item.name.toLowerCase() === itemName);
+    const displayName = actualItem ? actualItem.name : itemName;
+    
+    const itemDiv = document.createElement('div');
+    itemDiv.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #2196f3;';
+    
+    itemDiv.innerHTML = `
+      <div style="flex: 1;">
+        <div style="font-weight: 600; color: #2c3e50;">${displayName}</div>
+        <div style="font-size: 0.85em; color: #666;">${statement.toUpperCase()} • ${rate}% annual growth</div>
+      </div>
+      <button class="btn-danger" onclick="removeCustomRate('${statement}', '${displayName.replace(/'/g, "\\'")}')" style="padding: 4px 12px; font-size: 0.85em;">Remove</button>
+    `;
+    
+    listContainer.appendChild(itemDiv);
+  });
+}
+
+function addCustomRateFromUI() {
+  const dropdown = document.getElementById('addCustomRateDropdown');
+  const input = document.getElementById('customRateInput');
+  
+  const itemName = dropdown?.value;
+  const rate = parseFloat(input?.value);
+  
+  if (!itemName) {
+    alert('Please select a line item');
+    return;
+  }
+  
+  if (isNaN(rate)) {
+    alert('Please enter a valid growth rate');
+    return;
+  }
+  
+  // Check if it's a P&L-driven item
+  if (isPnLDrivenItem(itemName)) {
+    alert(`"${itemName}" uses a P&L-driven formula and cannot have a custom growth rate.`);
+    return;
+  }
+  
+  // Add the custom rate
+  setCustomGrowthRate('pnl', itemName, rate);
+  
+  // Clear inputs
+  dropdown.value = '';
+  input.value = '';
+  input.disabled = true;
+  document.getElementById('addCustomRateBtn').disabled = true;
+  
+  // Refresh UI
+  renderCustomRatesList();
+  populateCustomRatesDropdown();
+  updateForecast();
+  rebuildAllTables();
+}
+
+function removeCustomRate(statement, itemName) {
+  if (confirm(`Remove custom growth rate for "${itemName}"?`)) {
+    deleteCustomGrowthRate(statement, itemName);
+    renderCustomRatesList();
+    populateCustomRatesDropdown();
+    updateForecast();
+    rebuildAllTables();
+  }
+}
+
+// Make removeCustomRate global so onclick can access it
+window.removeCustomRate = removeCustomRate;
+
 document.addEventListener('DOMContentLoaded', function () {
   console.log('DOM loaded, initializing...');
   console.log('JavaScript is running!');
@@ -7097,6 +7225,76 @@ document.addEventListener('DOMContentLoaded', function () {
       seasonalModal.style.display = 'none';
     }
   });
+
+  // Operating Leverage (80% Rule) help modal handlers
+  const operatingLeverageHelpButton = document.getElementById('operatingLeverageHelp');
+  const operatingLeverageModal = document.getElementById('operatingLeverageModal');
+  const closeOperatingLeverageModal = document.getElementById('closeOperatingLeverageModal');
+
+  operatingLeverageHelpButton?.addEventListener('click', function() {
+    operatingLeverageModal.style.display = 'block';
+  });
+
+  closeOperatingLeverageModal?.addEventListener('click', function() {
+    operatingLeverageModal.style.display = 'none';
+  });
+
+  window.addEventListener('click', function(event) {
+    if (event.target === operatingLeverageModal) {
+      operatingLeverageModal.style.display = 'none';
+    }
+  });
+
+  // Custom Growth Rates help modal handlers
+  const customRatesHelpButton = document.getElementById('customRatesHelp');
+  const customRatesModal = document.getElementById('customRatesModal');
+  const closeCustomRatesModal = document.getElementById('closeCustomRatesModal');
+
+  customRatesHelpButton?.addEventListener('click', function() {
+    customRatesModal.style.display = 'block';
+  });
+
+  closeCustomRatesModal?.addEventListener('click', function() {
+    customRatesModal.style.display = 'none';
+  });
+
+  window.addEventListener('click', function(event) {
+    if (event.target === customRatesModal) {
+      customRatesModal.style.display = 'none';
+    }
+  });
+
+  // Custom Growth Rates UI handlers
+  const addCustomRateDropdown = document.getElementById('addCustomRateDropdown');
+  const customRateInput = document.getElementById('customRateInput');
+  const addCustomRateBtn = document.getElementById('addCustomRateBtn');
+
+  // Enable input and button when dropdown selection changes
+  addCustomRateDropdown?.addEventListener('change', function() {
+    const hasSelection = this.value !== '';
+    if (customRateInput) customRateInput.disabled = !hasSelection;
+    if (addCustomRateBtn) addCustomRateBtn.disabled = !hasSelection;
+    if (hasSelection && customRateInput) customRateInput.focus();
+  });
+
+  // Add custom rate when button clicked
+  addCustomRateBtn?.addEventListener('click', addCustomRateFromUI);
+
+  // Add custom rate when Enter pressed in input
+  customRateInput?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && !addCustomRateBtn.disabled) {
+      addCustomRateFromUI();
+    }
+  });
+
+  // Initialize custom rates UI when data is uploaded
+  function initializeCustomRatesUI() {
+    populateCustomRatesDropdown();
+    renderCustomRatesList();
+  }
+
+  // Call after file upload
+  window.addEventListener('dataUploaded', initializeCustomRatesUI);
 
   // Balance sheet help - show individual explanations in styled modal
   const bsHelpContent = {
