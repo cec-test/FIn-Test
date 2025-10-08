@@ -2051,11 +2051,15 @@ function createSVGChart(container, data, periodType) {
   
   // Create SVG
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('width', width);
-  svg.setAttribute('height', height);
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   svg.style.background = 'white';
   svg.style.display = 'block'; // Prevents extra space below SVG
+  // Override CSS - use explicit dimensions that fit in container
+  svg.style.width = width + 'px !important';
+  svg.style.height = height + 'px !important';
+  svg.style.maxWidth = '100%';
+  svg.style.maxHeight = '100%';
   
   // Find min/max values across all datasets
   let minValue = Infinity;
