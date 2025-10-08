@@ -3460,6 +3460,91 @@ async function showPnLMappingReview(mappings, pnlItems) {
       document.body.appendChild(overlay);
     }
     
+    // Define the 5 critical P&L driver categories that should ALWAYS be shown
+    const CRITICAL_PNL_DRIVERS = [
+      { 
+        category: 'revenue', 
+        label: 'Revenue Driver',
+        description: 'Drives: Accounts Receivable, Prepaid Expenses, CapEx',
+        patterns: ['total revenue', 'net revenue', 'revenue', 'total sales', 'sales']
+      },
+      { 
+        category: 'cogs', 
+        label: 'COGS Driver',
+        description: 'Drives: Inventory',
+        patterns: ['cost of goods sold', 'cogs', 'cost of sales']
+      },
+      { 
+        category: 'operating_expenses', 
+        label: 'Operating Expenses Driver',
+        description: 'Drives: Accounts Payable, Accrued Expenses',
+        patterns: ['operating expenses', 'opex', 'total expenses']
+      },
+      { 
+        category: 'net_income', 
+        label: 'Net Income Driver',
+        description: 'Drives: Retained Earnings, Dividends',
+        patterns: ['net income', 'net profit', 'net earnings', 'bottom line']
+      },
+      { 
+        category: 'depreciation', 
+        label: 'Depreciation Driver',
+        description: 'Drives: PPE, Cash Flow (non-cash add-back)',
+        patterns: ['depreciation', 'depreciation expense', 'd&a', 'depreciation and amortization']
+      }
+    ];
+    
+    // Find which P&L items map to each critical driver
+    const criticalMappings = CRITICAL_PNL_DRIVERS.map(driver => {
+      // Look through all existing mappings to find one that matches this driver type
+      const existingMapping = Object.values(mappings).find(m => {
+        const category = m.balanceSheetCategory;
+        if (driver.category === 'revenue' && (category === 'accounts_receivable' || category === 'prepaid_expenses' || category === 'deferred_revenue')) {
+          return true;
+        }
+        if (driver.category === 'cogs' && category === 'inventory') {
+          return true;
+        }
+        if (driver.category === 'operating_expenses' && (category === 'accounts_payable' || category === 'accrued_expenses')) {
+          return true;
+        }
+        if (driver.category === 'net_income' && category === 'retained_earnings') {
+          return true;
+        }
+        if (driver.category === 'depreciation' && category === 'property_plant_equipment') {
+          return true;
+        }
+        return false;
+      });
+      
+      // If found, use the existing mapping; otherwise, try to auto-detect
+      if (existingMapping) {
+        return {
+          category: driver.category,
+          label: driver.label,
+          description: driver.description,
+          pnlDriver: existingMapping.pnlDriver,
+          confidence: existingMapping.confidence || 0,
+          method: existingMapping.method || 'auto_detected'
+        };
+      } else {
+        // Try to find a matching P&L item using patterns
+        const matchedPnL = pnlItems.find(item => {
+          const itemNameLower = item.name.toLowerCase();
+          return driver.patterns.some(pattern => itemNameLower.includes(pattern));
+        });
+        
+        return {
+          category: driver.category,
+          label: driver.label,
+          description: driver.description,
+          pnlDriver: matchedPnL ? matchedPnL.name : null,
+          confidence: matchedPnL ? 0.85 : 0,
+          method: matchedPnL ? 'pattern_matched' : 'not_found'
+        };
+      }
+    });
+    
     const mappingEntries = Object.values(mappings);
     const highConfidenceMappings = mappingEntries.filter(m => m.confidence >= 0.7);
     const lowConfidenceMappings = mappingEntries.filter(m => m.confidence < 0.7);
@@ -3474,12 +3559,46 @@ async function showPnLMappingReview(mappings, pnlItems) {
       <div style="background: white; padding: 30px; border-radius: 10px; max-width: 1000px; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
         <div style="font-size: 1.5rem; color: #2c3e50; margin-bottom: 10px;">🔗 P&L Driver Mapping</div>
         <div style="color: #6c757d; margin-bottom: 20px;">
-          Review how balance sheet items connect to P&L drivers for forecasting calculations.
+          Review and adjust the 5 critical P&L drivers that power your balance sheet forecasts.
         </div>
         
+        <!-- CRITICAL P&L DRIVERS (ALWAYS SHOWN) -->
+        <div style="margin-bottom: 25px;">
+          <h4 style="color: #3498db; margin-bottom: 10px;">⭐ Critical P&L Drivers (Always Editable)</h4>
+          <div style="background: #f0f8ff; padding: 15px; border-radius: 6px; border-left: 4px solid #3498db;">
+            ${criticalMappings.map(mapping => {
+              const confidence = mapping.confidence || 0;
+              const confidenceColor = confidence >= 0.7 ? '#27ae60' : confidence > 0 ? '#f39c12' : '#e74c3c';
+              const confidenceLabel = confidence >= 0.7 ? 'High Confidence' : confidence > 0 ? 'Medium Confidence' : 'Not Found';
+              
+              return `
+                <div style="margin-bottom: 15px; padding: 12px; background: white; border-radius: 4px; border: 1px solid #e9ecef;">
+                  <div style="margin-bottom: 8px;">
+                    <strong style="color: #2c3e50;">${mapping.label}</strong>
+                    <br><span style="color: #6c757d; font-size: 0.85rem;">${mapping.description}</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <select id="critical_mapping_${mapping.category}" style="flex: 1; padding: 8px; border: 2px solid #dee2e6; border-radius: 6px; font-size: 0.95rem;">
+                      ${mapping.pnlDriver ? `<option value="${mapping.pnlDriver}" selected>${mapping.pnlDriver}</option>` : '<option value="" selected>-- Select P&L Item --</option>'}
+                      ${pnlOptions}
+                      <option value="">❌ None (Use Growth Rates)</option>
+                    </select>
+                    <div style="min-width: 110px; text-align: right;">
+                      <span style="color: ${confidenceColor}; font-size: 0.85rem; font-weight: 600;">
+                        ${confidence > 0 ? `${(confidence * 100).toFixed(0)}% ${confidenceLabel}` : 'Not Detected'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+        
+        <!-- OTHER BALANCE SHEET MAPPINGS (if any exist) -->
         ${highConfidenceMappings.length > 0 ? `
           <div style="margin-bottom: 25px;">
-            <h4 style="color: #27ae60; margin-bottom: 10px;">✅ High Confidence Mappings</h4>
+            <h4 style="color: #27ae60; margin-bottom: 10px;">✅ Other High Confidence Mappings</h4>
             <div style="background: #f8fff8; padding: 15px; border-radius: 6px; border-left: 4px solid #27ae60;">
               ${highConfidenceMappings.map(mapping => `
                 <div style="margin-bottom: 12px; padding: 8px; background: white; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
@@ -3510,14 +3629,14 @@ async function showPnLMappingReview(mappings, pnlItems) {
                     ${mapping.pnlDriver ? `<strong style="color: #f39c12;">"${mapping.pnlDriver}"</strong> <span style="color: #f39c12;">(${(mapping.confidence * 100).toFixed(0)}% confidence)</span>` : '<span style="color: #e74c3c;">No Match Found</span>'}
                     <br><span style="color: #6c757d; font-size: 0.8rem;">
                       Method: ${mapping.method}
-                      ${mapping.alternatives.length > 0 ? ` | Alternatives: ${mapping.alternatives.slice(0, 2).map(alt => alt.item.name).join(', ')}` : ''}
+                      ${mapping.alternatives && mapping.alternatives.length > 0 ? ` | Alternatives: ${mapping.alternatives.slice(0, 2).map(alt => alt.item.name).join(', ')}` : ''}
                     </span>
                   </div>
                   <select id="mapping_${mapping.balanceSheetItem.replace(/[^a-zA-Z0-9]/g, '_')}" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
                     ${mapping.pnlDriver ? `<option value="${mapping.pnlDriver}" selected>${mapping.pnlDriver} (${(mapping.confidence * 100).toFixed(0)}%)</option>` : ''}
-                    ${mapping.alternatives.map(alt => `
+                    ${mapping.alternatives ? mapping.alternatives.map(alt => `
                       <option value="${alt.item.name}">${alt.item.name} (${(alt.confidence * 100).toFixed(0)}%)</option>
-                    `).join('')}
+                    `).join('') : ''}
                     ${pnlOptions}
                     <option value="">❌ No P&L Driver (Manual Entry)</option>
                   </select>
@@ -3527,16 +3646,16 @@ async function showPnLMappingReview(mappings, pnlItems) {
           </div>
         ` : ''}
         
-        ${mappingEntries.length === 0 ? `
-          <div style="text-align: center; color: #6c757d; padding: 20px;">
-            <div style="font-size: 1.1rem; margin-bottom: 10px;">No Balance Sheet Items to Map</div>
-            <div style="font-size: 0.9rem;">All items are subheaders or totals.</div>
+        <div style="background: #e3f2fd; border: 1px solid #2196f3; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+          <div style="font-size: 0.9rem; color: #1976d2;">
+            <strong>ℹ️ Note:</strong> The 5 critical P&L drivers above are always shown for your review. 
+            You can adjust any or all of them. Items without a P&L driver will use simple growth rates.
           </div>
-        ` : ''}
+        </div>
         
         <div style="text-align: center; margin-top: 25px;">
           <button id="acceptMappings" style="background: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1rem; margin-right: 10px;">
-            Accept P&L Mappings
+            ✓ Accept & Continue
           </button>
           <button id="skipMappings" style="background: #95a5a6; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1rem;">
             Skip P&L Mapping
@@ -3547,7 +3666,52 @@ async function showPnLMappingReview(mappings, pnlItems) {
     
     // Add event listeners
     document.getElementById('acceptMappings').addEventListener('click', () => {
-      // Update mappings based on user changes
+      // Step 1: Capture critical P&L driver selections (the 5 always-shown mappings)
+      criticalMappings.forEach(criticalMapping => {
+        const selectId = `critical_mapping_${criticalMapping.category}`;
+        const select = document.getElementById(selectId);
+        if (select) {
+          const selectedPnL = select.value;
+          
+          // Find all balance sheet items that use this P&L driver category
+          Object.keys(pnlMappings).forEach(bsItem => {
+            const mapping = pnlMappings[bsItem];
+            
+            // Map the critical category to balance sheet categories
+            let shouldUpdate = false;
+            if (criticalMapping.category === 'revenue' && 
+                ['accounts_receivable', 'prepaid_expenses', 'deferred_revenue'].includes(mapping.balanceSheetCategory)) {
+              shouldUpdate = true;
+            }
+            if (criticalMapping.category === 'cogs' && mapping.balanceSheetCategory === 'inventory') {
+              shouldUpdate = true;
+            }
+            if (criticalMapping.category === 'operating_expenses' && 
+                ['accounts_payable', 'accrued_expenses'].includes(mapping.balanceSheetCategory)) {
+              shouldUpdate = true;
+            }
+            if (criticalMapping.category === 'net_income' && mapping.balanceSheetCategory === 'retained_earnings') {
+              shouldUpdate = true;
+            }
+            if (criticalMapping.category === 'depreciation' && mapping.balanceSheetCategory === 'property_plant_equipment') {
+              shouldUpdate = true;
+            }
+            
+            if (shouldUpdate) {
+              const oldDriver = mapping.pnlDriver;
+              mapping.pnlDriver = selectedPnL || null;
+              mapping.confidence = selectedPnL ? 1.0 : 0;
+              mapping.userOverride = true;
+              
+              if (oldDriver !== selectedPnL) {
+                console.log(`✏️ User updated ${criticalMapping.category} driver: "${bsItem}" now uses "${selectedPnL || 'none'}"`);
+              }
+            }
+          });
+        }
+      });
+      
+      // Step 2: Update other mappings based on user changes (existing logic)
       mappingEntries.forEach(mapping => {
         const selectId = `mapping_${mapping.balanceSheetItem.replace(/[^a-zA-Z0-9]/g, '_')}`;
         const select = document.getElementById(selectId);
@@ -3563,7 +3727,7 @@ async function showPnLMappingReview(mappings, pnlItems) {
       });
       
       overlay.remove();
-      console.log('Final P&L mappings:', pnlMappings);
+      console.log('✅ Final P&L mappings after user review:', pnlMappings);
       resolve();
     });
     
