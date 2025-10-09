@@ -6943,8 +6943,8 @@ function addCustomRateFromUI() {
   // Refresh UI
   renderCustomRatesList();
   populateCustomRatesDropdown();
-  updateForecast();
-  rebuildAllTables();
+  rebuildAllTables();  // Rebuild HTML first
+  updateForecast();    // Then calculate forecasts
 }
 
 function removeCustomRate(statement, itemName) {
