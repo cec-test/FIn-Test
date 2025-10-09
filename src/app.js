@@ -6952,8 +6952,8 @@ function removeCustomRate(statement, itemName) {
     deleteCustomGrowthRate(statement, itemName);
     renderCustomRatesList();
     populateCustomRatesDropdown();
-    updateForecast();
-    rebuildAllTables();
+    rebuildAllTables();  // Rebuild HTML first
+    updateForecast();    // Then calculate forecasts
   }
 }
 
