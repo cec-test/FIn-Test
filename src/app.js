@@ -919,26 +919,25 @@ function updateForecast() {
  * Dynamic forecast calculations for all line items
  */
 function updateDynamicForecasts(revGrowth, expGrowth, periods) {
-  // Update P&L and Cash Flow using existing logic
+  // Update P&L and Cash Flow using NEW getForecastValuesForItem function
   ['pnl', 'cashflow'].forEach(statementType => {
     const lineItems = uploadedLineItems[statementType] || [];
     
     lineItems.forEach(item => {
       // Skip subheaders entirely
       if (item.isSubheader) return;
-      // Calculate growth rate for this item
-      let itemGrowth = revGrowth;
-      if (statementType === 'pnl' && item.name.toLowerCase().includes('expense')) {
-        itemGrowth = expGrowth;
-      }
       
-      // Use the most recent actual value as base
-      const baseMonthly = lastNonNull(item.actualValues);
-      const baseValue = (typeof baseMonthly === 'number') ? baseMonthly : (item.actual ?? 0);
-
+      // Skip if item has no actual values
+      if (!item.actualValues || item.actualValues.length === 0) return;
+      
+      // Use NEW forecast function that handles custom rates, 80% rule, and all forecast methods
+      const monthlyForecasts = getForecastValuesForItem(item, periods, statementType);
+      
       // Compute roll-up bases for quarterly and yearly
-      let baseQuarterly = baseValue;
-      let baseYearly = baseValue;
+      const baseMonthly = lastNonNull(item.actualValues) || 0;
+      let baseQuarterly = baseMonthly;
+      let baseYearly = baseMonthly;
+      
       if (item.actualValues && item.actualValues.length > 0) {
         const agg = aggregateActuals(statementType, item.actualValues);
         const qo = agg.toQuarterOutputs();
@@ -947,46 +946,56 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
         if (yo.values && yo.values.length > 0) baseYearly = yo.values[yo.values.length - 1];
       }
       
+      // For quarterly/yearly, we need to scale from monthly forecasts
+      // Generate quarterly forecasts by averaging every 3 months
+      const quarterlyForecasts = [];
+      for (let i = 0; i < periods; i += 3) {
+        const quarter = monthlyForecasts.slice(i, i + 3);
+        const quarterSum = quarter.reduce((sum, val) => sum + (val || 0), 0);
+        quarterlyForecasts.push(quarterSum);
+      }
+      
+      // Generate yearly forecasts by averaging every 12 months  
+      const yearlyForecasts = [];
+      for (let i = 0; i < periods; i += 12) {
+        const year = monthlyForecasts.slice(i, i + 12);
+        const yearSum = year.reduce((sum, val) => sum + (val || 0), 0);
+        yearlyForecasts.push(yearSum);
+      }
+      
       // Update forecast columns
       const safeName = item.name.toLowerCase().replace(/\s+/g, '');
-      for (let i = 0; i < periods; i++) {
-        // separate keys per periodType to avoid cross-period contamination
+      
+      // Update monthly forecasts
+      for (let i = 0; i < periods && i < monthlyForecasts.length; i++) {
         const forecastKeyMonthly = `monthly-${statementType}-${safeName}-${i}`;
-        const forecastKeyQuarterly = `quarterly-${statementType}-${safeName}-${i}`;
-        const forecastKeyYearly = `yearly-${statementType}-${safeName}-${i}`;
-        
-        // Get seasonality settings
-        const seasonalPattern = document.getElementById('seasonalPattern')?.value || 'none';
-        const seasonalStrength = parseFloat(document.getElementById('seasonalStrength')?.value) || 50;
-        
-        // Calculate base forecasts
-        const mForecast = baseValue * Math.pow(1 + itemGrowth, i + 1);
-        const qForecast = baseQuarterly * Math.pow(1 + itemGrowth, i + 1);
-        const yForecast = baseYearly * Math.pow(1 + itemGrowth, i + 1);
-        
-        // Apply seasonality based on period type
-        const forecastMonth = (i + 1) % 12; // Month index (0-11)
-        const seasonalMultiplierMonthly = getSeasonalMultiplier(forecastMonth, seasonalPattern, seasonalStrength, 'monthly');
-        const seasonalMultiplierQuarterly = getSeasonalMultiplier(forecastMonth, seasonalPattern, seasonalStrength, 'quarterly');
-        const seasonalMultiplierYearly = getSeasonalMultiplier(forecastMonth, seasonalPattern, seasonalStrength, 'yearly');
-        
-        // Apply seasonality and clamp for non-negative constraints
+        const value = monthlyForecasts[i] || 0;
         const clamp = (v) => (/total/i.test(item.name) ? Math.max(v, 0) : v);
-        const mForecastSeasonal = clamp(mForecast * seasonalMultiplierMonthly);
-        const qForecastSeasonal = clamp(qForecast * seasonalMultiplierQuarterly);
-        const yForecastSeasonal = clamp(yForecast * seasonalMultiplierYearly);
         
-        // Update monthly
         document.querySelectorAll(`[data-forecast-key="${forecastKeyMonthly}"]`).forEach(cell => {
-          updateElement(cell.id, formatCurrency(mForecastSeasonal, !hasUploadedData));
+          updateElement(cell.id, formatCurrency(clamp(value), !hasUploadedData));
         });
-        // Update quarterly based on base of rolled-up last quarter
+      }
+      
+      // Update quarterly forecasts
+      for (let i = 0; i < quarterlyForecasts.length; i++) {
+        const forecastKeyQuarterly = `quarterly-${statementType}-${safeName}-${i}`;
+        const value = quarterlyForecasts[i] || 0;
+        const clamp = (v) => (/total/i.test(item.name) ? Math.max(v, 0) : v);
+        
         document.querySelectorAll(`[data-forecast-key="${forecastKeyQuarterly}"]`).forEach(cell => {
-          updateElement(cell.id, formatCurrency(qForecastSeasonal, !hasUploadedData));
+          updateElement(cell.id, formatCurrency(clamp(value), !hasUploadedData));
         });
-        // Update yearly based on base of rolled-up last year
+      }
+      
+      // Update yearly forecasts
+      for (let i = 0; i < yearlyForecasts.length; i++) {
+        const forecastKeyYearly = `yearly-${statementType}-${safeName}-${i}`;
+        const value = yearlyForecasts[i] || 0;
+        const clamp = (v) => (/total/i.test(item.name) ? Math.max(v, 0) : v);
+        
         document.querySelectorAll(`[data-forecast-key="${forecastKeyYearly}"]`).forEach(cell => {
-          updateElement(cell.id, formatCurrency(yForecastSeasonal, !hasUploadedData));
+          updateElement(cell.id, formatCurrency(clamp(value), !hasUploadedData));
         });
       }
     });
