@@ -925,7 +925,7 @@ function updateDynamicForecasts(revGrowth, expGrowth, periods) {
     
     lineItems.forEach(item => {
       // Skip subheaders entirely
-      if (item.isSubheader) return;
+      if (isSubheaderOverridden(statementType, item.name)) return;
       
       // Skip if item has no actual values
       if (!item.actualValues || item.actualValues.length === 0) return;
