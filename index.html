@@ -2013,15 +2013,12 @@
                                 </div>
                                 
                                 <!-- Operating Leverage Toggle -->
-                                <div class="control-item" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
-                                    <label>
-                                        <input type="checkbox" id="applyOperatingLeverage" checked style="width: auto; margin-right: 8px;">
+                                <div class="control-item" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;">
+                                    <label style="margin: 0;">
                                         Apply Operating Leverage (80% Rule)
                                         <span class="help-button" id="operatingLeverageHelp" title="Click for explanation of the 80% rule">?</span>
                                     </label>
-                                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px; margin-left: 24px;">
-                                        When enabled, expense items grow at 80% of the revenue growth rate
-                                    </div>
+                                    <input type="checkbox" id="applyOperatingLeverage" checked style="width: auto;">
                                 </div>
                                 
                                 <!-- Custom Independent Growth Rates -->
@@ -2038,12 +2035,20 @@
                                         <!-- Custom rates will be added here dynamically -->
                                     </div>
                                     
-                                    <div style="display: flex; gap: 10px; align-items: center;">
-                                        <select id="addCustomRateDropdown" style="flex: 1; max-width: 300px;">
-                                            <option value="">+ Add Line Item</option>
-                                        </select>
-                                        <input type="number" id="customRateInput" placeholder="Annual %" step="0.1" style="width: 100px;" disabled>
-                                        <button id="addCustomRateBtn" class="btn-secondary" style="padding: 6px 12px;" disabled>Add</button>
+                                    <div class="control-group" style="margin: 0;">
+                                        <div class="control-item">
+                                            <label>Select Line Item:</label>
+                                            <select id="addCustomRateDropdown">
+                                                <option value="">+ Add Line Item</option>
+                                            </select>
+                                        </div>
+                                        <div class="control-item">
+                                            <label>Annual Growth Rate (%):</label>
+                                            <input type="number" id="customRateInput" placeholder="e.g., 8.5" step="0.1" disabled>
+                                        </div>
+                                        <div class="control-item" style="align-items: flex-end;">
+                                            <button id="addCustomRateBtn" class="btn-secondary" disabled>Add Custom Rate</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
