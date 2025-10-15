@@ -8671,13 +8671,21 @@ function displaySensitivityResults(scenarios, config) {
   console.log('Baseline scenario:', baselineScenario);
   console.log('Baseline value:', baselineValue);
   
+  // Short currency formatter for compact display
+  const formatShort = (val) => {
+    const absVal = Math.abs(val);
+    if (absVal >= 1000000) return `$${(val/1000000).toFixed(1)}M`;
+    if (absVal >= 1000) return `$${(val/1000).toFixed(0)}k`;
+    return `$${val.toFixed(0)}`;
+  };
+  
   let html = `
     <thead>
       <tr>
-        <th>${config.testVariable.lineItemName} Growth</th>
-        <th>${config.outputMetric.lineItemName}</th>
-        <th>Change vs Base</th>
-        <th>% Change</th>
+        <th>Growth</th>
+        <th>Value</th>
+        <th>Change</th>
+        <th>% Δ</th>
       </tr>
     </thead>
     <tbody>
@@ -8688,17 +8696,17 @@ function displaySensitivityResults(scenarios, config) {
     const delta = value - baselineValue;
     const percentChange = baselineValue !== 0 ? (delta / baselineValue * 100) : 0;
     const rowClass = scenario.isBaseline ? 'baseline-row' : '';
-    const marker = scenario.isBaseline ? '⭐ ' : '';
+    const marker = scenario.isBaseline ? '⭐' : '';
     
     html += `
       <tr class="${rowClass}">
-        <td>${marker}${scenario.label}</td>
-        <td>${formatCurrency(value)}</td>
+        <td>${marker} ${scenario.label}</td>
+        <td>${formatShort(value)}</td>
         <td class="${delta >= 0 ? 'positive' : 'negative'}">
-          ${delta >= 0 ? '+' : ''}${formatCurrency(delta)}
+          ${delta >= 0 ? '+' : ''}${formatShort(delta)}
         </td>
         <td class="${percentChange >= 0 ? 'positive' : 'negative'}">
-          ${delta >= 0 ? '+' : ''}${percentChange.toFixed(1)}%
+          ${delta >= 0 ? '+' : ''}${percentChange.toFixed(0)}%
         </td>
       </tr>
     `;
