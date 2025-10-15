@@ -8206,16 +8206,23 @@ function initializeSensitivityAnalysis() {
   
   // Populate test variable dropdown with P&L line items
   const variableSelect = document.getElementById('sensitivityVariable');
-  if (!variableSelect) return;
+  if (!variableSelect) {
+    console.warn('sensitivityVariable element not found');
+    return;
+  }
   
   variableSelect.innerHTML = '<option value="">-- Select a line item to test --</option>';
   
+  // Use uploadedLineItems.pnl instead of sampleData.pnl
+  const pnlItems = uploadedLineItems.pnl || [];
+  console.log('P&L items found:', pnlItems.length);
+  
   // Add P&L items
-  if (sampleData.pnl && sampleData.pnl.length > 0) {
+  if (pnlItems.length > 0) {
     const pnlGroup = document.createElement('optgroup');
     pnlGroup.label = 'P&L Items';
     
-    sampleData.pnl.forEach(item => {
+    pnlItems.forEach(item => {
       if (!item.isSubheader) {
         const option = document.createElement('option');
         option.value = `pnl::${item.name}`;
@@ -8225,19 +8232,25 @@ function initializeSensitivityAnalysis() {
     });
     
     variableSelect.appendChild(pnlGroup);
+    console.log('Added P&L items to test variable dropdown');
+  } else {
+    console.warn('No P&L items available for sensitivity analysis');
   }
   
   // Populate output metric dropdown with same P&L items
   const outputSelect = document.getElementById('sensitivityOutputMetric');
-  if (!outputSelect) return;
+  if (!outputSelect) {
+    console.warn('sensitivityOutputMetric element not found');
+    return;
+  }
   
   outputSelect.innerHTML = '<option value="">-- Select metric to measure --</option>';
   
-  if (sampleData.pnl && sampleData.pnl.length > 0) {
+  if (pnlItems.length > 0) {
     const pnlGroup = document.createElement('optgroup');
     pnlGroup.label = 'P&L Metrics';
     
-    sampleData.pnl.forEach(item => {
+    pnlItems.forEach(item => {
       if (!item.isSubheader) {
         const option = document.createElement('option');
         option.value = `pnl::${item.name}`;
@@ -8247,6 +8260,7 @@ function initializeSensitivityAnalysis() {
     });
     
     outputSelect.appendChild(pnlGroup);
+    console.log('Added P&L items to output metric dropdown');
   }
   
   // Populate period dropdown with forecast dates
@@ -8329,16 +8343,9 @@ function cloneForecastSettings() {
 function applyScenarioToSettings(testVariable, testValue) {
   const { statementType, lineItemName } = testVariable;
   
-  // Ensure growthRates structure exists
-  if (!forecastSettings.growthRates) {
-    forecastSettings.growthRates = {};
-  }
-  if (!forecastSettings.growthRates[statementType]) {
-    forecastSettings.growthRates[statementType] = {};
-  }
-  
-  // Set the growth rate for this line item
-  forecastSettings.growthRates[statementType][lineItemName] = testValue;
+  // Set custom growth rate for this line item
+  // This will be picked up by getForecastValuesForItem()
+  setCustomGrowthRate(statementType, lineItemName, testValue);
   
   console.log(`Applied ${testValue}% growth to ${lineItemName}`);
 }
@@ -8349,20 +8356,17 @@ function applyScenarioToSettings(testVariable, testValue) {
 function extractOutputMetric(outputConfig, periodIndex) {
   const { statementType, lineItemName } = outputConfig;
   
-  // Get from forecast cache
-  const statement = forecastCache[statementType];
-  if (!statement) {
-    console.error(`Statement type "${statementType}" not found in cache`);
-    return null;
-  }
+  // Get line items from uploadedLineItems
+  const lineItems = uploadedLineItems[statementType] || [];
   
-  const lineItem = statement.find(item => item.name === lineItemName);
+  const lineItem = lineItems.find(item => item.name === lineItemName);
   if (!lineItem) {
     console.error(`Line item "${lineItemName}" not found in ${statementType}`);
     return null;
   }
   
-  const value = lineItem.forecastValues ? lineItem.forecastValues[periodIndex] : null;
+  // Calculate the forecast value for this item at this period
+  const value = calculateForecastForItem(lineItem, periodIndex, statementType);
   
   return {
     primaryMetric: value,
@@ -8441,14 +8445,10 @@ function runSensitivityAnalysis() {
   scenarios.forEach((scenario, index) => {
     console.log(`Running scenario ${index + 1}/${scenarios.length}: ${scenario.label}`);
     
-    // Apply scenario
+    // Apply scenario (temporarily set custom growth rate)
     applyScenarioToSettings(config.testVariable, scenario.testValue);
     
-    // Run forecast (reusing existing logic)
-    // We'll call the internal forecast calculation
-    calculateAllForecasts();
-    
-    // Extract output
+    // Extract output metric with the modified settings
     const output = extractOutputMetric(config.outputMetric, config.outputMetric.periodIndex);
     if (output) {
       scenario.outputs = output;
@@ -8460,8 +8460,8 @@ function runSensitivityAnalysis() {
   forecastSettings.method = sensitivityState.baselineSettings.method;
   forecastSettings.growthRates = sensitivityState.baselineSettings.growthRates;
   
-  // Recalculate with original settings
-  calculateAllForecasts();
+  // Clear the custom growth rate that was set during analysis
+  deleteCustomGrowthRate(config.testVariable.statementType, config.testVariable.lineItemName);
   
   // 6. Store results
   sensitivityState.config = config;
@@ -8474,38 +8474,15 @@ function runSensitivityAnalysis() {
 }
 
 /**
- * Calculate forecasts (internal helper)
+ * Calculate forecast for a specific item at a specific period
  */
-function calculateAllForecasts() {
-  // This reuses the existing forecast calculation logic
-  // For P&L forecasting
-  if (sampleData.pnl && sampleData.pnl.length > 0) {
-    const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
-    
-    forecastCache.pnl = sampleData.pnl.map(item => {
-      if (item.isSubheader) {
-        return {
-          ...item,
-          forecastValues: new Array(forecastPeriods).fill(0)
-        };
-      }
-      
-      const growthRate = forecastSettings.growthRates?.pnl?.[item.name] ?? 0;
-      const baseValue = item.actual || 0;
-      const forecastValues = [];
-      
-      for (let i = 0; i < forecastPeriods; i++) {
-        const monthlyGrowth = growthRate / 100 / 12;
-        const value = baseValue * Math.pow(1 + monthlyGrowth, i + 1);
-        forecastValues.push(value);
-      }
-      
-      return {
-        ...item,
-        forecastValues: forecastValues
-      };
-    });
-  }
+function calculateForecastForItem(item, periodIndex, statementType = 'pnl') {
+  // Reuse the existing getForecastValuesForItem function
+  const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+  const forecastValues = getForecastValuesForItem(item, forecastPeriods, statementType);
+  
+  // Return the value for the specific period
+  return forecastValues[periodIndex] || 0;
 }
 
 /**
