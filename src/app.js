@@ -8715,6 +8715,58 @@ function displaySensitivityResults(scenarios, config) {
 }
 
 /**
+ * Render bar chart for sensitivity results
+ */
+function renderSensitivityChart(scenarios, config, baselineValue) {
+  const chartDiv = document.getElementById('sensitivityChart');
+  
+  if (!chartDiv) {
+    console.warn('Chart container not found');
+    return;
+  }
+  
+  // Find min and max values for scaling
+  const values = scenarios.map(s => s.outputs.primaryMetric || 0);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const range = maxValue - minValue;
+  
+  // Build chart HTML
+  let html = `<h4>📊 ${config.outputMetric.lineItemName} by ${config.testVariable.lineItemName} Growth Rate</h4>`;
+  
+  scenarios.forEach(scenario => {
+    const value = scenario.outputs.primaryMetric || 0;
+    const percentage = range > 0 ? ((value - minValue) / range) * 100 : 50;
+    const delta = value - baselineValue;
+    
+    // Determine bar class
+    let barClass = '';
+    if (scenario.isBaseline) {
+      barClass = 'baseline';
+    } else if (delta > 0) {
+      barClass = 'positive';
+    } else if (delta < 0) {
+      barClass = 'negative';
+    }
+    
+    html += `
+      <div class="chart-bar-container">
+        <div class="chart-label">${scenario.label}</div>
+        <div class="chart-bar-wrapper">
+          <div class="chart-bar ${barClass}" style="width: ${percentage}%">
+            ${percentage > 15 ? formatCurrency(value) : ''}
+          </div>
+        </div>
+        <div class="chart-value">${formatCurrency(value)}</div>
+      </div>
+    `;
+  });
+  
+  chartDiv.innerHTML = html;
+  console.log('Chart rendered');
+}
+
+/**
  * Generate insights from sensitivity results
  */
 function generateSensitivityInsights(scenarios, config, baselineValue) {
