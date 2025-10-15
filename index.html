@@ -2750,80 +2750,47 @@
                             </div>
                         </div>
 
-                        <!-- Profitability Metrics Section -->
+                        <!-- Forecast Reality Check Section -->
                         <div class="insight-section-collapsible">
-                            <div class="section-header" onclick="toggleInsightSection('profitability')">
-                                <h3>💰 Profitability Metrics</h3>
+                            <div class="section-header" onclick="toggleInsightSection('realitycheck')">
+                                <h3>📊 Forecast Reality Check</h3>
                                 <span class="toggle-icon">−</span>
                             </div>
-                            <div class="section-content" id="profitabilityContent">
-                                <div class="loading">Calculating profitability metrics...</div>
+                            <div class="section-content" id="realitycheckContent">
+                                <div class="loading">Comparing forecast to historical baseline...</div>
                             </div>
                         </div>
 
-                        <!-- Growth & Trajectory Section -->
+                        <!-- Margin Forecast Section -->
                         <div class="insight-section-collapsible collapsed">
-                            <div class="section-header" onclick="toggleInsightSection('growth')">
-                                <h3>📈 Growth & Trajectory</h3>
+                            <div class="section-header" onclick="toggleInsightSection('margins')">
+                                <h3>💰 Margin Forecast</h3>
                                 <span class="toggle-icon">+</span>
                             </div>
-                            <div class="section-content" id="growthContent" style="display: none;">
-                                <div class="loading">Calculating growth metrics...</div>
+                            <div class="section-content" id="marginsContent" style="display: none;">
+                                <div class="loading">Calculating margin forecast...</div>
                             </div>
                         </div>
 
-                        <!-- Expense Analysis Section -->
+                        <!-- Expense vs Revenue Growth Section -->
                         <div class="insight-section-collapsible collapsed">
                             <div class="section-header" onclick="toggleInsightSection('expenses')">
-                                <h3>💸 Expense Analysis</h3>
+                                <h3>💸 Expense vs Revenue Growth</h3>
                                 <span class="toggle-icon">+</span>
                             </div>
                             <div class="section-content" id="expensesContent" style="display: none;">
-                                <div class="loading">Analyzing expenses...</div>
+                                <div class="loading">Analyzing expense forecast...</div>
                             </div>
                         </div>
 
-                        <!-- Top Movers Section -->
-                        <div class="insight-section-collapsible collapsed">
-                            <div class="section-header" onclick="toggleInsightSection('topmovers')">
-                                <h3>🎯 Top Movers</h3>
-                                <span class="toggle-icon">+</span>
-                            </div>
-                            <div class="section-content" id="topmoversContent" style="display: none;">
-                                <div class="loading">Finding top movers...</div>
-                            </div>
-                        </div>
-
-                        <!-- Revenue Composition Section -->
-                        <div class="insight-section-collapsible collapsed">
-                            <div class="section-header" onclick="toggleInsightSection('revenue')">
-                                <h3>🥧 Revenue Composition</h3>
-                                <span class="toggle-icon">+</span>
-                            </div>
-                            <div class="section-content" id="revenueContent" style="display: none;">
-                                <div class="loading">Analyzing revenue mix...</div>
-                            </div>
-                        </div>
-
-                        <!-- Cash & Working Capital Section (Only if BS available) -->
-                        <div class="insight-section-collapsible collapsed" id="cashSection" style="display: none;">
-                            <div class="section-header" onclick="toggleInsightSection('cash')">
-                                <h3>💵 Cash & Working Capital</h3>
-                                <span class="toggle-icon">+</span>
-                            </div>
-                            <div class="section-content" id="cashContent" style="display: none;">
-                                <div class="loading">Analyzing cash position...</div>
-                            </div>
-                        </div>
-
-                        <!-- Alerts & Warnings Section -->
+                        <!-- Forecast Alerts Section -->
                         <div class="insight-section-collapsible" id="alertsSection">
                             <div class="section-header" onclick="toggleInsightSection('alerts')">
-                                <h3>⚠️ Alerts & Warnings</h3>
+                                <h3>⚠️ Forecast Alerts</h3>
                                 <span class="toggle-icon">−</span>
                             </div>
                             <div class="section-content" id="alertsContent">
-                                <div class="loading">Checking for alerts...</div>
+                                <div class="loading">Checking forecast assumptions...</div>
                             </div>
                         </div>
 
