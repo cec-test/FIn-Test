@@ -8356,17 +8356,25 @@ function applyScenarioToSettings(testVariable, testValue) {
 function extractOutputMetric(outputConfig, periodIndex) {
   const { statementType, lineItemName } = outputConfig;
   
+  console.log(`Extracting metric: ${lineItemName} from ${statementType} at period ${periodIndex}`);
+  
   // Get line items from uploadedLineItems
   const lineItems = uploadedLineItems[statementType] || [];
+  console.log(`Found ${lineItems.length} line items in ${statementType}`);
   
   const lineItem = lineItems.find(item => item.name === lineItemName);
   if (!lineItem) {
     console.error(`Line item "${lineItemName}" not found in ${statementType}`);
+    console.log('Available items:', lineItems.map(i => i.name));
     return null;
   }
   
+  console.log('Found line item:', lineItem.name);
+  
   // Calculate the forecast value for this item at this period
   const value = calculateForecastForItem(lineItem, periodIndex, statementType);
+  
+  console.log(`Calculated value: ${value}`);
   
   return {
     primaryMetric: value,
@@ -8379,15 +8387,18 @@ function extractOutputMetric(outputConfig, periodIndex) {
  * Main function to run sensitivity analysis
  */
 function runSensitivityAnalysis() {
-  console.log('Starting sensitivity analysis...');
-  
-  // 1. Get configuration from form
-  const variableValue = document.getElementById('sensitivityVariable').value;
-  const outputValue = document.getElementById('sensitivityOutputMetric').value;
-  const periodIndex = parseInt(document.getElementById('sensitivityPeriod').value);
-  const min = parseFloat(document.getElementById('sensitivityMin').value);
-  const max = parseFloat(document.getElementById('sensitivityMax').value);
-  const step = parseFloat(document.getElementById('sensitivityStep').value);
+  try {
+    console.log('Starting sensitivity analysis...');
+    
+    // 1. Get configuration from form
+    const variableValue = document.getElementById('sensitivityVariable').value;
+    const outputValue = document.getElementById('sensitivityOutputMetric').value;
+    const periodIndex = parseInt(document.getElementById('sensitivityPeriod').value);
+    const min = parseFloat(document.getElementById('sensitivityMin').value);
+    const max = parseFloat(document.getElementById('sensitivityMax').value);
+    const step = parseFloat(document.getElementById('sensitivityStep').value);
+    
+    console.log('Form values:', { variableValue, outputValue, periodIndex, min, max, step });
   
   // Validate inputs
   if (!variableValue) {
@@ -8450,8 +8461,13 @@ function runSensitivityAnalysis() {
     
     // Extract output metric with the modified settings
     const output = extractOutputMetric(config.outputMetric, config.outputMetric.periodIndex);
+    console.log(`Scenario ${scenario.label} output:`, output);
+    
     if (output) {
       scenario.outputs = output;
+    } else {
+      console.warn(`No output for scenario ${scenario.label}`);
+      scenario.outputs = { primaryMetric: 0 };
     }
   });
   
@@ -8471,6 +8487,12 @@ function runSensitivityAnalysis() {
   displaySensitivityResults(scenarios, config);
   
   console.log('Sensitivity analysis complete!');
+  
+  } catch (error) {
+    console.error('ERROR in runSensitivityAnalysis:', error);
+    console.error('Error stack:', error.stack);
+    alert('An error occurred during sensitivity analysis. Check the console for details.');
+  }
 }
 
 /**
@@ -8489,13 +8511,38 @@ function calculateForecastForItem(item, periodIndex, statementType = 'pnl') {
  * Display sensitivity analysis results
  */
 function displaySensitivityResults(scenarios, config) {
+  console.log('displaySensitivityResults called');
+  console.log('Scenarios:', scenarios);
+  console.log('Config:', config);
+  
   // Hide config, show results
-  document.querySelector('.sensitivity-config').style.display = 'none';
-  document.getElementById('sensitivityResults').style.display = 'block';
+  const configSection = document.querySelector('.sensitivity-config');
+  const resultsSection = document.getElementById('sensitivityResults');
+  
+  if (!configSection) {
+    console.error('Config section not found!');
+    return;
+  }
+  if (!resultsSection) {
+    console.error('Results section not found!');
+    return;
+  }
+  
+  configSection.style.display = 'none';
+  resultsSection.style.display = 'block';
+  
+  console.log('Toggled sections - config hidden, results shown');
   
   // Update info section
-  const periodLabel = document.getElementById('sensitivityPeriod').selectedOptions[0].text;
+  const periodSelect = document.getElementById('sensitivityPeriod');
+  const periodLabel = periodSelect && periodSelect.selectedOptions[0] ? periodSelect.selectedOptions[0].text : 'Unknown';
   const infoDiv = document.getElementById('sensitivityResultsInfo');
+  
+  if (!infoDiv) {
+    console.error('Info div not found!');
+    return;
+  }
+  
   infoDiv.innerHTML = `
     <p><strong>Test Variable:</strong> ${config.testVariable.lineItemName}</p>
     <p><strong>Output Metric:</strong> ${config.outputMetric.lineItemName}</p>
@@ -8503,10 +8550,21 @@ function displaySensitivityResults(scenarios, config) {
     <p><strong>Scenarios Tested:</strong> ${scenarios.length}</p>
   `;
   
+  console.log('Info section updated');
+  
   // Build table
   const table = document.getElementById('sensitivityTable');
+  
+  if (!table) {
+    console.error('Table element not found!');
+    return;
+  }
+  
   const baselineScenario = scenarios.find(s => s.isBaseline);
   const baselineValue = baselineScenario ? baselineScenario.outputs.primaryMetric : 0;
+  
+  console.log('Baseline scenario:', baselineScenario);
+  console.log('Baseline value:', baselineValue);
   
   let html = `
     <thead>
