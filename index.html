@@ -1819,54 +1819,56 @@
             background: white;
             border-radius: 8px;
             padding: 15px;
-            overflow: hidden;
+            overflow-x: auto;
         }
         
         .sensitivity-table {
             width: 100%;
             border-collapse: collapse;
-            table-layout: fixed;
+            table-layout: auto;
+            min-width: 100%;
         }
         
         .sensitivity-table th {
             background: #3498db;
             color: white;
-            padding: 8px 4px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 0.8rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .sensitivity-table td {
-            padding: 6px 2px;
-            border-bottom: 1px solid #e9ecef;
-            font-size: 0.8rem;
-            text-align: center;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        /* Equal width columns - 25% each */
-        .sensitivity-table th,
-        .sensitivity-table td {
-            width: 25%;
-            max-width: 25%;
-        }
-        
-        /* First column - left align for growth rates */
-        .sensitivity-table th:first-child,
-        .sensitivity-table td:first-child {
+            padding: 10px 12px;
             text-align: left;
-            padding-left: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            white-space: nowrap;
         }
         
-        /* Last column - right align for percentages */
-        .sensitivity-table th:last-child,
-        .sensitivity-table td:last-child {
+        .sensitivity-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        
+        /* Let columns size naturally based on content */
+        .sensitivity-table th:nth-child(1),
+        .sensitivity-table td:nth-child(1) {
+            width: 12%;
+            text-align: left;
+        }
+        
+        .sensitivity-table th:nth-child(2),
+        .sensitivity-table td:nth-child(2) {
+            width: 35%;
             text-align: right;
-            padding-right: 6px;
+        }
+        
+        .sensitivity-table th:nth-child(3),
+        .sensitivity-table td:nth-child(3) {
+            width: 35%;
+            text-align: right;
+        }
+        
+        .sensitivity-table th:nth-child(4),
+        .sensitivity-table td:nth-child(4) {
+            width: 18%;
+            text-align: right;
         }
         
         .sensitivity-table tr:hover {

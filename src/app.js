@@ -8671,21 +8671,13 @@ function displaySensitivityResults(scenarios, config) {
   console.log('Baseline scenario:', baselineScenario);
   console.log('Baseline value:', baselineValue);
   
-  // Short currency formatter for compact display
-  const formatShort = (val) => {
-    const absVal = Math.abs(val);
-    if (absVal >= 1000000) return `$${(val/1000000).toFixed(1)}M`;
-    if (absVal >= 1000) return `$${(val/1000).toFixed(0)}k`;
-    return `$${val.toFixed(0)}`;
-  };
-  
   let html = `
     <thead>
       <tr>
-        <th>Growth</th>
-        <th>Value</th>
-        <th>Change</th>
-        <th>% Δ</th>
+        <th>Growth Rate</th>
+        <th>${config.outputMetric.lineItemName}</th>
+        <th>Change vs Baseline</th>
+        <th>% Change</th>
       </tr>
     </thead>
     <tbody>
@@ -8696,17 +8688,17 @@ function displaySensitivityResults(scenarios, config) {
     const delta = value - baselineValue;
     const percentChange = baselineValue !== 0 ? (delta / baselineValue * 100) : 0;
     const rowClass = scenario.isBaseline ? 'baseline-row' : '';
-    const marker = scenario.isBaseline ? '⭐' : '';
+    const marker = scenario.isBaseline ? '⭐ ' : '';
     
     html += `
       <tr class="${rowClass}">
-        <td>${marker} ${scenario.label}</td>
-        <td>${formatShort(value)}</td>
+        <td>${marker}${scenario.label}</td>
+        <td>${formatCurrency(value)}</td>
         <td class="${delta >= 0 ? 'positive' : 'negative'}">
-          ${delta >= 0 ? '+' : ''}${formatShort(delta)}
+          ${delta >= 0 ? '+' : ''}${formatCurrency(delta)}
         </td>
         <td class="${percentChange >= 0 ? 'positive' : 'negative'}">
-          ${delta >= 0 ? '+' : ''}${percentChange.toFixed(0)}%
+          ${delta >= 0 ? '+' : ''}${percentChange.toFixed(1)}%
         </td>
       </tr>
     `;
@@ -8760,22 +8752,27 @@ function renderSensitivityChart(scenarios, config, baselineValue) {
       <svg class="line-chart-svg" viewBox="0 0 ${width} ${height}">
   `;
   
-  // Grid lines (horizontal)
+  // Y-axis labels FIRST (so they render behind the axis line)
   const numGridLines = 5;
   for (let i = 0; i <= numGridLines; i++) {
     const y = margin.top + (plotHeight / numGridLines) * i;
     const value = maxY - ((maxY - minY) / numGridLines) * i;
     
-    // Only draw grid line for non-axis positions
-    if (i > 0) {
-      svg += `<line class="chart-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"/>`;
-    }
-    
-    // Position labels WELL LEFT of the axis line (axis is at margin.left = 110)
-    svg += `<text class="chart-label-text" x="${margin.left - 15}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
+    // Draw label - positioned clearly left of where axis will be
+    svg += `<text class="chart-label-text" x="${margin.left - 20}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
   }
   
-  // Axes
+  // Grid lines (horizontal) - drawn AFTER labels
+  for (let i = 0; i <= numGridLines; i++) {
+    const y = margin.top + (plotHeight / numGridLines) * i;
+    
+    // Draw grid lines lighter, skip the top one
+    if (i > 0) {
+      svg += `<line class="chart-grid-line" x1="${margin.left + 5}" y1="${y}" x2="${width - margin.right}" y2="${y}"/>`;
+    }
+  }
+  
+  // Axes - drawn AFTER labels so they're on top
   svg += `<line class="chart-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"/>`;
   svg += `<line class="chart-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"/>`;
   
