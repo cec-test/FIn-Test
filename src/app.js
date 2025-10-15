@@ -8707,6 +8707,9 @@ function displaySensitivityResults(scenarios, config) {
   html += '</tbody>';
   table.innerHTML = html;
   
+  // Generate chart
+  renderSensitivityChart(scenarios, config, baselineValue);
+  
   // Generate insights
   generateSensitivityInsights(scenarios, config, baselineValue);
 }

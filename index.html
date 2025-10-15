@@ -1825,19 +1825,44 @@
         .sensitivity-table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
         }
         
         .sensitivity-table th {
             background: #3498db;
             color: white;
-            padding: 12px;
+            padding: 10px 8px;
             text-align: left;
             font-weight: 600;
+            font-size: 0.9rem;
+            white-space: nowrap;
         }
         
         .sensitivity-table td {
-            padding: 10px 12px;
+            padding: 8px;
             border-bottom: 1px solid #e9ecef;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        
+        .sensitivity-table th:first-child,
+        .sensitivity-table td:first-child {
+            width: 15%;
+        }
+        
+        .sensitivity-table th:nth-child(2),
+        .sensitivity-table td:nth-child(2) {
+            width: 35%;
+        }
+        
+        .sensitivity-table th:nth-child(3),
+        .sensitivity-table td:nth-child(3) {
+            width: 25%;
+        }
+        
+        .sensitivity-table th:nth-child(4),
+        .sensitivity-table td:nth-child(4) {
+            width: 25%;
         }
         
         .sensitivity-table tr:hover {
@@ -1882,6 +1907,78 @@
         
         .sensitivity-insights li {
             padding: 8px 0;
+            color: #333;
+        }
+        
+        /* Sensitivity Chart */
+        .sensitivity-chart-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .sensitivity-chart-container h4 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+        
+        .chart-bar-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 10px;
+        }
+        
+        .chart-label {
+            min-width: 60px;
+            text-align: right;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .chart-bar-wrapper {
+            flex: 1;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .chart-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .chart-bar.baseline {
+            background: linear-gradient(90deg, #f39c12, #e67e22);
+        }
+        
+        .chart-bar.positive {
+            background: linear-gradient(90deg, #27ae60, #229954);
+        }
+        
+        .chart-bar.negative {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+        
+        .chart-value {
+            min-width: 100px;
+            text-align: left;
+            font-size: 0.85rem;
+            font-weight: 600;
             color: #333;
         }
         
@@ -2724,6 +2821,10 @@
                             <table id="sensitivityTable" class="sensitivity-table">
                                 <!-- Results will be populated here -->
                             </table>
+                        </div>
+                        
+                        <div id="sensitivityChart" class="sensitivity-chart-container">
+                            <!-- Chart will be populated here -->
                         </div>
                         
                         <div id="sensitivityInsights" class="sensitivity-insights">
