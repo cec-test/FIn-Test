@@ -1920,66 +1920,97 @@
         
         .sensitivity-chart-container h4 {
             color: #333;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             font-size: 1.1rem;
+            text-align: center;
         }
         
-        .chart-bar-container {
-            display: flex;
-            align-items: center;
-            margin-bottom: 8px;
-            gap: 10px;
+        .chart-subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
         }
         
-        .chart-label {
-            min-width: 60px;
-            text-align: right;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #555;
-        }
-        
-        .chart-bar-wrapper {
-            flex: 1;
-            height: 30px;
-            background: #f0f0f0;
-            border-radius: 4px;
+        .line-chart-wrapper {
             position: relative;
-            overflow: hidden;
+            width: 100%;
+            height: 300px;
         }
         
-        .chart-bar {
+        .line-chart-svg {
+            width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, #3498db, #2980b9);
-            border-radius: 4px;
-            transition: width 0.5s ease;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            padding-right: 8px;
+        }
+        
+        .chart-line {
+            fill: none;
+            stroke: #3498db;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        
+        .chart-grid-line {
+            stroke: #e0e0e0;
+            stroke-width: 1;
+            stroke-dasharray: 2,2;
+        }
+        
+        .chart-axis {
+            stroke: #666;
+            stroke-width: 2;
+        }
+        
+        .chart-point {
+            fill: #3498db;
+            stroke: white;
+            stroke-width: 2;
+        }
+        
+        .chart-point.baseline {
+            fill: #f39c12;
+            r: 6;
+        }
+        
+        .chart-point:hover {
+            r: 8;
+            cursor: pointer;
+        }
+        
+        .chart-label-text {
+            font-size: 11px;
+            fill: #666;
+            text-anchor: middle;
+        }
+        
+        .chart-value-text {
+            font-size: 10px;
+            fill: #333;
+            font-weight: 600;
+        }
+        
+        .axis-label {
+            font-size: 12px;
+            fill: #666;
+            font-weight: 500;
+        }
+        
+        .chart-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
             color: white;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        
-        .chart-bar.baseline {
-            background: linear-gradient(90deg, #f39c12, #e67e22);
-        }
-        
-        .chart-bar.positive {
-            background: linear-gradient(90deg, #27ae60, #229954);
-        }
-        
-        .chart-bar.negative {
-            background: linear-gradient(90deg, #e74c3c, #c0392b);
-        }
-        
-        .chart-value {
-            min-width: 100px;
-            text-align: left;
+            padding: 8px 12px;
+            border-radius: 4px;
             font-size: 0.85rem;
-            font-weight: 600;
-            color: #333;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+        }
+        
+        .chart-tooltip.visible {
+            opacity: 1;
         }
         
         /* Template Cards */

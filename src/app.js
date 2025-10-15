@@ -8715,7 +8715,7 @@ function displaySensitivityResults(scenarios, config) {
 }
 
 /**
- * Render bar chart for sensitivity results
+ * Render line chart for sensitivity results
  */
 function renderSensitivityChart(scenarios, config, baselineValue) {
   const chartDiv = document.getElementById('sensitivityChart');
@@ -8725,45 +8725,104 @@ function renderSensitivityChart(scenarios, config, baselineValue) {
     return;
   }
   
-  // Find min and max values for scaling
+  // Chart dimensions
+  const width = 800;
+  const height = 300;
+  const margin = { top: 20, right: 40, bottom: 50, left: 80 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  
+  // Get data
   const values = scenarios.map(s => s.outputs.primaryMetric || 0);
-  const minValue = Math.min(...values);
-  const maxValue = Math.max(...values);
-  const range = maxValue - minValue;
+  const xValues = scenarios.map(s => s.testValue);
+  const minX = Math.min(...xValues);
+  const maxX = Math.max(...xValues);
+  const minY = Math.min(...values) * 0.95; // Add 5% padding
+  const maxY = Math.max(...values) * 1.05;
   
-  // Build chart HTML
-  let html = `<h4>📊 ${config.outputMetric.lineItemName} by ${config.testVariable.lineItemName} Growth Rate</h4>`;
+  // Scale functions
+  const scaleX = (x) => margin.left + ((x - minX) / (maxX - minX)) * plotWidth;
+  const scaleY = (y) => margin.top + plotHeight - ((y - minY) / (maxY - minY)) * plotHeight;
   
-  scenarios.forEach(scenario => {
-    const value = scenario.outputs.primaryMetric || 0;
-    const percentage = range > 0 ? ((value - minValue) / range) * 100 : 50;
-    const delta = value - baselineValue;
+  // Build SVG
+  let svg = `
+    <h4>📈 ${config.outputMetric.lineItemName} vs ${config.testVariable.lineItemName} Growth</h4>
+    <div class="chart-subtitle">Sensitivity Analysis</div>
+    <div class="line-chart-wrapper">
+      <svg class="line-chart-svg" viewBox="0 0 ${width} ${height}">
+  `;
+  
+  // Grid lines (horizontal)
+  const numGridLines = 5;
+  for (let i = 0; i <= numGridLines; i++) {
+    const y = margin.top + (plotHeight / numGridLines) * i;
+    const value = maxY - ((maxY - minY) / numGridLines) * i;
     
-    // Determine bar class
-    let barClass = '';
-    if (scenario.isBaseline) {
-      barClass = 'baseline';
-    } else if (delta > 0) {
-      barClass = 'positive';
-    } else if (delta < 0) {
-      barClass = 'negative';
-    }
-    
-    html += `
-      <div class="chart-bar-container">
-        <div class="chart-label">${scenario.label}</div>
-        <div class="chart-bar-wrapper">
-          <div class="chart-bar ${barClass}" style="width: ${percentage}%">
-            ${percentage > 15 ? formatCurrency(value) : ''}
-          </div>
-        </div>
-        <div class="chart-value">${formatCurrency(value)}</div>
-      </div>
-    `;
+    svg += `<line class="chart-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"/>`;
+    svg += `<text class="chart-label-text" x="${margin.left - 10}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
+  }
+  
+  // Axes
+  svg += `<line class="chart-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"/>`;
+  svg += `<line class="chart-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"/>`;
+  
+  // X-axis labels
+  scenarios.forEach((scenario, i) => {
+    const x = scaleX(scenario.testValue);
+    svg += `<text class="chart-label-text" x="${x}" y="${height - margin.bottom + 20}" text-anchor="middle">${scenario.label}</text>`;
   });
   
-  chartDiv.innerHTML = html;
-  console.log('Chart rendered');
+  // Axis titles
+  svg += `<text class="axis-label" x="${width / 2}" y="${height - 5}" text-anchor="middle">${config.testVariable.lineItemName} Growth Rate</text>`;
+  svg += `<text class="axis-label" x="${15}" y="${height / 2}" text-anchor="middle" transform="rotate(-90 15 ${height / 2})">${config.outputMetric.lineItemName}</text>`;
+  
+  // Build line path
+  let pathData = '';
+  scenarios.forEach((scenario, i) => {
+    const x = scaleX(scenario.testValue);
+    const y = scaleY(scenario.outputs.primaryMetric || 0);
+    
+    if (i === 0) {
+      pathData += `M ${x} ${y}`;
+    } else {
+      pathData += ` L ${x} ${y}`;
+    }
+  });
+  
+  svg += `<path class="chart-line" d="${pathData}"/>`;
+  
+  // Points
+  scenarios.forEach((scenario, i) => {
+    const x = scaleX(scenario.testValue);
+    const y = scaleY(scenario.outputs.primaryMetric || 0);
+    const isBaseline = scenario.isBaseline;
+    
+    svg += `
+      <circle 
+        class="chart-point ${isBaseline ? 'baseline' : ''}" 
+        cx="${x}" 
+        cy="${y}" 
+        r="${isBaseline ? 6 : 4}"
+        data-label="${scenario.label}"
+        data-value="${formatCurrency(scenario.outputs.primaryMetric || 0)}"
+      >
+        <title>${scenario.label}: ${formatCurrency(scenario.outputs.primaryMetric || 0)}</title>
+      </circle>
+    `;
+    
+    // Add baseline marker
+    if (isBaseline) {
+      svg += `<text class="chart-value-text" x="${x}" y="${y - 15}" text-anchor="middle">⭐ Baseline</text>`;
+    }
+  });
+  
+  svg += `
+      </svg>
+    </div>
+  `;
+  
+  chartDiv.innerHTML = svg;
+  console.log('Line chart rendered');
 }
 
 /**
