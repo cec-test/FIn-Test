@@ -8759,7 +8759,10 @@ function renderSensitivityChart(scenarios, config, baselineValue) {
     const value = maxY - ((maxY - minY) / numGridLines) * i;
     
     svg += `<line class="chart-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"/>`;
-    svg += `<text class="chart-label-text" x="${margin.left - 10}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
+    
+    // Add white background behind text for better readability
+    svg += `<text class="chart-label-text chart-label-bg" x="${margin.left - 15}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
+    svg += `<text class="chart-label-text" x="${margin.left - 15}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
   }
   
   // Axes
