@@ -3426,34 +3426,25 @@ function createSVGChart(container, data, periodType) {
   let width, height, padding;
   
   if (isExpanded) {
-    // For expanded view: calculate based on ACTUAL available space in modal-body
+    // For expanded view: calculate based on ACTUAL available container space
     const containerRect = container.getBoundingClientRect();
-    const modalBody = container.closest('.modal-body');
     
-    // If inside modal-body, use the parent's constrained height instead
-    let availableHeight;
-    if (modalBody) {
-      const modalBodyRect = modalBody.getBoundingClientRect();
-      // Modal body has padding (12px top, 20px bottom) and chart controls (~70px with margins)
-      const modalBodyPadding = 12 + 20; // top + bottom padding
-      const controlsHeight = 80; // More realistic height estimate for chart controls + margins
-      availableHeight = modalBodyRect.height - modalBodyPadding - controlsHeight;
-    } else {
-      availableHeight = containerRect.height;
-    }
+    // Use the container's actual dimensions (it's sized via CSS)
+    let availableWidth = containerRect.width;
+    let availableHeight = containerRect.height;
     
-    // Container has 10px padding on all sides
-    const containerPadding = 20; // 10px × 2
-    const availableWidth = containerRect.width - containerPadding;
+    // Account for any container padding
+    const containerPadding = 0; // Container has no padding, chart fills it
+    availableWidth = availableWidth - containerPadding;
     availableHeight = availableHeight - containerPadding;
     
-    // Use 90% of available space (less aggressive than before)
-    width = Math.floor(availableWidth * 0.90);
-    height = Math.floor(availableHeight * 0.90);
+    // Use full available space
+    width = Math.floor(availableWidth);
+    height = Math.floor(availableHeight);
     
     // Ensure reasonable minimums
-    width = Math.max(width, 500);
-    height = Math.max(height, 300);
+    width = Math.max(width, 600);
+    height = Math.max(height, 400);
     
     padding = 80; // More padding for Y-axis labels
   } else {
@@ -3493,16 +3484,21 @@ function createSVGChart(container, data, periodType) {
   
   // Create SVG
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('width', width);
-  svg.setAttribute('height', height);
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.style.background = 'white';
   svg.style.display = 'block'; // Prevents extra space below SVG
   
-  // For expanded view, override the CSS that sets width/height to 100%
   if (isExpanded) {
-    svg.style.width = width + 'px';
-    svg.style.height = height + 'px';
+    // For expanded view: let SVG fill the container responsively
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+    svg.style.maxWidth = width + 'px';
+    svg.style.maxHeight = height + 'px';
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  } else {
+    // For inline view: use fixed dimensions
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
   }
   
   // Find min/max values across all datasets
