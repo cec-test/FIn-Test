@@ -8728,7 +8728,7 @@ function renderSensitivityChart(scenarios, config, baselineValue) {
   // Chart dimensions
   const width = 800;
   const height = 300;
-  const margin = { top: 20, right: 40, bottom: 50, left: 100 };
+  const margin = { top: 20, right: 40, bottom: 50, left: 110 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
   
@@ -8763,8 +8763,8 @@ function renderSensitivityChart(scenarios, config, baselineValue) {
       svg += `<line class="chart-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"/>`;
     }
     
-    // Position labels well clear of the axis line
-    svg += `<text class="chart-label-text" x="${margin.left - 10}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
+    // Position labels WELL LEFT of the axis line (axis is at margin.left = 110)
+    svg += `<text class="chart-label-text" x="${margin.left - 15}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
   }
   
   // Axes
