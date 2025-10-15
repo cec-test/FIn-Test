@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { getOrCreateProcessIdentifier, attachProcessIdentifier } = require('./identifier-utils');
 
 // OpenAI API configuration
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -159,11 +160,15 @@ function selectRelevantData(financialData, analysis) {
 }
 
 module.exports = async (req, res) => {
+  // Generate or extract process identifier for tracking
+  const processId = getOrCreateProcessIdentifier(req);
+  attachProcessIdentifier(res, processId);
+  
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, X-Process-Id');
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
@@ -175,11 +180,13 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ 
       success: false, 
-      error: 'Method not allowed' 
+      error: 'Method not allowed',
+      processId: processId
     });
   }
 
   try {
+    console.log(`[Process: ${processId}] Chat request initiated`);
     console.log('Request method:', req.method);
     console.log('Request body:', req.body);
     console.log('Request headers:', req.headers);
@@ -190,10 +197,11 @@ module.exports = async (req, res) => {
     console.log('OPENAI_API_KEY length:', process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 'undefined');
     
     if (!OPENAI_API_KEY) {
-      console.error('OpenAI API key not found in environment variables');
+      console.error(`[Process: ${processId}] OpenAI API key not found in environment variables`);
       return res.status(500).json({
         success: false,
         error: 'OpenAI API key not configured',
+        processId: processId,
         debug: {
           envKeys: Object.keys(process.env).filter(key => key.includes('OPENAI')),
           hasKey: !!process.env.OPENAI_API_KEY
@@ -204,17 +212,18 @@ module.exports = async (req, res) => {
     const { message, financialData } = req.body;
     
     if (!message) {
-      console.log('No message provided');
+      console.log(`[Process: ${processId}] No message provided`);
       return res.status(400).json({ 
         success: false, 
-        error: 'Message is required' 
+        error: 'Message is required',
+        processId: processId
       });
     }
     
-    console.log('Message received:', message);
-    console.log('Financial data length:', financialData ? JSON.stringify(financialData).length : 'undefined');
-    console.log('Financial data type:', typeof financialData);
-    console.log('Financial data keys:', financialData ? Object.keys(financialData) : 'undefined');
+    console.log(`[Process: ${processId}] Message received:`, message);
+    console.log(`[Process: ${processId}] Financial data length:`, financialData ? JSON.stringify(financialData).length : 'undefined');
+    console.log(`[Process: ${processId}] Financial data type:`, typeof financialData);
+    console.log(`[Process: ${processId}] Financial data keys:`, financialData ? Object.keys(financialData) : 'undefined');
     
     // Check if financial data is too large
     const dataString = JSON.stringify(financialData);
@@ -227,12 +236,12 @@ module.exports = async (req, res) => {
 
     // Smart data filtering based on question analysis
     const questionAnalysis = analyzeQuestion(message);
-    console.log('Question analysis:', questionAnalysis);
+    console.log(`[Process: ${processId}] Question analysis:`, questionAnalysis);
     
     let dataToSend = selectRelevantData(financialData, questionAnalysis);
     
-    console.log('Selected data size:', JSON.stringify(dataToSend).length, 'characters');
-    console.log('Selected statements:', Object.keys(dataToSend.statements));
+    console.log(`[Process: ${processId}] Selected data size:`, JSON.stringify(dataToSend).length, 'characters');
+    console.log(`[Process: ${processId}] Selected statements:`, Object.keys(dataToSend.statements));
     
     const prompt = `You are a financial analysis assistant. Here is the current financial forecast data from the user's financial statements:
 
@@ -258,12 +267,12 @@ Instructions:
 Please provide a helpful response based on the financial forecast data provided.`;
 
     // Call OpenAI API with retry logic for rate limiting
-    console.log('Making OpenAI API call...');
-    console.log('API Key (first 10 chars):', OPENAI_API_KEY.substring(0, 10) + '...');
+    console.log(`[Process: ${processId}] Making OpenAI API call...`);
+    console.log(`[Process: ${processId}] API Key (first 10 chars):`, OPENAI_API_KEY.substring(0, 10) + '...');
     
     // Use GPT-4 for larger datasets (better context handling)
     const modelToUse = JSON.stringify(dataToSend).length > 20000 ? 'gpt-4' : 'gpt-3.5-turbo';
-    console.log('Using model:', modelToUse);
+    console.log(`[Process: ${processId}] Using model:`, modelToUse);
     
     let openaiResponse;
     let retryCount = 0;
@@ -296,7 +305,7 @@ Please provide a helpful response based on the financial forecast data provided.
         if (error.response?.status === 429 && retryCount < maxRetries - 1) {
           retryCount++;
           const waitTime = Math.pow(2, retryCount) * 1000; // Exponential backoff
-          console.log(`Rate limited, retrying in ${waitTime}ms (attempt ${retryCount}/${maxRetries})`);
+          console.log(`[Process: ${processId}] Rate limited, retrying in ${waitTime}ms (attempt ${retryCount}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
         } else {
           throw error; // Re-throw if not rate limit or max retries reached
@@ -304,19 +313,20 @@ Please provide a helpful response based on the financial forecast data provided.
       }
     }
     
-    console.log('OpenAI API response received');
+    console.log(`[Process: ${processId}] OpenAI API response received`);
 
     const aiResponse = openaiResponse.data.choices[0].message.content;
 
     res.status(200).json({
       success: true,
-      response: aiResponse
+      response: aiResponse,
+      processId: processId
     });
 
   } catch (error) {
-    console.error('OpenAI API error:', error.response?.data || error.message);
-    console.error('Full error:', error);
-    console.error('Error stack:', error.stack);
+    console.error(`[Process: ${processId}] OpenAI API error:`, error.response?.data || error.message);
+    console.error(`[Process: ${processId}] Full error:`, error);
+    console.error(`[Process: ${processId}] Error stack:`, error.stack);
     
     // Return more detailed error information
     res.status(500).json({
@@ -324,7 +334,8 @@ Please provide a helpful response based on the financial forecast data provided.
       error: 'Failed to process request with OpenAI API',
       details: error.message,
       type: error.name,
-      stack: error.stack?.substring(0, 500) // Truncate stack trace
+      stack: error.stack?.substring(0, 500), // Truncate stack trace
+      processId: processId
     });
   }
 };
