@@ -1811,9 +1811,9 @@ function calculateAtAGlance(period) {
       item.name.toLowerCase().includes('net profit')
     );
     
-    // Calculate metrics
+    // Calculate metrics (including forecasts)
     if (revenueItem && revenueItem.actualValues) {
-      const revData = getDataForPeriod(period, revenueItem.actualValues);
+      const revData = getDataForPeriod(period, revenueItem.actualValues, revenueItem);
       const lastRev = lastNonNull(revData.values);
       const prevRev = revData.values[revData.values.length - 2] || lastRev;
       const revChange = prevRev !== 0 ? ((lastRev - prevRev) / Math.abs(prevRev) * 100) : 0;
@@ -1826,8 +1826,8 @@ function calculateAtAGlance(period) {
     
     // Net Margin
     if (revenueItem && netIncomeItem && revenueItem.actualValues && netIncomeItem.actualValues) {
-      const revData = getDataForPeriod(period, revenueItem.actualValues);
-      const incData = getDataForPeriod(period, netIncomeItem.actualValues);
+      const revData = getDataForPeriod(period, revenueItem.actualValues, revenueItem);
+      const incData = getDataForPeriod(period, netIncomeItem.actualValues, netIncomeItem);
       const lastRev = lastNonNull(revData.values);
       const lastInc = lastNonNull(incData.values);
       const margin = lastRev !== 0 ? (lastInc / lastRev * 100) : 0;
@@ -1845,7 +1845,7 @@ function calculateAtAGlance(period) {
     
     // Growth Rate
     if (revenueItem && revenueItem.actualValues) {
-      const revData = getDataForPeriod(period, revenueItem.actualValues);
+      const revData = getDataForPeriod(period, revenueItem.actualValues, revenueItem);
       const lastRev = lastNonNull(revData.values);
       const prevRev = revData.values[revData.values.length - 2] || lastRev;
       const growth = prevRev !== 0 ? ((lastRev - prevRev) / Math.abs(prevRev) * 100) : 0;
@@ -1858,7 +1858,7 @@ function calculateAtAGlance(period) {
     
     // Net Income (or Cash if BS available)
     if (netIncomeItem && netIncomeItem.actualValues) {
-      const incData = getDataForPeriod(period, netIncomeItem.actualValues);
+      const incData = getDataForPeriod(period, netIncomeItem.actualValues, netIncomeItem);
       const lastInc = lastNonNull(incData.values);
       const prevInc = incData.values[incData.values.length - 2] || lastInc;
       const incChange = prevInc !== 0 ? ((lastInc - prevInc) / Math.abs(prevInc) * 100) : 0;
@@ -1874,25 +1874,58 @@ function calculateAtAGlance(period) {
   }
 }
 
-// Helper function to get period-specific data
-function getDataForPeriod(period, actualValues = null) {
+// Helper function to get period-specific data (ACTUALS + FORECASTS COMBINED)
+function getDataForPeriod(period, actualValues = null, lineItem = null) {
   if (!actualValues) {
     // Return period type info
     return { period: period };
   }
   
+  // Combine actuals + forecasts
+  const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+  let combinedValues = actualValues.slice(); // Start with actuals
+  
+  // Add forecast values if lineItem provided
+  if (lineItem) {
+    const forecastValues = getForecastValuesForItem(lineItem, forecastPeriods, 'pnl');
+    combinedValues = combinedValues.concat(forecastValues);
+  }
+  
   let values, labels;
   
   if (period === 'monthly') {
-    values = actualValues.slice();
-    labels = dateColumns.slice();
+    values = combinedValues;
+    labels = [];
+    
+    // Generate labels for actuals
+    for (let i = 0; i < actualValues.length; i++) {
+      labels.push(dateColumns[i] || `Actual ${i+1}`);
+    }
+    
+    // Generate labels for forecasts
+    let baseDate = new Date();
+    if (dateColumns && dateColumns.length > 0) {
+      const lastActual = dateColumns[dateColumns.length - 1];
+      const parsedDate = parseHeaderToYearMonth(lastActual);
+      if (parsedDate) {
+        baseDate = new Date(parsedDate.year, parsedDate.month + 1, 1);
+      }
+    }
+    
+    for (let i = 0; i < forecastPeriods; i++) {
+      const date = new Date(baseDate.getTime());
+      date.setMonth(date.getMonth() + i);
+      const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+      const year = date.getFullYear();
+      labels.push(`${monthName} ${year} (F)`);
+    }
   } else if (period === 'quarterly') {
-    const agg = aggregateActuals('pnl', actualValues);
+    const agg = aggregateActuals('pnl', combinedValues);
     const out = agg.toQuarterOutputs();
     values = out.values || [];
     labels = out.labels || [];
   } else {
-    const agg = aggregateActuals('pnl', actualValues);
+    const agg = aggregateActuals('pnl', combinedValues);
     const out = agg.toYearOutputs();
     values = out.values || [];
     labels = out.labels || [];
