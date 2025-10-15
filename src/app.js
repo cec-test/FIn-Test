@@ -8752,29 +8752,27 @@ function renderSensitivityChart(scenarios, config, baselineValue) {
       <svg class="line-chart-svg" viewBox="0 0 ${width} ${height}">
   `;
   
-  // Y-axis labels FIRST (so they render behind the axis line)
+  // Draw Y-axis line FIRST
+  svg += `<line class="chart-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"/>`;
+  
+  // Draw X-axis line
+  svg += `<line class="chart-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"/>`;
+  
+  // Draw grid lines (horizontal)
   const numGridLines = 5;
+  for (let i = 1; i <= numGridLines; i++) {
+    const y = margin.top + (plotHeight / numGridLines) * i;
+    svg += `<line class="chart-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"/>`;
+  }
+  
+  // Draw Y-axis labels LAST (on top of everything, well left of axis)
   for (let i = 0; i <= numGridLines; i++) {
     const y = margin.top + (plotHeight / numGridLines) * i;
     const value = maxY - ((maxY - minY) / numGridLines) * i;
     
-    // Draw label - positioned clearly left of where axis will be
-    svg += `<text class="chart-label-text" x="${margin.left - 20}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
+    // Labels at x=105, axis is at x=120, so 15px clearance
+    svg += `<text class="chart-label-text" x="${margin.left - 15}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
   }
-  
-  // Grid lines (horizontal) - drawn AFTER labels
-  for (let i = 0; i <= numGridLines; i++) {
-    const y = margin.top + (plotHeight / numGridLines) * i;
-    
-    // Draw grid lines lighter, skip the top one
-    if (i > 0) {
-      svg += `<line class="chart-grid-line" x1="${margin.left + 5}" y1="${y}" x2="${width - margin.right}" y2="${y}"/>`;
-    }
-  }
-  
-  // Axes - drawn AFTER labels so they're on top
-  svg += `<line class="chart-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"/>`;
-  svg += `<line class="chart-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"/>`;
   
   // X-axis labels
   scenarios.forEach((scenario, i) => {
