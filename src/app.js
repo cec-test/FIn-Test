@@ -1664,8 +1664,13 @@ function labelFromTableId(tableId) {
 window.exportPeriodData = exportPeriodData;
 
 /**
- * Insights calculations
+ * Insights calculations - NEW SYSTEM
  */
+
+// Global state for insights
+let currentInsightsPeriod = 'monthly';
+
+// Main insights calculation entry point
 function calculateInsights() {
   console.log('calculateInsights called, hasUploadedData:', hasUploadedData);
   
@@ -1678,42 +1683,1351 @@ function calculateInsights() {
   
   console.log('Calculating insights with uploaded data');
   
-  // Calculate insights for each period type
-  ['monthly', 'quarterly', 'yearly'].forEach(periodType => {
-    const largestChanges = calculateLargestChangesForPeriod(periodType);
-    const anomalousItems = calculateAnomalousItemsForPeriod(periodType);
-    
-    displayLargestChangesForPeriod(periodType, largestChanges);
-    displayAnomalousItemsForPeriod(periodType, anomalousItems);
+  // Populate line item dropdowns for charts
+  populateLineItemDropdowns();
+  
+  // Calculate and display insights for the current period
+  refreshInsightsForPeriod(currentInsightsPeriod);
+}
+
+// Refresh all insights when called (button click)
+function refreshAllInsights() {
+  console.log('Refreshing all insights');
+  calculateInsights();
+}
+
+// Switch between periods (Monthly/Quarterly/Yearly)
+function switchInsightsPeriod(period) {
+  console.log('Switching insights period to:', period);
+  
+  // Update global state
+  currentInsightsPeriod = period;
+  
+  // Update button states
+  document.querySelectorAll('.period-btn').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.dataset.period === period) {
+      btn.classList.add('active');
+    }
   });
   
-  // Populate line item dropdowns
-  populateLineItemDropdowns();
+  // Refresh insights for this period
+  refreshInsightsForPeriod(period);
+  
+  // Save selection to session storage
+  sessionStorage.setItem('insightsPeriod', period);
+}
+
+// Refresh insights for a specific period
+function refreshInsightsForPeriod(period) {
+  console.log('Refreshing insights for period:', period);
+  
+  // Calculate and display each insight section
+  calculateAtAGlance(period);
+  calculateProfitabilityMetrics(period);
+  calculateGrowthTrajectory(period);
+  calculateExpenseAnalysis(period);
+  calculateTopMovers(period);
+  calculateRevenueComposition(period);
+  calculateCashWorkingCapital(period);
+  calculateAlertsWarnings(period);
+}
+
+// Toggle collapsible sections
+function toggleInsightSection(sectionId) {
+  const section = document.getElementById(`${sectionId}Content`);
+  const header = section.closest('.insight-section-collapsible').querySelector('.section-header');
+  const icon = header.querySelector('.toggle-icon');
+  const collapsibleDiv = section.closest('.insight-section-collapsible');
+  
+  if (section.style.display === 'none') {
+    section.style.display = 'block';
+    icon.textContent = '−';
+    collapsibleDiv.classList.remove('collapsed');
+    
+    // If section is being opened and is empty, calculate it
+    if (section.querySelector('.loading')) {
+      refreshInsightsForPeriod(currentInsightsPeriod);
+    }
+  } else {
+    section.style.display = 'none';
+    icon.textContent = '+';
+    collapsibleDiv.classList.add('collapsed');
+  }
 }
 
 function displayBlankInsights() {
   console.log('displayBlankInsights called');
   
-  // Update all period-specific containers
+  // Update At a Glance cards
+  ['Revenue', 'Margin', 'Growth', 'Cash'].forEach(metric => {
+    const valueEl = document.getElementById(`glance${metric}`);
+    const changeEl = document.getElementById(`glance${metric}Change`);
+    if (valueEl) valueEl.textContent = '--';
+    if (changeEl) changeEl.textContent = 'Upload data to see insights';
+  });
+  
+  // Update all section contents
+  const sections = ['profitability', 'growth', 'expenses', 'topmovers', 'revenue', 'cash', 'alerts'];
+  sections.forEach(section => {
+    const content = document.getElementById(`${section}Content`);
+    if (content) {
+      content.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
+    }
+  });
+  
+  // Update chart containers
   ['monthly', 'quarterly', 'yearly'].forEach(periodType => {
-    const largestChangesContainer = document.getElementById(`${periodType}LargestChanges`);
-    const anomalousItemsContainer = document.getElementById(`${periodType}AnomalousItems`);
     const lineChartContainer = document.getElementById(`${periodType}LineChart`);
-    
-    if (largestChangesContainer) {
-      largestChangesContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
-    }
-    
-    if (anomalousItemsContainer) {
-      anomalousItemsContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
-    }
-    
     if (lineChartContainer) {
-      lineChartContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
+      lineChartContainer.innerHTML = '<div class="loading">Upload data to view charts</div>';
     }
   });
 }
 
+/**
+ * NEW INSIGHT CALCULATION FUNCTIONS
+ */
+
+// 1. AT A GLANCE CARDS
+function calculateAtAGlance(period) {
+  console.log('Calculating At a Glance for period:', period);
+  
+  if (!hasUploadedData) return;
+  
+  try {
+    // Get data for the selected period
+    const data = getDataForPeriod(period);
+    if (!data || !data.values || data.values.length === 0) return;
+    
+    // Find revenue and net income
+    const revenueItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('total revenue') || 
+      item.name.toLowerCase().includes('revenue')
+    );
+    
+    const netIncomeItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('net income') || 
+      item.name.toLowerCase().includes('net profit')
+    );
+    
+    // Calculate metrics
+    if (revenueItem && revenueItem.actualValues) {
+      const revData = getDataForPeriod(period, revenueItem.actualValues);
+      const lastRev = lastNonNull(revData.values);
+      const prevRev = revData.values[revData.values.length - 2] || lastRev;
+      const revChange = prevRev !== 0 ? ((lastRev - prevRev) / Math.abs(prevRev) * 100) : 0;
+      
+      document.getElementById('glanceRevenue').textContent = formatCurrency(lastRev);
+      const changeEl = document.getElementById('glanceRevenueChange');
+      changeEl.textContent = `${revChange >= 0 ? '+' : ''}${revChange.toFixed(1)}%`;
+      changeEl.className = `card-change ${revChange >= 0 ? 'positive' : 'negative'}`;
+    }
+    
+    // Net Margin
+    if (revenueItem && netIncomeItem && revenueItem.actualValues && netIncomeItem.actualValues) {
+      const revData = getDataForPeriod(period, revenueItem.actualValues);
+      const incData = getDataForPeriod(period, netIncomeItem.actualValues);
+      const lastRev = lastNonNull(revData.values);
+      const lastInc = lastNonNull(incData.values);
+      const margin = lastRev !== 0 ? (lastInc / lastRev * 100) : 0;
+      
+      const prevRev = revData.values[revData.values.length - 2] || lastRev;
+      const prevInc = incData.values[incData.values.length - 2] || lastInc;
+      const prevMargin = prevRev !== 0 ? (prevInc / prevRev * 100) : 0;
+      const marginChange = margin - prevMargin;
+      
+      document.getElementById('glanceMargin').textContent = `${margin.toFixed(1)}%`;
+      const changeEl = document.getElementById('glanceMarginChange');
+      changeEl.textContent = `${marginChange >= 0 ? '+' : ''}${marginChange.toFixed(1)}pp`;
+      changeEl.className = `card-change ${marginChange >= 0 ? 'positive' : 'negative'}`;
+    }
+    
+    // Growth Rate
+    if (revenueItem && revenueItem.actualValues) {
+      const revData = getDataForPeriod(period, revenueItem.actualValues);
+      const lastRev = lastNonNull(revData.values);
+      const prevRev = revData.values[revData.values.length - 2] || lastRev;
+      const growth = prevRev !== 0 ? ((lastRev - prevRev) / Math.abs(prevRev) * 100) : 0;
+      
+      document.getElementById('glanceGrowth').textContent = `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%`;
+      const changeEl = document.getElementById('glanceGrowthChange');
+      changeEl.textContent = growth >= 0 ? '🟢 Up' : '🔴 Down';
+      changeEl.className = `card-change ${growth >= 0 ? 'positive' : 'negative'}`;
+    }
+    
+    // Net Income (or Cash if BS available)
+    if (netIncomeItem && netIncomeItem.actualValues) {
+      const incData = getDataForPeriod(period, netIncomeItem.actualValues);
+      const lastInc = lastNonNull(incData.values);
+      const prevInc = incData.values[incData.values.length - 2] || lastInc;
+      const incChange = prevInc !== 0 ? ((lastInc - prevInc) / Math.abs(prevInc) * 100) : 0;
+      
+      document.getElementById('glanceCash').textContent = formatCurrency(lastInc);
+      const changeEl = document.getElementById('glanceCashChange');
+      changeEl.textContent = `${incChange >= 0 ? '+' : ''}${incChange.toFixed(1)}%`;
+      changeEl.className = `card-change ${incChange >= 0 ? 'positive' : 'negative'}`;
+    }
+    
+  } catch (error) {
+    console.error('Error calculating At a Glance:', error);
+  }
+}
+
+// Helper function to get period-specific data
+function getDataForPeriod(period, actualValues = null) {
+  if (!actualValues) {
+    // Return period type info
+    return { period: period };
+  }
+  
+  let values, labels;
+  
+  if (period === 'monthly') {
+    values = actualValues.slice();
+    labels = dateColumns.slice();
+  } else if (period === 'quarterly') {
+    const agg = aggregateActuals('pnl', actualValues);
+    const out = agg.toQuarterOutputs();
+    values = out.values || [];
+    labels = out.labels || [];
+  } else {
+    const agg = aggregateActuals('pnl', actualValues);
+    const out = agg.toYearOutputs();
+    values = out.values || [];
+    labels = out.labels || [];
+  }
+  
+  return { values, labels };
+}
+
+// 2. PROFITABILITY METRICS
+function calculateProfitabilityMetrics(period) {
+  console.log('Calculating Profitability Metrics for period:', period);
+  
+  const content = document.getElementById('profitabilityContent');
+  if (!content) return;
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see profitability metrics</div>';
+    return;
+  }
+  
+  try {
+    // Find key line items
+    const revenueItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('total revenue') || 
+      item.name.toLowerCase() === 'revenue'
+    );
+    
+    const cogsItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('cogs') || 
+      item.name.toLowerCase().includes('cost of goods')
+    );
+    
+    const opIncomeItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('operating income') ||
+      item.name.toLowerCase().includes('ebit')
+    );
+    
+    const netIncomeItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('net income') || 
+      item.name.toLowerCase().includes('net profit')
+    );
+    
+    if (!revenueItem || !netIncomeItem) {
+      content.innerHTML = '<div class="loading">Unable to calculate profitability metrics (missing revenue or net income)</div>';
+      return;
+    }
+    
+    // Get first and last values
+    const revData = getDataForPeriod(period, revenueItem.actualValues);
+    const firstRev = revData.values[0] || 0;
+    const lastRev = lastNonNull(revData.values);
+    
+    const incData = getDataForPeriod(period, netIncomeItem.actualValues);
+    const firstInc = incData.values[0] || 0;
+    const lastInc = lastNonNull(incData.values);
+    
+    // Calculate net margin
+    const firstNetMargin = firstRev !== 0 ? (firstInc / firstRev * 100) : 0;
+    const lastNetMargin = lastRev !== 0 ? (lastInc / lastRev * 100) : 0;
+    const netMarginChange = lastNetMargin - firstNetMargin;
+    
+    let html = '<div style="padding: 10px;">';
+    html += '<div style="margin-bottom: 15px; font-size: 0.9rem; color: #6c757d;">Current → Forecast End</div>';
+    
+    // Gross margin (if COGS available)
+    if (cogsItem) {
+      const cogsData = getDataForPeriod(period, cogsItem.actualValues);
+      const firstCogs = cogsData.values[0] || 0;
+      const lastCogs = lastNonNull(cogsData.values);
+      
+      const firstGrossMargin = firstRev !== 0 ? ((firstRev - firstCogs) / firstRev * 100) : 0;
+      const lastGrossMargin = lastRev !== 0 ? ((lastRev - lastCogs) / lastRev * 100) : 0;
+      const grossMarginChange = lastGrossMargin - firstGrossMargin;
+      
+      html += `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 10px;">
+          <div style="font-weight: 600;">Gross Margin</div>
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <span>${firstGrossMargin.toFixed(1)}% → ${lastGrossMargin.toFixed(1)}%</span>
+            <span style="font-weight: 600; color: ${grossMarginChange >= 0 ? '#27ae60' : '#e74c3c'}">
+              ${grossMarginChange >= 0 ? '+' : ''}${grossMarginChange.toFixed(1)}pp ${grossMarginChange >= 0 ? '🟢' : '🔴'}
+            </span>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Operating margin (if available)
+    if (opIncomeItem) {
+      const opData = getDataForPeriod(period, opIncomeItem.actualValues);
+      const firstOpInc = opData.values[0] || 0;
+      const lastOpInc = lastNonNull(opData.values);
+      
+      const firstOpMargin = firstRev !== 0 ? (firstOpInc / firstRev * 100) : 0;
+      const lastOpMargin = lastRev !== 0 ? (lastOpInc / lastRev * 100) : 0;
+      const opMarginChange = lastOpMargin - firstOpMargin;
+      
+      html += `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 10px;">
+          <div style="font-weight: 600;">Operating Margin</div>
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <span>${firstOpMargin.toFixed(1)}% → ${lastOpMargin.toFixed(1)}%</span>
+            <span style="font-weight: 600; color: ${opMarginChange >= 0 ? '#27ae60' : '#e74c3c'}">
+              ${opMarginChange >= 0 ? '+' : ''}${opMarginChange.toFixed(1)}pp ${opMarginChange >= 0 ? '🟢' : '🔴'}
+            </span>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Net margin
+    html += `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 15px;">
+        <div style="font-weight: 600;">Net Margin</div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <span>${firstNetMargin.toFixed(1)}% → ${lastNetMargin.toFixed(1)}%</span>
+          <span style="font-weight: 600; color: ${netMarginChange >= 0 ? '#27ae60' : '#e74c3c'}">
+            ${netMarginChange >= 0 ? '+' : ''}${netMarginChange.toFixed(1)}pp ${netMarginChange >= 0 ? '🟢' : '🔴'}
+          </span>
+        </div>
+      </div>
+    `;
+    
+    // Generate insight
+    let insight = '';
+    if (netMarginChange > 1) {
+      insight = '💡 Margins expanding - sign of healthy scaling';
+    } else if (netMarginChange < -1) {
+      insight = '⚠️ Margins compressing - review pricing or cost structure';
+    } else {
+      insight = '💡 Margins relatively stable';
+    }
+    
+    html += `<div style="padding: 10px; background: #e3f2fd; border-radius: 6px; color: #1976d2; font-size: 0.9rem;">${insight}</div>`;
+    html += '</div>';
+    
+    content.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error calculating profitability metrics:', error);
+    content.innerHTML = '<div class="loading">Error calculating profitability metrics</div>';
+  }
+}
+
+// 3. GROWTH & TRAJECTORY
+function calculateGrowthTrajectory(period) {
+  console.log('Calculating Growth & Trajectory for period:', period);
+  
+  const content = document.getElementById('growthContent');
+  if (!content) return;
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see growth metrics</div>';
+    return;
+  }
+  
+  try {
+    // Find total revenue
+    const revenueItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('total revenue') || 
+      item.name.toLowerCase() === 'revenue'
+    );
+    
+    if (!revenueItem || !revenueItem.actualValues) {
+      content.innerHTML = '<div class="loading">Revenue data not found</div>';
+      return;
+    }
+    
+    // Get data for period
+    const revData = getDataForPeriod(period, revenueItem.actualValues);
+    const values = revData.values;
+    
+    if (values.length < 2) {
+      content.innerHTML = '<div class="loading">Not enough data to calculate growth</div>';
+      return;
+    }
+    
+    // Calculate historical growth (first half of data)
+    const midPoint = Math.floor(values.length / 2);
+    const historicalValues = values.slice(0, midPoint);
+    const forecastValues = values.slice(midPoint);
+    
+    // Calculate average growth rate for historical
+    let historicalGrowthRates = [];
+    for (let i = 1; i < historicalValues.length; i++) {
+      if (historicalValues[i-1] !== 0) {
+        const growthRate = ((historicalValues[i] - historicalValues[i-1]) / Math.abs(historicalValues[i-1])) * 100;
+        historicalGrowthRates.push(growthRate);
+      }
+    }
+    const avgHistoricalGrowth = historicalGrowthRates.length > 0 ? 
+      historicalGrowthRates.reduce((a, b) => a + b, 0) / historicalGrowthRates.length : 0;
+    
+    // Calculate average growth rate for forecast
+    let forecastGrowthRates = [];
+    for (let i = 1; i < forecastValues.length; i++) {
+      if (forecastValues[i-1] !== 0) {
+        const growthRate = ((forecastValues[i] - forecastValues[i-1]) / Math.abs(forecastValues[i-1])) * 100;
+        forecastGrowthRates.push(growthRate);
+      }
+    }
+    const avgForecastGrowth = forecastGrowthRates.length > 0 ? 
+      forecastGrowthRates.reduce((a, b) => a + b, 0) / forecastGrowthRates.length : 0;
+    
+    // Calculate acceleration
+    const growthAcceleration = avgForecastGrowth - avgHistoricalGrowth;
+    
+    // Current revenue
+    const currentRevenue = lastNonNull(values);
+    
+    // Calculate milestones (round numbers)
+    const milestones = [];
+    const monthlyGrowthRate = avgForecastGrowth / 100;
+    
+    // Find next milestone targets (round to nearest significant number)
+    let nextTarget = Math.ceil(currentRevenue / 500000) * 500000;
+    if (nextTarget <= currentRevenue) nextTarget += 500000;
+    
+    for (let i = 0; i < 3; i++) {
+      const target = nextTarget + (i * 500000);
+      if (target > currentRevenue && monthlyGrowthRate > 0) {
+        const monthsToReach = Math.log(target / currentRevenue) / Math.log(1 + monthlyGrowthRate);
+        if (monthsToReach > 0 && monthsToReach < 100) {
+          const today = new Date();
+          const targetDate = new Date(today);
+          targetDate.setMonth(targetDate.getMonth() + Math.ceil(monthsToReach));
+          milestones.push({
+            target: target,
+            months: Math.ceil(monthsToReach),
+            date: targetDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
+          });
+        }
+      }
+    }
+    
+    // Build HTML
+    let html = '<div style="padding: 15px;">';
+    html += '<h4 style="margin-top: 0; color: #2c3e50;">Revenue Growth Analysis</h4>';
+    
+    html += '<div style="margin-bottom: 20px;">';
+    html += `<div style="margin-bottom: 15px;">
+      <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 5px;">Historical Growth (Last ${historicalValues.length} periods)</div>
+      <div style="background: #e9ecef; height: 24px; border-radius: 4px; position: relative; overflow: hidden;">
+        <div style="background: #3498db; height: 100%; width: ${Math.min(Math.abs(avgHistoricalGrowth) * 5, 100)}%; border-radius: 4px;"></div>
+      </div>
+      <div style="margin-top: 5px; font-weight: 600; color: #2c3e50;">${avgHistoricalGrowth.toFixed(1)}% average</div>
+    </div>`;
+    
+    html += `<div style="margin-bottom: 15px;">
+      <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 5px;">Forecasted Growth (Next ${forecastValues.length} periods)</div>
+      <div style="background: #e9ecef; height: 24px; border-radius: 4px; position: relative; overflow: hidden;">
+        <div style="background: #27ae60; height: 100%; width: ${Math.min(Math.abs(avgForecastGrowth) * 5, 100)}%; border-radius: 4px;"></div>
+      </div>
+      <div style="margin-top: 5px; font-weight: 600; color: #2c3e50;">${avgForecastGrowth.toFixed(1)}% average</div>
+    </div>`;
+    
+    html += `<div style="padding: 12px; background: ${growthAcceleration >= 0 ? '#d4edda' : '#f8d7da'}; border-radius: 6px; border-left: 4px solid ${growthAcceleration >= 0 ? '#28a745' : '#dc3545'}">
+      <div style="font-weight: 600; color: ${growthAcceleration >= 0 ? '#155724' : '#721c24'}">
+        Growth Acceleration: ${growthAcceleration >= 0 ? '+' : ''}${growthAcceleration.toFixed(1)}% ${growthAcceleration >= 0 ? '🟢' : '🔴'}
+      </div>
+    </div>`;
+    html += '</div>';
+    
+    // Milestone Tracker
+    if (milestones.length > 0) {
+      html += '<h4 style="color: #2c3e50; margin-top: 25px; margin-bottom: 15px;">Milestone Tracker</h4>';
+      html += `<div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+        <div style="margin-bottom: 10px; font-weight: 600;">Current Revenue: ${formatCurrency(currentRevenue)}</div>
+        <div style="margin-bottom: 15px; color: #6c757d; font-size: 0.9rem;">At current growth rate (${avgForecastGrowth.toFixed(1)}%), you will reach:</div>
+      `;
+      
+      milestones.forEach((milestone, index) => {
+        html += `
+          <div style="padding: 10px; margin-bottom: 8px; background: white; border-radius: 6px; border-left: 3px solid #3498db;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="font-weight: 600;">${formatCurrency(milestone.target)}</div>
+              <div style="color: #6c757d; font-size: 0.9rem;">in ${milestone.months} months (${milestone.date}) 📅</div>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += '</div>';
+    }
+    
+    // Generate insight
+    let insight = '';
+    if (growthAcceleration > 2) {
+      insight = '💡 Revenue growth is accelerating - momentum is strong';
+    } else if (growthAcceleration < -2) {
+      insight = '⚠️ Growth slowing - monitor trend and consider growth initiatives';
+    } else {
+      insight = '💡 Growth rate is relatively stable';
+    }
+    
+    html += `<div style="padding: 12px; background: #e3f2fd; border-radius: 6px; color: #1976d2; font-size: 0.9rem; margin-top: 20px;">${insight}</div>`;
+    html += '</div>';
+    
+    content.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error calculating growth trajectory:', error);
+    content.innerHTML = '<div class="loading">Error calculating growth metrics</div>';
+  }
+}
+
+// 4. EXPENSE ANALYSIS  
+function calculateExpenseAnalysis(period) {
+  console.log('Calculating Expense Analysis for period:', period);
+  
+  const content = document.getElementById('expensesContent');
+  if (!content) return;
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see expense analysis</div>';
+    return;
+  }
+  
+  try {
+    // Find revenue and expenses
+    const revenueItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('total revenue') || 
+      item.name.toLowerCase() === 'revenue'
+    );
+    
+    const expenseItems = uploadedLineItems.pnl.filter(item => 
+      item.name.toLowerCase().includes('expense') || 
+      item.name.toLowerCase().includes('cost')
+    );
+    
+    if (!revenueItem || expenseItems.length === 0) {
+      content.innerHTML = '<div class="loading">Unable to calculate expense analysis (missing data)</div>';
+      return;
+    }
+    
+    let html = '<div style="padding: 15px;">';
+    
+    // 1. Operating Leverage
+    const revData = getDataForPeriod(period, revenueItem.actualValues);
+    const firstRev = revData.values[0] || 0;
+    const lastRev = lastNonNull(revData.values);
+    const revGrowth = firstRev !== 0 ? ((lastRev - firstRev) / Math.abs(firstRev) * 100) : 0;
+    
+    // Calculate total expenses
+    let firstTotalExp = 0, lastTotalExp = 0;
+    expenseItems.forEach(item => {
+      if (item.actualValues) {
+        const expData = getDataForPeriod(period, item.actualValues);
+        firstTotalExp += Math.abs(expData.values[0] || 0);
+        lastTotalExp += Math.abs(lastNonNull(expData.values));
+      }
+    });
+    
+    const expGrowth = firstTotalExp !== 0 ? ((lastTotalExp - firstTotalExp) / Math.abs(firstTotalExp) * 100) : 0;
+    const operatingLeverage = revGrowth - expGrowth;
+    
+    html += '<h4 style="margin-top: 0; color: #2c3e50;">Operating Leverage</h4>';
+    html += `<div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+        <span>Revenue Growth:</span>
+        <span style="font-weight: 600; color: ${revGrowth >= 0 ? '#27ae60' : '#e74c3c'}">${revGrowth >= 0 ? '+' : ''}${revGrowth.toFixed(1)}%</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+        <span>Expense Growth:</span>
+        <span style="font-weight: 600; color: ${expGrowth >= 0 ? '#e74c3c' : '#27ae60'}">${expGrowth >= 0 ? '+' : ''}${expGrowth.toFixed(1)}%</span>
+      </div>
+      <div style="padding-top: 10px; border-top: 2px solid #dee2e6; margin-top: 10px;">
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-weight: 600;">Operating Leverage:</span>
+          <span style="font-weight: 600; font-size: 1.2rem; color: ${operatingLeverage >= 0 ? '#27ae60' : '#e74c3c'}">
+            ${operatingLeverage.toFixed(1)}% ${operatingLeverage >= 0 ? '🟢' : '🔴'}
+          </span>
+        </div>
+        <div style="margin-top: 8px; font-size: 0.85rem; color: #6c757d;">
+          ${operatingLeverage >= 0 ? 'Expenses growing slower than revenue - efficient' : 'Expenses outpacing revenue - review costs'}
+        </div>
+      </div>
+    </div>`;
+    
+    // 2. Top Growing Expenses
+    const expenseGrowth = [];
+    expenseItems.forEach(item => {
+      if (item.actualValues) {
+        const expData = getDataForPeriod(period, item.actualValues);
+        const first = Math.abs(expData.values[0] || 0);
+        const last = Math.abs(lastNonNull(expData.values));
+        if (first > 0) {
+          const growth = ((last - first) / first * 100);
+          const growthMultiple = revGrowth !== 0 ? growth / revGrowth : 0;
+          expenseGrowth.push({
+            name: item.name,
+            growth: growth,
+            growthMultiple: growthMultiple,
+            firstVal: first,
+            lastVal: last
+          });
+        }
+      }
+    });
+    
+    expenseGrowth.sort((a, b) => Math.abs(b.growth) - Math.abs(a.growth));
+    const topExpenses = expenseGrowth.slice(0, 3);
+    
+    html += '<h4 style="color: #2c3e50; margin-bottom: 15px;">Top Growing Expenses</h4>';
+    topExpenses.forEach((exp, index) => {
+      const color = exp.growthMultiple > 4 ? '#e74c3c' : exp.growthMultiple > 2 ? '#f39c12' : '#27ae60';
+      const emoji = exp.growthMultiple > 4 ? '🔴' : exp.growthMultiple > 2 ? '🟡' : '🟢';
+      const label = exp.growthMultiple > 4 ? 'WATCH' : exp.growthMultiple > 2 ? 'Monitor' : 'Healthy';
+      
+      html += `<div style="padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid ${color};">
+        <div style="font-weight: 600; margin-bottom: 5px;">${index + 1}. ${exp.name}</div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.9rem; color: #6c757d;">
+            ${formatCurrency(exp.firstVal)} → ${formatCurrency(exp.lastVal)} (${exp.growth >= 0 ? '+' : ''}${exp.growth.toFixed(1)}%)
+          </span>
+          <span style="font-weight: 600; color: ${color};">${emoji} ${label}</span>
+        </div>
+        ${exp.growthMultiple > 0 ? `<div style="font-size: 0.85rem; color: #6c757d; margin-top: 5px;">Growing ${exp.growthMultiple.toFixed(1)}x ${exp.growthMultiple > 1 ? 'faster' : 'slower'} than revenue</div>` : ''}
+      </div>`;
+    });
+    
+    // 3. Expense Efficiency (as % of revenue)
+    html += '<h4 style="color: #2c3e50; margin-top: 25px; margin-bottom: 15px;">Expense Efficiency (% of Revenue)</h4>';
+    
+    const expenseEfficiency = [];
+    expenseItems.slice(0, 5).forEach(item => {
+      if (item.actualValues) {
+        const expData = getDataForPeriod(period, item.actualValues);
+        const first = Math.abs(expData.values[0] || 0);
+        const last = Math.abs(lastNonNull(expData.values));
+        const firstPct = firstRev !== 0 ? (first / firstRev * 100) : 0;
+        const lastPct = lastRev !== 0 ? (last / lastRev * 100) : 0;
+        const change = lastPct - firstPct;
+        
+        expenseEfficiency.push({
+          name: item.name,
+          firstPct,
+          lastPct,
+          change
+        });
+      }
+    });
+    
+    expenseEfficiency.forEach(eff => {
+      const color = eff.change < 0 ? '#27ae60' : eff.change > 0 ? '#e74c3c' : '#95a5a6';
+      const emoji = eff.change < 0 ? '🟢' : eff.change > 0 ? '🔴' : '⚪';
+      const label = eff.change < 0 ? 'Improving' : eff.change > 0 ? 'Increasing' : 'Stable';
+      
+      html += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px;">
+        <span style="font-weight: 600;">${eff.name}</span>
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <span>${eff.firstPct.toFixed(1)}% → ${eff.lastPct.toFixed(1)}%</span>
+          <span style="font-weight: 600; color: ${color}; min-width: 100px;">${emoji} ${label}</span>
+        </div>
+      </div>`;
+    });
+    
+    // 4. Most Variable Expenses (Enhanced Anomalous Items)
+    html += '<h4 style="color: #2c3e50; margin-top: 25px; margin-bottom: 10px;">Most Variable Expenses</h4>';
+    html += `<div style="margin-bottom: 15px;">
+      <label style="font-size: 0.9rem; color: #6c757d; margin-right: 10px;">Volatility Threshold:</label>
+      <input type="number" id="expenseVolatilityThreshold" value="30" min="10" max="100" step="5" 
+        style="padding: 6px 10px; border: 1px solid #dee2e6; border-radius: 4px; width: 80px;"
+        onchange="calculateExpenseAnalysis('${period}')">
+      <span style="font-size: 0.85rem; color: #6c757d; margin-left: 8px;">%</span>
+    </div>`;
+    
+    const threshold = parseFloat(document.getElementById('expenseVolatilityThreshold')?.value || 30);
+    
+    // Calculate coefficient of variation for each expense
+    const volatileExpenses = [];
+    expenseItems.forEach(item => {
+      if (item.actualValues) {
+        const expData = getDataForPeriod(period, item.actualValues);
+        const values = expData.values.map(v => Math.abs(v));
+        
+        if (values.length >= 3) {
+          const mean = values.reduce((a, b) => a + b, 0) / values.length;
+          const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+          const stdDev = Math.sqrt(variance);
+          const cv = mean !== 0 ? (stdDev / mean * 100) : 0;
+          
+          if (cv >= threshold) {
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const impact = mean > 10000 ? 'HIGH' : mean > 1000 ? 'MED' : 'LOW';
+            
+            volatileExpenses.push({
+              name: item.name,
+              volatility: cv,
+              mean: mean,
+              min: min,
+              max: max,
+              impact: impact
+            });
+          }
+        }
+      }
+    });
+    
+    volatileExpenses.sort((a, b) => b.volatility - a.volatility);
+    
+    if (volatileExpenses.length > 0) {
+      volatileExpenses.slice(0, 5).forEach((exp, index) => {
+        const impactColor = exp.impact === 'HIGH' ? '#e74c3c' : exp.impact === 'MED' ? '#f39c12' : '#95a5a6';
+        
+        html += `<div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid ${impactColor};">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+            <div style="font-weight: 600; color: #2c3e50;">${index + 1}. ${exp.name}</div>
+            <div style="text-align: right;">
+              <div style="font-weight: 600; color: ${impactColor};">Volatility: ${exp.volatility.toFixed(0)}%</div>
+              <div style="font-size: 0.85rem; color: #6c757d;">Impact: ${exp.impact}</div>
+            </div>
+          </div>
+          <div style="font-size: 0.9rem; color: #6c757d;">
+            Range: ${formatCurrency(exp.min)} - ${formatCurrency(exp.max)} (avg ${formatCurrency(exp.mean)})
+          </div>
+        </div>`;
+      });
+      
+      html += `<div style="padding: 12px; background: #fff3cd; border-radius: 6px; color: #856404; font-size: 0.9rem; margin-top: 15px; border-left: 4px solid #ffc107;">
+        💡 High variability = harder to forecast. Budget 20% buffer for these items.
+      </div>`;
+    } else {
+      html += '<div style="padding: 15px; color: #6c757d; font-style: italic;">No expenses exceed the volatility threshold</div>';
+    }
+    
+    html += '</div>';
+    content.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error calculating expense analysis:', error);
+    content.innerHTML = '<div class="loading">Error calculating expense analysis</div>';
+  }
+}
+
+// 5. TOP MOVERS (using existing logic)
+function calculateTopMovers(period) {
+  console.log('Calculating Top Movers for period:', period);
+  
+  const content = document.getElementById('topmoversContent');
+  if (!content) return;
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see top movers</div>';
+    return;
+  }
+  
+  // Reuse existing calculation
+  const changes = calculateLargestChangesForPeriod(period);
+  
+  if (changes.length === 0) {
+    content.innerHTML = '<div class="loading">No significant changes detected</div>';
+    return;
+  }
+  
+  let html = '<div style="padding: 15px;">';
+  html += '<div style="margin-bottom: 15px; font-size: 0.9rem; color: #6c757d;">Biggest Changes (Last Actual → End of Forecast)</div>';
+  
+  changes.forEach((change, index) => {
+    const changeClass = change.isPositive ? 'positive' : 'negative';
+    const changeSymbol = change.isPositive ? '+' : '';
+    const statementLabel = change.statement === 'pnl' ? 'P&L' : 
+                          change.statement === 'balance' ? 'Balance' : 'Cash Flow';
+    const emoji = change.isPositive ? '🟢' : '🔴';
+    
+    html += `
+      <div style="padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid ${change.isPositive ? '#27ae60' : '#e74c3c'}">
+        <div style="font-weight: 600; margin-bottom: 5px;">${index + 1}. ${change.name}</div>
+        <div style="font-size: 0.9rem; color: #6c757d;">
+          ${formatCurrency(change.lastActual)} → ${formatCurrency(change.furthestForecast)} (${changeSymbol}${change.percentChange.toFixed(1)}%) ${emoji}
+        </div>
+        <div style="font-size: 0.85rem; color: #6c757d; margin-top: 5px;">
+          ${statementLabel} | ${change.lastActualDate} to ${change.forecastDate}
+        </div>
+      </div>
+    `;
+  });
+  
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+// 6. REVENUE COMPOSITION
+function calculateRevenueComposition(period) {
+  console.log('Calculating Revenue Composition for period:', period);
+  
+  const content = document.getElementById('revenueContent');
+  if (!content) return;
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see revenue composition</div>';
+    return;
+  }
+  
+  try {
+    // Find all revenue line items (excluding total)
+    const revenueItems = uploadedLineItems.pnl.filter(item => 
+      (item.name.toLowerCase().includes('revenue') || 
+       item.name.toLowerCase().includes('sales')) &&
+      !item.name.toLowerCase().includes('total')
+    );
+    
+    if (revenueItems.length === 0) {
+      content.innerHTML = '<div style="padding: 15px; color: #6c757d;">No revenue breakdown detected - only single revenue stream found</div>';
+      return;
+    }
+    
+    // Calculate revenue mix for first and last periods
+    const revenueMix = [];
+    let firstTotal = 0, lastTotal = 0;
+    
+    revenueItems.forEach(item => {
+      if (item.actualValues) {
+        const revData = getDataForPeriod(period, item.actualValues);
+        const first = revData.values[0] || 0;
+        const last = lastNonNull(revData.values);
+        
+        firstTotal += first;
+        lastTotal += last;
+        
+        revenueMix.push({
+          name: item.name,
+          firstValue: first,
+          lastValue: last
+        });
+      }
+    });
+    
+    // Calculate percentages
+    revenueMix.forEach(item => {
+      item.firstPct = firstTotal !== 0 ? (item.firstValue / firstTotal * 100) : 0;
+      item.lastPct = lastTotal !== 0 ? (item.lastValue / lastTotal * 100) : 0;
+      item.pctChange = item.lastPct - item.firstPct;
+    });
+    
+    // Sort by current size
+    revenueMix.sort((a, b) => b.lastValue - a.lastValue);
+    
+    let html = '<div style="padding: 15px;">';
+    html += '<h4 style="margin-top: 0; color: #2c3e50;">Revenue Mix Analysis</h4>';
+    
+    // Visual bars
+    const colors = ['#3498db', '#e74c3c', '#27ae60', '#f39c12', '#9b59b6', '#1abc9c'];
+    revenueMix.forEach((item, index) => {
+      const color = colors[index % colors.length];
+      const barWidth = item.lastPct;
+      
+      html += `<div style="margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+          <span style="font-weight: 600; font-size: 0.9rem;">${item.name}</span>
+          <span style="font-weight: 600; color: ${color};">${item.lastPct.toFixed(0)}%</span>
+        </div>
+        <div style="background: #e9ecef; height: 24px; border-radius: 4px; overflow: hidden;">
+          <div style="background: ${color}; height: 100%; width: ${barWidth}%; display: flex; align-items: center; padding-left: 10px; color: white; font-size: 0.85rem; font-weight: 600;">
+            ${formatCurrency(item.lastValue)}
+          </div>
+        </div>
+      </div>`;
+    });
+    
+    // Concentration Risk
+    const topRevenuePct = revenueMix[0]?.lastPct || 0;
+    let concentrationRisk, concentrationColor, concentrationEmoji;
+    
+    if (topRevenuePct > 60) {
+      concentrationRisk = 'HIGH';
+      concentrationColor = '#e74c3c';
+      concentrationEmoji = '🔴';
+    } else if (topRevenuePct > 40) {
+      concentrationRisk = 'MEDIUM';
+      concentrationColor = '#f39c12';
+      concentrationEmoji = '🟡';
+    } else {
+      concentrationRisk = 'LOW';
+      concentrationColor = '#27ae60';
+      concentrationEmoji = '🟢';
+    }
+    
+    html += `<div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-top: 20px; border-left: 4px solid ${concentrationColor};">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-weight: 600;">Concentration Risk:</span>
+        <span style="font-weight: 600; color: ${concentrationColor};">${concentrationEmoji} ${concentrationRisk}</span>
+      </div>
+      <div style="font-size: 0.9rem; color: #6c757d;">
+        Top revenue source = ${topRevenuePct.toFixed(0)}% of total
+      </div>
+    </div>`;
+    
+    // Forecast Shift
+    html += '<h4 style="color: #2c3e50; margin-top: 25px; margin-bottom: 15px;">Forecast Shift (Start vs End)</h4>';
+    
+    revenueMix.forEach((item, index) => {
+      const color = item.pctChange > 0 ? '#27ae60' : item.pctChange < 0 ? '#e74c3c' : '#95a5a6';
+      const emoji = item.pctChange > 0 ? '🟢' : item.pctChange < 0 ? '🔴' : '⚪';
+      const label = item.pctChange > 0 ? 'Growing share' : item.pctChange < 0 ? 'Shrinking share' : 'Stable';
+      
+      html += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px;">
+        <span style="font-weight: 600;">${item.name}</span>
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <span>${item.firstPct.toFixed(0)}% → ${item.lastPct.toFixed(0)}%</span>
+          <span style="font-weight: 600; color: ${color}; min-width: 120px;">${emoji} ${label}</span>
+        </div>
+      </div>`;
+    });
+    
+    // Generate insight
+    const biggestShift = revenueMix.reduce((max, item) => 
+      Math.abs(item.pctChange) > Math.abs(max.pctChange) ? item : max
+    , revenueMix[0]);
+    
+    if (Math.abs(biggestShift.pctChange) > 3) {
+      const direction = biggestShift.pctChange > 0 ? 'growing faster' : 'declining';
+      html += `<div style="padding: 12px; background: #e3f2fd; border-radius: 6px; color: #1976d2; font-size: 0.9rem; margin-top: 20px;">
+        💡 ${biggestShift.name} ${direction} - mix shift in progress
+      </div>`;
+    }
+    
+    html += '</div>';
+    content.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error calculating revenue composition:', error);
+    content.innerHTML = '<div class="loading">Error calculating revenue composition</div>';
+  }
+}
+
+// 7. CASH & WORKING CAPITAL
+function calculateCashWorkingCapital(period) {
+  console.log('Calculating Cash & Working Capital for period:', period);
+  
+  const content = document.getElementById('cashContent');
+  const section = document.getElementById('cashSection');
+  if (!content) return;
+  
+  // Check if Balance Sheet data is available
+  const hasBSData = uploadedLineItems.balance && uploadedLineItems.balance.length > 0;
+  
+  if (!hasBSData) {
+    if (section) section.style.display = 'none';
+    return;
+  }
+  
+  if (section) section.style.display = 'block';
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see cash & working capital metrics</div>';
+    return;
+  }
+  
+  try {
+    // Find cash line item
+    const cashItem = uploadedLineItems.balance.find(item => 
+      item.name.toLowerCase().includes('cash') && 
+      !item.name.toLowerCase().includes('flow')
+    );
+    
+    // Find current assets/liabilities
+    const currentAssetsItem = uploadedLineItems.balance.find(item => 
+      item.name.toLowerCase().includes('current assets')
+    );
+    
+    const currentLiabilitiesItem = uploadedLineItems.balance.find(item => 
+      item.name.toLowerCase().includes('current liabilities')
+    );
+    
+    if (!cashItem) {
+      content.innerHTML = '<div style="padding: 15px; color: #6c757d;">Cash data not found in Balance Sheet</div>';
+      return;
+    }
+    
+    let html = '<div style="padding: 15px;">';
+    
+    // Cash Position
+    const cashData = getDataForPeriod(period, cashItem.actualValues);
+    const firstCash = cashData.values[0] || 0;
+    const lastCash = lastNonNull(cashData.values);
+    const cashChange = lastCash - firstCash;
+    const cashTrend = cashChange >= 0 ? 'INCREASING' : 'DECREASING';
+    const cashColor = cashChange >= 0 ? '#27ae60' : '#e74c3c';
+    
+    html += '<h4 style="margin-top: 0; color: #2c3e50;">Cash Position Forecast</h4>';
+    html += `<div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+        <span style="color: #6c757d;">Current Cash:</span>
+        <span style="font-weight: 600; font-size: 1.2rem;">${formatCurrency(firstCash)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+        <span style="color: #6c757d;">Forecast (End Period):</span>
+        <span style="font-weight: 600; font-size: 1.2rem;">${formatCurrency(lastCash)}</span>
+      </div>
+      <div style="padding-top: 10px; border-top: 2px solid #dee2e6; margin-top: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 600;">Trend:</span>
+          <span style="font-weight: 600; color: ${cashColor};">
+            ${cashTrend === 'INCREASING' ? '🟢' : '🔴'} ${cashTrend} (${cashChange >= 0 ? '+' : ''}${formatCurrency(cashChange)})
+          </span>
+        </div>
+      </div>
+    </div>`;
+    
+    // Cash Runway (using expenses from P&L)
+    const expenseItems = uploadedLineItems.pnl.filter(item => 
+      item.name.toLowerCase().includes('expense') || 
+      item.name.toLowerCase().includes('cost')
+    );
+    
+    if (expenseItems.length > 0) {
+      let totalMonthlyExpenses = 0;
+      let expenseCount = 0;
+      
+      expenseItems.forEach(item => {
+        if (item.actualValues) {
+          const expData = getDataForPeriod(period, item.actualValues);
+          const avgExpense = expData.values.reduce((a, b) => a + Math.abs(b), 0) / expData.values.length;
+          totalMonthlyExpenses += avgExpense;
+          expenseCount++;
+        }
+      });
+      
+      if (totalMonthlyExpenses > 0) {
+        const runway = lastCash / totalMonthlyExpenses;
+        const runwayColor = runway > 12 ? '#27ae60' : runway > 6 ? '#f39c12' : '#e74c3c';
+        const runwayEmoji = runway > 12 ? '🟢' : runway > 6 ? '🟡' : '🔴';
+        
+        html += '<h4 style="color: #2c3e50; margin-bottom: 15px;">Cash Runway</h4>';
+        html += `<div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid ${runwayColor};">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span style="color: #6c757d;">Monthly Burn Rate:</span>
+            <span style="font-weight: 600;">${formatCurrency(totalMonthlyExpenses)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600;">Runway:</span>
+            <span style="font-weight: 600; font-size: 1.2rem; color: ${runwayColor};">
+              ${runwayEmoji} ${runway.toFixed(1)} months
+            </span>
+          </div>
+          <div style="margin-top: 10px; font-size: 0.85rem; color: #6c757d;">
+            ${runway > 12 ? 'Strong cash position' : runway > 6 ? 'Adequate runway' : '⚠️ Limited runway - plan for funding'}
+          </div>
+        </div>`;
+      }
+    }
+    
+    // Working Capital Metrics
+    if (currentAssetsItem && currentLiabilitiesItem) {
+      const caData = getDataForPeriod(period, currentAssetsItem.actualValues);
+      const clData = getDataForPeriod(period, currentLiabilitiesItem.actualValues);
+      
+      const currentAssets = lastNonNull(caData.values);
+      const currentLiabilities = lastNonNull(clData.values);
+      const netWorkingCapital = currentAssets - currentLiabilities;
+      const currentRatio = currentLiabilities !== 0 ? currentAssets / currentLiabilities : 0;
+      
+      const ratioColor = currentRatio > 1.5 ? '#27ae60' : currentRatio > 1.0 ? '#f39c12' : '#e74c3c';
+      const ratioEmoji = currentRatio > 1.5 ? '🟢' : currentRatio > 1.0 ? '🟡' : '🔴';
+      const ratioLabel = currentRatio > 1.5 ? 'Healthy' : currentRatio > 1.0 ? 'Adequate' : 'Weak';
+      
+      html += '<h4 style="color: #2c3e50; margin-bottom: 15px;">Working Capital Metrics</h4>';
+      html += `<div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: #6c757d;">Current Assets:</span>
+          <span style="font-weight: 600;">${formatCurrency(currentAssets)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: #6c757d;">Current Liabilities:</span>
+          <span style="font-weight: 600;">${formatCurrency(currentLiabilities)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+          <span style="font-weight: 600;">Net Working Capital:</span>
+          <span style="font-weight: 600; font-size: 1.1rem;">${formatCurrency(netWorkingCapital)}</span>
+        </div>
+        <div style="padding-top: 10px; border-top: 2px solid #dee2e6;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600;">Current Ratio:</span>
+            <span style="font-weight: 600; color: ${ratioColor};">
+              ${ratioEmoji} ${currentRatio.toFixed(2)}:1 (${ratioLabel})
+            </span>
+          </div>
+        </div>
+      </div>`;
+    }
+    
+    // Cash Conversion Cycle (from config inputs)
+    const dso = parseFloat(document.getElementById('bsDSO')?.value || 30);
+    const dpo = parseFloat(document.getElementById('bsDPO')?.value || 30);
+    const dio = parseFloat(document.getElementById('bsDIO')?.value || 45);
+    const ccc = dso + dio - dpo;
+    
+    html += '<h4 style="color: #2c3e50; margin-bottom: 15px;">Cash Conversion Cycle</h4>';
+    html += `<div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span>DSO (Days Sales Outstanding)</span>
+        <span style="font-weight: 600;">${dso} days</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span>DIO (Days Inventory Outstanding)</span>
+        <span style="font-weight: 600;">${dio} days</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+        <span>DPO (Days Payable Outstanding)</span>
+        <span style="font-weight: 600;">${dpo} days</span>
+      </div>
+      <div style="padding-top: 10px; border-top: 2px solid #dee2e6;">
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-weight: 600;">Net Cash Conversion Cycle:</span>
+          <span style="font-weight: 600; font-size: 1.2rem; color: ${ccc < 45 ? '#27ae60' : ccc < 60 ? '#f39c12' : '#e74c3c'};">
+            ${ccc} days ${ccc < 45 ? '🟢' : ccc < 60 ? '🟡' : '🔴'}
+          </span>
+        </div>
+      </div>
+    </div>`;
+    
+    html += '</div>';
+    content.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error calculating cash & working capital:', error);
+    content.innerHTML = '<div class="loading">Error calculating cash & working capital metrics</div>';
+  }
+}
+
+// 8. ALERTS & WARNINGS
+function calculateAlertsWarnings(period) {
+  console.log('Calculating Alerts & Warnings for period:', period);
+  
+  const content = document.getElementById('alertsContent');
+  if (!content) return;
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see alerts</div>';
+    return;
+  }
+  
+  try {
+    const alerts = {
+      high: [],
+      medium: [],
+      positive: []
+    };
+    
+    // Find key items
+    const revenueItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('total revenue') || 
+      item.name.toLowerCase() === 'revenue'
+    );
+    
+    const netIncomeItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('net income') || 
+      item.name.toLowerCase().includes('net profit')
+    );
+    
+    const expenseItems = uploadedLineItems.pnl.filter(item => 
+      item.name.toLowerCase().includes('expense') || 
+      item.name.toLowerCase().includes('cost')
+    );
+    
+    // Check profitability margins
+    if (revenueItem && netIncomeItem && revenueItem.actualValues && netIncomeItem.actualValues) {
+      const revData = getDataForPeriod(period, revenueItem.actualValues);
+      const incData = getDataForPeriod(period, netIncomeItem.actualValues);
+      
+      const firstRev = revData.values[0] || 0;
+      const lastRev = lastNonNull(revData.values);
+      const firstInc = incData.values[0] || 0;
+      const lastInc = lastNonNull(incData.values);
+      
+      const firstMargin = firstRev !== 0 ? (firstInc / firstRev * 100) : 0;
+      const lastMargin = lastRev !== 0 ? (lastInc / lastRev * 100) : 0;
+      const marginChange = lastMargin - firstMargin;
+      
+      if (marginChange < -3) {
+        alerts.high.push({
+          message: `Margins declining by ${Math.abs(marginChange).toFixed(1)}pp (${firstMargin.toFixed(1)}% → ${lastMargin.toFixed(1)}%). Review pricing or cost structure.`,
+          link: 'profitability'
+        });
+      } else if (marginChange > 2) {
+        alerts.positive.push('All profitability margins expanding - strong efficiency gains');
+      }
+      
+      // Check revenue growth
+      const revGrowth = firstRev !== 0 ? ((lastRev - firstRev) / Math.abs(firstRev) * 100) : 0;
+      
+      if (revGrowth < -5) {
+        alerts.high.push({
+          message: `Revenue declining by ${Math.abs(revGrowth).toFixed(1)}%. Urgent action needed.`,
+          link: 'growth'
+        });
+      } else if (revGrowth > 0) {
+        alerts.positive.push(`Revenue growing at ${revGrowth.toFixed(1)}%`);
+      }
+    }
+    
+    // Check expense growth vs revenue growth
+    if (revenueItem && expenseItems.length > 0) {
+      const revData = getDataForPeriod(period, revenueItem.actualValues);
+      const firstRev = revData.values[0] || 0;
+      const lastRev = lastNonNull(revData.values);
+      const revGrowth = firstRev !== 0 ? ((lastRev - firstRev) / Math.abs(firstRev) * 100) : 0;
+      
+      expenseItems.forEach(item => {
+        if (item.actualValues) {
+          const expData = getDataForPeriod(period, item.actualValues);
+          const first = Math.abs(expData.values[0] || 0);
+          const last = Math.abs(lastNonNull(expData.values));
+          
+          if (first > 0) {
+            const expGrowth = ((last - first) / first * 100);
+            const growthMultiple = revGrowth !== 0 ? expGrowth / revGrowth : 0;
+            
+            if (growthMultiple > 4 && expGrowth > 20) {
+              alerts.high.push({
+                message: `${item.name} up ${expGrowth.toFixed(0)}% - growing ${growthMultiple.toFixed(1)}x faster than revenue. ROI review recommended.`,
+                link: 'expenses'
+              });
+            } else if (growthMultiple > 2 && expGrowth > 15) {
+              alerts.medium.push({
+                message: `${item.name} growing ${growthMultiple.toFixed(1)}x faster than revenue (${expGrowth.toFixed(0)}%).`,
+                link: 'expenses'
+              });
+            }
+          }
+        }
+      });
+      
+      // Operating leverage check
+      let firstTotalExp = 0, lastTotalExp = 0;
+      expenseItems.forEach(item => {
+        if (item.actualValues) {
+          const expData = getDataForPeriod(period, item.actualValues);
+          firstTotalExp += Math.abs(expData.values[0] || 0);
+          lastTotalExp += Math.abs(lastNonNull(expData.values));
+        }
+      });
+      
+      const expGrowth = firstTotalExp !== 0 ? ((lastTotalExp - firstTotalExp) / Math.abs(firstTotalExp) * 100) : 0;
+      const operatingLeverage = revGrowth - expGrowth;
+      
+      if (operatingLeverage > 0) {
+        alerts.positive.push(`Operating leverage positive (expenses growing slower than revenue by ${operatingLeverage.toFixed(1)}pp)`);
+      }
+    }
+    
+    // Check cash runway (if balance sheet available)
+    const cashItem = uploadedLineItems.balance?.find(item => 
+      item.name.toLowerCase().includes('cash') && 
+      !item.name.toLowerCase().includes('flow')
+    );
+    
+    if (cashItem && cashItem.actualValues && expenseItems.length > 0) {
+      const cashData = getDataForPeriod(period, cashItem.actualValues);
+      const lastCash = lastNonNull(cashData.values);
+      
+      let totalMonthlyExpenses = 0;
+      expenseItems.forEach(item => {
+        if (item.actualValues) {
+          const expData = getDataForPeriod(period, item.actualValues);
+          const avgExpense = expData.values.reduce((a, b) => a + Math.abs(b), 0) / expData.values.length;
+          totalMonthlyExpenses += avgExpense;
+        }
+      });
+      
+      if (totalMonthlyExpenses > 0) {
+        const runway = lastCash / totalMonthlyExpenses;
+        
+        if (runway < 6) {
+          alerts.high.push({
+            message: `Cash runway is ${runway.toFixed(1)} months. Plan for working capital or funding.`,
+            link: 'cash'
+          });
+        } else if (runway < 12) {
+          alerts.medium.push({
+            message: `Cash runway is ${runway.toFixed(1)} months. Monitor burn rate.`,
+            link: 'cash'
+          });
+        }
+      }
+    }
+    
+    // Build HTML
+    let html = '<div style="padding: 15px;">';
+    
+    // High Priority Alerts
+    if (alerts.high.length > 0) {
+      html += '<div style="padding: 15px; background: #f8d7da; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #dc3545;">';
+      html += '<div style="font-weight: 600; color: #721c24; margin-bottom: 12px; font-size: 1.05rem;">🔴 HIGH PRIORITY</div>';
+      alerts.high.forEach(alert => {
+        html += `<div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #f5c6cb;">
+          <div style="color: #721c24;">• ${alert.message}</div>
+          ${alert.link ? `<a href="#" onclick="toggleInsightSection('${alert.link}'); return false;" style="font-size: 0.85rem; color: #721c24; text-decoration: underline;">View Details →</a>` : ''}
+        </div>`;
+      });
+      html += '</div>';
+    }
+    
+    // Medium Priority Alerts
+    if (alerts.medium.length > 0) {
+      html += '<div style="padding: 15px; background: #fff3cd; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ffc107;">';
+      html += '<div style="font-weight: 600; color: #856404; margin-bottom: 12px; font-size: 1.05rem;">🟡 MEDIUM PRIORITY</div>';
+      alerts.medium.forEach(alert => {
+        html += `<div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #ffeaa7;">
+          <div style="color: #856404;">• ${alert.message}</div>
+          ${alert.link ? `<a href="#" onclick="toggleInsightSection('${alert.link}'); return false;" style="font-size: 0.85rem; color: #856404; text-decoration: underline;">View Details →</a>` : ''}
+        </div>`;
+      });
+      html += '</div>';
+    }
+    
+    // Positive Signals
+    if (alerts.positive.length > 0) {
+      html += '<div style="padding: 15px; background: #d4edda; border-radius: 8px; border-left: 4px solid #28a745;">';
+      html += '<div style="font-weight: 600; color: #155724; margin-bottom: 12px; font-size: 1.05rem;">🟢 POSITIVE SIGNALS</div>';
+      alerts.positive.forEach(signal => {
+        html += `<div style="color: #155724; margin-bottom: 8px;">• ${signal}</div>`;
+      });
+      html += '</div>';
+    }
+    
+    // If no alerts at all
+    if (alerts.high.length === 0 && alerts.medium.length === 0 && alerts.positive.length === 0) {
+      html += '<div style="padding: 15px; background: #d1ecf1; border-radius: 8px; color: #0c5460; border-left: 4px solid #17a2b8;">';
+      html += '✓ No critical issues detected - financials appear healthy';
+      html += '</div>';
+    }
+    
+    html += '</div>';
+    content.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error calculating alerts & warnings:', error);
+    content.innerHTML = '<div class="loading">Error calculating alerts</div>';
+  }
+}
+
+// Keep old functions for backwards compatibility
 function calculateLargestChanges() {
   const changes = [];
   
@@ -8940,3 +10254,22 @@ function exportSensitivityCSV() {
   
   console.log('Sensitivity results exported to CSV');
 }
+
+/**
+ * Initialize insights period selector on page load
+ */
+(function initializeInsightsPeriod() {
+  // Restore saved period from session storage
+  const savedPeriod = sessionStorage.getItem('insightsPeriod');
+  if (savedPeriod && ['monthly', 'quarterly', 'yearly'].includes(savedPeriod)) {
+    currentInsightsPeriod = savedPeriod;
+    
+    // Update button states
+    document.querySelectorAll('.period-btn').forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.dataset.period === savedPeriod) {
+        btn.classList.add('active');
+      }
+    });
+  }
+})();

@@ -1328,11 +1328,191 @@
         .insights-controls {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 20px;
             margin-bottom: 30px;
-            padding: 15px;
+            padding: 15px 20px;
             background: #f8f9fa;
             border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        
+        /* Period Selector */
+        .period-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .period-btn {
+            padding: 8px 20px;
+            border: 2px solid #dee2e6;
+            background: white;
+            color: #495057;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .period-btn:hover {
+            border-color: #3498db;
+            color: #3498db;
+        }
+        
+        .period-btn.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        
+        /* Insights Content Container */
+        .insights-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* At a Glance Section */
+        .at-a-glance-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .at-a-glance-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .glance-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .glance-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .glance-card .card-icon {
+            font-size: 2rem;
+        }
+        
+        .glance-card .card-content {
+            flex: 1;
+        }
+        
+        .glance-card .card-label {
+            font-size: 0.75rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .glance-card .card-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            line-height: 1.2;
+        }
+        
+        .glance-card .card-change {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        
+        .glance-card .card-change.positive {
+            color: #27ae60;
+        }
+        
+        .glance-card .card-change.negative {
+            color: #e74c3c;
+        }
+        
+        .glance-card .card-change.neutral {
+            color: #95a5a6;
+        }
+        
+        /* Collapsible Insight Sections */
+        .insight-section-collapsible {
+            margin-bottom: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        
+        .insight-section-collapsible .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            cursor: pointer;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            transition: background 0.2s;
+        }
+        
+        .insight-section-collapsible .section-header:hover {
+            background: #e9ecef;
+        }
+        
+        .insight-section-collapsible .section-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .insight-section-collapsible .toggle-icon {
+            font-size: 1.5rem;
+            color: #6c757d;
+            font-weight: 300;
+            width: 30px;
+            text-align: center;
+        }
+        
+        .insight-section-collapsible .section-content {
+            padding: 20px;
+        }
+        
+        /* Permanent Insight Sections (Charts) */
+        .insight-section-permanent {
+            margin-bottom: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 20px;
+        }
+        
+        .insight-section-permanent h3 {
+            color: #2c3e50;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0 0 20px 0;
+        }
+        
+        .chart-period-section {
+            margin-bottom: 30px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .chart-period-section:last-child {
+            margin-bottom: 0;
         }
         
         .insights-containers {
@@ -2518,36 +2698,145 @@
                     <strong>Insights Dashboard</strong> - Financial insights across all date ranges
                 </div>
                 <div class="insights-dashboard">
+                    <!-- Period Selector -->
                     <div class="insights-controls">
-                        <button class="refresh-insights-btn" id="refreshInsightsBtn">Refresh All Insights</button>
+                        <div class="period-selector">
+                            <label style="font-weight: 600; margin-right: 15px;">View Period:</label>
+                            <button class="period-btn active" data-period="monthly" onclick="switchInsightsPeriod('monthly')">Monthly</button>
+                            <button class="period-btn" data-period="quarterly" onclick="switchInsightsPeriod('quarterly')">Quarterly</button>
+                            <button class="period-btn" data-period="yearly" onclick="switchInsightsPeriod('yearly')">Yearly</button>
+                        </div>
+                        <button class="refresh-insights-btn" id="refreshInsightsBtn" onclick="refreshAllInsights()">Refresh All Insights</button>
                     </div>
-                    <div class="insights-containers">
-                        <div class="insights-period-container">
-                            <h3>Monthly Insights</h3>
-                            <div class="insights-sections">
-                                <div class="insights-section">
-                                    <h4>Largest Changes</h4>
-                                    <div id="monthlyLargestChanges" class="insights-list">
-                                        <div class="loading">Calculating insights...</div>
+
+                    <!-- Main Insights Content (Period-Specific) -->
+                    <div class="insights-content">
+                        
+                        <!-- At a Glance Section (Always Visible) -->
+                        <div class="at-a-glance-section">
+                            <div class="at-a-glance-cards" id="atAGlanceCards">
+                                <div class="glance-card">
+                                    <div class="card-icon">📈</div>
+                                    <div class="card-content">
+                                        <div class="card-label">Revenue</div>
+                                        <div class="card-value" id="glanceRevenue">--</div>
+                                        <div class="card-change" id="glanceRevenueChange">--</div>
                                     </div>
                                 </div>
-                            <div class="insights-section">
-                                <h4>Anomalous Items</h4>
-                                <div class="anomaly-controls">
-                                    <div class="control-item">
-                                        <label>Threshold (%):</label>
-                                        <input type="number" id="monthlyAnomalyThreshold" value="30" min="1" max="100" step="1">
+                                <div class="glance-card">
+                                    <div class="card-icon">💰</div>
+                                    <div class="card-content">
+                                        <div class="card-label">Net Margin</div>
+                                        <div class="card-value" id="glanceMargin">--</div>
+                                        <div class="card-change" id="glanceMarginChange">--</div>
                                     </div>
                                 </div>
-                                <div class="anomalous-items-container">
-                                    <div id="monthlyAnomalousItems" class="insights-list">
-                                        <div class="loading">Analyzing patterns...</div>
+                                <div class="glance-card">
+                                    <div class="card-icon">🚀</div>
+                                    <div class="card-content">
+                                        <div class="card-label">Growth</div>
+                                        <div class="card-value" id="glanceGrowth">--</div>
+                                        <div class="card-change" id="glanceGrowthChange">--</div>
+                                    </div>
+                                </div>
+                                <div class="glance-card">
+                                    <div class="card-icon">💵</div>
+                                    <div class="card-content">
+                                        <div class="card-label">Net Income</div>
+                                        <div class="card-value" id="glanceCash">--</div>
+                                        <div class="card-change" id="glanceCashChange">--</div>
                                     </div>
                                 </div>
                             </div>
-                                <div class="insights-section">
+                        </div>
+
+                        <!-- Profitability Metrics Section -->
+                        <div class="insight-section-collapsible">
+                            <div class="section-header" onclick="toggleInsightSection('profitability')">
+                                <h3>💰 Profitability Metrics</h3>
+                                <span class="toggle-icon">−</span>
+                            </div>
+                            <div class="section-content" id="profitabilityContent">
+                                <div class="loading">Calculating profitability metrics...</div>
+                            </div>
+                        </div>
+
+                        <!-- Growth & Trajectory Section -->
+                        <div class="insight-section-collapsible collapsed">
+                            <div class="section-header" onclick="toggleInsightSection('growth')">
+                                <h3>📈 Growth & Trajectory</h3>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="section-content" id="growthContent" style="display: none;">
+                                <div class="loading">Calculating growth metrics...</div>
+                            </div>
+                        </div>
+
+                        <!-- Expense Analysis Section -->
+                        <div class="insight-section-collapsible collapsed">
+                            <div class="section-header" onclick="toggleInsightSection('expenses')">
+                                <h3>💸 Expense Analysis</h3>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="section-content" id="expensesContent" style="display: none;">
+                                <div class="loading">Analyzing expenses...</div>
+                            </div>
+                        </div>
+
+                        <!-- Top Movers Section -->
+                        <div class="insight-section-collapsible collapsed">
+                            <div class="section-header" onclick="toggleInsightSection('topmovers')">
+                                <h3>🎯 Top Movers</h3>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="section-content" id="topmoversContent" style="display: none;">
+                                <div class="loading">Finding top movers...</div>
+                            </div>
+                        </div>
+
+                        <!-- Revenue Composition Section -->
+                        <div class="insight-section-collapsible collapsed">
+                            <div class="section-header" onclick="toggleInsightSection('revenue')">
+                                <h3>🥧 Revenue Composition</h3>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="section-content" id="revenueContent" style="display: none;">
+                                <div class="loading">Analyzing revenue mix...</div>
+                            </div>
+                        </div>
+
+                        <!-- Cash & Working Capital Section (Only if BS available) -->
+                        <div class="insight-section-collapsible collapsed" id="cashSection" style="display: none;">
+                            <div class="section-header" onclick="toggleInsightSection('cash')">
+                                <h3>💵 Cash & Working Capital</h3>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="section-content" id="cashContent" style="display: none;">
+                                <div class="loading">Analyzing cash position...</div>
+                            </div>
+                        </div>
+
+                        <!-- Alerts & Warnings Section -->
+                        <div class="insight-section-collapsible" id="alertsSection">
+                            <div class="section-header" onclick="toggleInsightSection('alerts')">
+                                <h3>⚠️ Alerts & Warnings</h3>
+                                <span class="toggle-icon">−</span>
+                            </div>
+                            <div class="section-content" id="alertsContent">
+                                <div class="loading">Checking for alerts...</div>
+                            </div>
+                        </div>
+
+                        <!-- Interactive Charts Section (All 3 Periods - Always Visible) -->
+                        <div class="insight-section-permanent">
+                            <h3 style="margin-bottom: 20px;">📊 Interactive Charts</h3>
+                            
+                            <!-- Monthly Chart -->
+                            <div class="chart-period-section">
+                                <h4 style="padding: 10px 15px; margin: 0; background: #f8f9fa; border-left: 4px solid #3498db;">Monthly Chart</h4>
+                                <div style="padding: 15px;">
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                        <h4 style="margin: 0;">Line Chart</h4>
+                                        <div></div>
                                         <button class="btn-expand-chart" onclick="expandChart('monthly')" title="Expand chart">🔍 Expand</button>
                                     </div>
                                     <div class="chart-controls">
@@ -2588,34 +2877,13 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="insights-period-container">
-                            <h3>Quarterly Insights</h3>
-                            <div class="insights-sections">
-                                <div class="insights-section">
-                                    <h4>Largest Changes</h4>
-                                    <div id="quarterlyLargestChanges" class="insights-list">
-                                        <div class="loading">Calculating insights...</div>
-                                    </div>
-                                </div>
-                            <div class="insights-section">
-                                <h4>Anomalous Items</h4>
-                                <div class="anomaly-controls">
-                                    <div class="control-item">
-                                        <label>Threshold (%):</label>
-                                        <input type="number" id="quarterlyAnomalyThreshold" value="30" min="1" max="100" step="1">
-                                    </div>
-                                </div>
-                                <div class="anomalous-items-container">
-                                    <div id="quarterlyAnomalousItems" class="insights-list">
-                                        <div class="loading">Analyzing patterns...</div>
-                                    </div>
-                                </div>
-                            </div>
-                                <div class="insights-section">
+
+                            <!-- Quarterly Chart -->
+                            <div class="chart-period-section">
+                                <h4 style="padding: 10px 15px; margin: 0; background: #f8f9fa; border-left: 4px solid #e74c3c;">Quarterly Chart</h4>
+                                <div style="padding: 15px;">
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                        <h4 style="margin: 0;">Line Chart</h4>
+                                        <div></div>
                                         <button class="btn-expand-chart" onclick="expandChart('quarterly')" title="Expand chart">🔍 Expand</button>
                                     </div>
                                     <div class="chart-controls">
@@ -2656,34 +2924,13 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="insights-period-container">
-                            <h3>Yearly Insights</h3>
-                            <div class="insights-sections">
-                                <div class="insights-section">
-                                    <h4>Largest Changes</h4>
-                                    <div id="yearlyLargestChanges" class="insights-list">
-                                        <div class="loading">Calculating insights...</div>
-                                    </div>
-                                </div>
-                            <div class="insights-section">
-                                <h4>Anomalous Items</h4>
-                                <div class="anomaly-controls">
-                                    <div class="control-item">
-                                        <label>Threshold (%):</label>
-                                        <input type="number" id="yearlyAnomalyThreshold" value="30" min="1" max="100" step="1">
-                                    </div>
-                                </div>
-                                <div class="anomalous-items-container">
-                                    <div id="yearlyAnomalousItems" class="insights-list">
-                                        <div class="loading">Analyzing patterns...</div>
-                                    </div>
-                                </div>
-                            </div>
-                                <div class="insights-section">
+
+                            <!-- Yearly Chart -->
+                            <div class="chart-period-section">
+                                <h4 style="padding: 10px 15px; margin: 0; background: #f8f9fa; border-left: 4px solid #27ae60;">Yearly Chart</h4>
+                                <div style="padding: 15px;">
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                        <h4 style="margin: 0;">Line Chart</h4>
+                                        <div></div>
                                         <button class="btn-expand-chart" onclick="expandChart('yearly')" title="Expand chart">🔍 Expand</button>
                                     </div>
                                     <div class="chart-controls">
@@ -2724,6 +2971,7 @@
                                     </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 </div>
