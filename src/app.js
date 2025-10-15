@@ -1664,8 +1664,13 @@ function labelFromTableId(tableId) {
 window.exportPeriodData = exportPeriodData;
 
 /**
- * Insights calculations
+ * Insights calculations - NEW SYSTEM
  */
+
+// Global state for insights
+let currentInsightsPeriod = 'monthly';
+
+// Main insights calculation entry point
 function calculateInsights() {
   console.log('calculateInsights called, hasUploadedData:', hasUploadedData);
   
@@ -1678,42 +1683,510 @@ function calculateInsights() {
   
   console.log('Calculating insights with uploaded data');
   
-  // Calculate insights for each period type
-  ['monthly', 'quarterly', 'yearly'].forEach(periodType => {
-    const largestChanges = calculateLargestChangesForPeriod(periodType);
-    const anomalousItems = calculateAnomalousItemsForPeriod(periodType);
-    
-    displayLargestChangesForPeriod(periodType, largestChanges);
-    displayAnomalousItemsForPeriod(periodType, anomalousItems);
+  // Populate line item dropdowns for charts
+  populateLineItemDropdowns();
+  
+  // Calculate and display insights for the current period
+  refreshInsightsForPeriod(currentInsightsPeriod);
+}
+
+// Refresh all insights when called (button click)
+function refreshAllInsights() {
+  console.log('Refreshing all insights');
+  calculateInsights();
+}
+
+// Switch between periods (Monthly/Quarterly/Yearly)
+function switchInsightsPeriod(period) {
+  console.log('Switching insights period to:', period);
+  
+  // Update global state
+  currentInsightsPeriod = period;
+  
+  // Update button states
+  document.querySelectorAll('.period-btn').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.dataset.period === period) {
+      btn.classList.add('active');
+    }
   });
   
-  // Populate line item dropdowns
-  populateLineItemDropdowns();
+  // Refresh insights for this period
+  refreshInsightsForPeriod(period);
+  
+  // Save selection to session storage
+  sessionStorage.setItem('insightsPeriod', period);
+}
+
+// Refresh insights for a specific period
+function refreshInsightsForPeriod(period) {
+  console.log('Refreshing insights for period:', period);
+  
+  // Calculate and display each insight section
+  calculateAtAGlance(period);
+  calculateProfitabilityMetrics(period);
+  calculateGrowthTrajectory(period);
+  calculateExpenseAnalysis(period);
+  calculateTopMovers(period);
+  calculateRevenueComposition(period);
+  calculateCashWorkingCapital(period);
+  calculateAlertsWarnings(period);
+}
+
+// Toggle collapsible sections
+function toggleInsightSection(sectionId) {
+  const section = document.getElementById(`${sectionId}Content`);
+  const header = section.closest('.insight-section-collapsible').querySelector('.section-header');
+  const icon = header.querySelector('.toggle-icon');
+  const collapsibleDiv = section.closest('.insight-section-collapsible');
+  
+  if (section.style.display === 'none') {
+    section.style.display = 'block';
+    icon.textContent = '−';
+    collapsibleDiv.classList.remove('collapsed');
+    
+    // If section is being opened and is empty, calculate it
+    if (section.querySelector('.loading')) {
+      refreshInsightsForPeriod(currentInsightsPeriod);
+    }
+  } else {
+    section.style.display = 'none';
+    icon.textContent = '+';
+    collapsibleDiv.classList.add('collapsed');
+  }
 }
 
 function displayBlankInsights() {
   console.log('displayBlankInsights called');
   
-  // Update all period-specific containers
+  // Update At a Glance cards
+  ['Revenue', 'Margin', 'Growth', 'Cash'].forEach(metric => {
+    const valueEl = document.getElementById(`glance${metric}`);
+    const changeEl = document.getElementById(`glance${metric}Change`);
+    if (valueEl) valueEl.textContent = '--';
+    if (changeEl) changeEl.textContent = 'Upload data to see insights';
+  });
+  
+  // Update all section contents
+  const sections = ['profitability', 'growth', 'expenses', 'topmovers', 'revenue', 'cash', 'alerts'];
+  sections.forEach(section => {
+    const content = document.getElementById(`${section}Content`);
+    if (content) {
+      content.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
+    }
+  });
+  
+  // Update chart containers
   ['monthly', 'quarterly', 'yearly'].forEach(periodType => {
-    const largestChangesContainer = document.getElementById(`${periodType}LargestChanges`);
-    const anomalousItemsContainer = document.getElementById(`${periodType}AnomalousItems`);
     const lineChartContainer = document.getElementById(`${periodType}LineChart`);
-    
-    if (largestChangesContainer) {
-      largestChangesContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
-    }
-    
-    if (anomalousItemsContainer) {
-      anomalousItemsContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
-    }
-    
     if (lineChartContainer) {
-      lineChartContainer.innerHTML = '<div class="loading">Upload a Financial Statement for Insights</div>';
+      lineChartContainer.innerHTML = '<div class="loading">Upload data to view charts</div>';
     }
   });
 }
 
+/**
+ * NEW INSIGHT CALCULATION FUNCTIONS
+ */
+
+// 1. AT A GLANCE CARDS
+function calculateAtAGlance(period) {
+  console.log('Calculating At a Glance for period:', period);
+  
+  if (!hasUploadedData) return;
+  
+  try {
+    // Get data for the selected period
+    const data = getDataForPeriod(period);
+    if (!data || !data.values || data.values.length === 0) return;
+    
+    // Find revenue and net income
+    const revenueItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('total revenue') || 
+      item.name.toLowerCase().includes('revenue')
+    );
+    
+    const netIncomeItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('net income') || 
+      item.name.toLowerCase().includes('net profit')
+    );
+    
+    // Calculate metrics
+    if (revenueItem && revenueItem.actualValues) {
+      const revData = getDataForPeriod(period, revenueItem.actualValues);
+      const lastRev = lastNonNull(revData.values);
+      const prevRev = revData.values[revData.values.length - 2] || lastRev;
+      const revChange = prevRev !== 0 ? ((lastRev - prevRev) / Math.abs(prevRev) * 100) : 0;
+      
+      document.getElementById('glanceRevenue').textContent = formatCurrency(lastRev);
+      const changeEl = document.getElementById('glanceRevenueChange');
+      changeEl.textContent = `${revChange >= 0 ? '+' : ''}${revChange.toFixed(1)}%`;
+      changeEl.className = `card-change ${revChange >= 0 ? 'positive' : 'negative'}`;
+    }
+    
+    // Net Margin
+    if (revenueItem && netIncomeItem && revenueItem.actualValues && netIncomeItem.actualValues) {
+      const revData = getDataForPeriod(period, revenueItem.actualValues);
+      const incData = getDataForPeriod(period, netIncomeItem.actualValues);
+      const lastRev = lastNonNull(revData.values);
+      const lastInc = lastNonNull(incData.values);
+      const margin = lastRev !== 0 ? (lastInc / lastRev * 100) : 0;
+      
+      const prevRev = revData.values[revData.values.length - 2] || lastRev;
+      const prevInc = incData.values[incData.values.length - 2] || lastInc;
+      const prevMargin = prevRev !== 0 ? (prevInc / prevRev * 100) : 0;
+      const marginChange = margin - prevMargin;
+      
+      document.getElementById('glanceMargin').textContent = `${margin.toFixed(1)}%`;
+      const changeEl = document.getElementById('glanceMarginChange');
+      changeEl.textContent = `${marginChange >= 0 ? '+' : ''}${marginChange.toFixed(1)}pp`;
+      changeEl.className = `card-change ${marginChange >= 0 ? 'positive' : 'negative'}`;
+    }
+    
+    // Growth Rate
+    if (revenueItem && revenueItem.actualValues) {
+      const revData = getDataForPeriod(period, revenueItem.actualValues);
+      const lastRev = lastNonNull(revData.values);
+      const prevRev = revData.values[revData.values.length - 2] || lastRev;
+      const growth = prevRev !== 0 ? ((lastRev - prevRev) / Math.abs(prevRev) * 100) : 0;
+      
+      document.getElementById('glanceGrowth').textContent = `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%`;
+      const changeEl = document.getElementById('glanceGrowthChange');
+      changeEl.textContent = growth >= 0 ? '🟢 Up' : '🔴 Down';
+      changeEl.className = `card-change ${growth >= 0 ? 'positive' : 'negative'}`;
+    }
+    
+    // Net Income (or Cash if BS available)
+    if (netIncomeItem && netIncomeItem.actualValues) {
+      const incData = getDataForPeriod(period, netIncomeItem.actualValues);
+      const lastInc = lastNonNull(incData.values);
+      const prevInc = incData.values[incData.values.length - 2] || lastInc;
+      const incChange = prevInc !== 0 ? ((lastInc - prevInc) / Math.abs(prevInc) * 100) : 0;
+      
+      document.getElementById('glanceCash').textContent = formatCurrency(lastInc);
+      const changeEl = document.getElementById('glanceCashChange');
+      changeEl.textContent = `${incChange >= 0 ? '+' : ''}${incChange.toFixed(1)}%`;
+      changeEl.className = `card-change ${incChange >= 0 ? 'positive' : 'negative'}`;
+    }
+    
+  } catch (error) {
+    console.error('Error calculating At a Glance:', error);
+  }
+}
+
+// Helper function to get period-specific data
+function getDataForPeriod(period, actualValues = null) {
+  if (!actualValues) {
+    // Return period type info
+    return { period: period };
+  }
+  
+  let values, labels;
+  
+  if (period === 'monthly') {
+    values = actualValues.slice();
+    labels = dateColumns.slice();
+  } else if (period === 'quarterly') {
+    const agg = aggregateActuals('pnl', actualValues);
+    const out = agg.toQuarterOutputs();
+    values = out.values || [];
+    labels = out.labels || [];
+  } else {
+    const agg = aggregateActuals('pnl', actualValues);
+    const out = agg.toYearOutputs();
+    values = out.values || [];
+    labels = out.labels || [];
+  }
+  
+  return { values, labels };
+}
+
+// 2. PROFITABILITY METRICS
+function calculateProfitabilityMetrics(period) {
+  console.log('Calculating Profitability Metrics for period:', period);
+  
+  const content = document.getElementById('profitabilityContent');
+  if (!content) return;
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see profitability metrics</div>';
+    return;
+  }
+  
+  try {
+    // Find key line items
+    const revenueItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('total revenue') || 
+      item.name.toLowerCase() === 'revenue'
+    );
+    
+    const cogsItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('cogs') || 
+      item.name.toLowerCase().includes('cost of goods')
+    );
+    
+    const opIncomeItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('operating income') ||
+      item.name.toLowerCase().includes('ebit')
+    );
+    
+    const netIncomeItem = uploadedLineItems.pnl.find(item => 
+      item.name.toLowerCase().includes('net income') || 
+      item.name.toLowerCase().includes('net profit')
+    );
+    
+    if (!revenueItem || !netIncomeItem) {
+      content.innerHTML = '<div class="loading">Unable to calculate profitability metrics (missing revenue or net income)</div>';
+      return;
+    }
+    
+    // Get first and last values
+    const revData = getDataForPeriod(period, revenueItem.actualValues);
+    const firstRev = revData.values[0] || 0;
+    const lastRev = lastNonNull(revData.values);
+    
+    const incData = getDataForPeriod(period, netIncomeItem.actualValues);
+    const firstInc = incData.values[0] || 0;
+    const lastInc = lastNonNull(incData.values);
+    
+    // Calculate net margin
+    const firstNetMargin = firstRev !== 0 ? (firstInc / firstRev * 100) : 0;
+    const lastNetMargin = lastRev !== 0 ? (lastInc / lastRev * 100) : 0;
+    const netMarginChange = lastNetMargin - firstNetMargin;
+    
+    let html = '<div style="padding: 10px;">';
+    html += '<div style="margin-bottom: 15px; font-size: 0.9rem; color: #6c757d;">Current → Forecast End</div>';
+    
+    // Gross margin (if COGS available)
+    if (cogsItem) {
+      const cogsData = getDataForPeriod(period, cogsItem.actualValues);
+      const firstCogs = cogsData.values[0] || 0;
+      const lastCogs = lastNonNull(cogsData.values);
+      
+      const firstGrossMargin = firstRev !== 0 ? ((firstRev - firstCogs) / firstRev * 100) : 0;
+      const lastGrossMargin = lastRev !== 0 ? ((lastRev - lastCogs) / lastRev * 100) : 0;
+      const grossMarginChange = lastGrossMargin - firstGrossMargin;
+      
+      html += `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 10px;">
+          <div style="font-weight: 600;">Gross Margin</div>
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <span>${firstGrossMargin.toFixed(1)}% → ${lastGrossMargin.toFixed(1)}%</span>
+            <span style="font-weight: 600; color: ${grossMarginChange >= 0 ? '#27ae60' : '#e74c3c'}">
+              ${grossMarginChange >= 0 ? '+' : ''}${grossMarginChange.toFixed(1)}pp ${grossMarginChange >= 0 ? '🟢' : '🔴'}
+            </span>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Operating margin (if available)
+    if (opIncomeItem) {
+      const opData = getDataForPeriod(period, opIncomeItem.actualValues);
+      const firstOpInc = opData.values[0] || 0;
+      const lastOpInc = lastNonNull(opData.values);
+      
+      const firstOpMargin = firstRev !== 0 ? (firstOpInc / firstRev * 100) : 0;
+      const lastOpMargin = lastRev !== 0 ? (lastOpInc / lastRev * 100) : 0;
+      const opMarginChange = lastOpMargin - firstOpMargin;
+      
+      html += `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 10px;">
+          <div style="font-weight: 600;">Operating Margin</div>
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <span>${firstOpMargin.toFixed(1)}% → ${lastOpMargin.toFixed(1)}%</span>
+            <span style="font-weight: 600; color: ${opMarginChange >= 0 ? '#27ae60' : '#e74c3c'}">
+              ${opMarginChange >= 0 ? '+' : ''}${opMarginChange.toFixed(1)}pp ${opMarginChange >= 0 ? '🟢' : '🔴'}
+            </span>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Net margin
+    html += `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 15px;">
+        <div style="font-weight: 600;">Net Margin</div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <span>${firstNetMargin.toFixed(1)}% → ${lastNetMargin.toFixed(1)}%</span>
+          <span style="font-weight: 600; color: ${netMarginChange >= 0 ? '#27ae60' : '#e74c3c'}">
+            ${netMarginChange >= 0 ? '+' : ''}${netMarginChange.toFixed(1)}pp ${netMarginChange >= 0 ? '🟢' : '🔴'}
+          </span>
+        </div>
+      </div>
+    `;
+    
+    // Generate insight
+    let insight = '';
+    if (netMarginChange > 1) {
+      insight = '💡 Margins expanding - sign of healthy scaling';
+    } else if (netMarginChange < -1) {
+      insight = '⚠️ Margins compressing - review pricing or cost structure';
+    } else {
+      insight = '💡 Margins relatively stable';
+    }
+    
+    html += `<div style="padding: 10px; background: #e3f2fd; border-radius: 6px; color: #1976d2; font-size: 0.9rem;">${insight}</div>`;
+    html += '</div>';
+    
+    content.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error calculating profitability metrics:', error);
+    content.innerHTML = '<div class="loading">Error calculating profitability metrics</div>';
+  }
+}
+
+// 3. GROWTH & TRAJECTORY
+function calculateGrowthTrajectory(period) {
+  console.log('Calculating Growth & Trajectory for period:', period);
+  
+  const content = document.getElementById('growthContent');
+  if (!content) return;
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see growth metrics</div>';
+    return;
+  }
+  
+  content.innerHTML = '<div style="padding: 15px; color: #6c757d;">Growth trajectory analysis coming soon...</div>';
+}
+
+// 4. EXPENSE ANALYSIS  
+function calculateExpenseAnalysis(period) {
+  console.log('Calculating Expense Analysis for period:', period);
+  
+  const content = document.getElementById('expensesContent');
+  if (!content) return;
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see expense analysis</div>';
+    return;
+  }
+  
+  content.innerHTML = '<div style="padding: 15px; color: #6c757d;">Expense analysis coming soon...</div>';
+}
+
+// 5. TOP MOVERS (using existing logic)
+function calculateTopMovers(period) {
+  console.log('Calculating Top Movers for period:', period);
+  
+  const content = document.getElementById('topmoversContent');
+  if (!content) return;
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see top movers</div>';
+    return;
+  }
+  
+  // Reuse existing calculation
+  const changes = calculateLargestChangesForPeriod(period);
+  
+  if (changes.length === 0) {
+    content.innerHTML = '<div class="loading">No significant changes detected</div>';
+    return;
+  }
+  
+  let html = '<div style="padding: 15px;">';
+  html += '<div style="margin-bottom: 15px; font-size: 0.9rem; color: #6c757d;">Biggest Changes (Last Actual → End of Forecast)</div>';
+  
+  changes.forEach((change, index) => {
+    const changeClass = change.isPositive ? 'positive' : 'negative';
+    const changeSymbol = change.isPositive ? '+' : '';
+    const statementLabel = change.statement === 'pnl' ? 'P&L' : 
+                          change.statement === 'balance' ? 'Balance' : 'Cash Flow';
+    const emoji = change.isPositive ? '🟢' : '🔴';
+    
+    html += `
+      <div style="padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid ${change.isPositive ? '#27ae60' : '#e74c3c'}">
+        <div style="font-weight: 600; margin-bottom: 5px;">${index + 1}. ${change.name}</div>
+        <div style="font-size: 0.9rem; color: #6c757d;">
+          ${formatCurrency(change.lastActual)} → ${formatCurrency(change.furthestForecast)} (${changeSymbol}${change.percentChange.toFixed(1)}%) ${emoji}
+        </div>
+        <div style="font-size: 0.85rem; color: #6c757d; margin-top: 5px;">
+          ${statementLabel} | ${change.lastActualDate} to ${change.forecastDate}
+        </div>
+      </div>
+    `;
+  });
+  
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+// 6. REVENUE COMPOSITION
+function calculateRevenueComposition(period) {
+  console.log('Calculating Revenue Composition for period:', period);
+  
+  const content = document.getElementById('revenueContent');
+  if (!content) return;
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see revenue composition</div>';
+    return;
+  }
+  
+  content.innerHTML = '<div style="padding: 15px; color: #6c757d;">Revenue composition analysis coming soon...</div>';
+}
+
+// 7. CASH & WORKING CAPITAL
+function calculateCashWorkingCapital(period) {
+  console.log('Calculating Cash & Working Capital for period:', period);
+  
+  const content = document.getElementById('cashContent');
+  const section = document.getElementById('cashSection');
+  if (!content) return;
+  
+  // Check if Balance Sheet data is available
+  const hasBSData = uploadedLineItems.balance && uploadedLineItems.balance.length > 0;
+  
+  if (!hasBSData) {
+    if (section) section.style.display = 'none';
+    return;
+  }
+  
+  if (section) section.style.display = 'block';
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see cash & working capital metrics</div>';
+    return;
+  }
+  
+  content.innerHTML = '<div style="padding: 15px; color: #6c757d;">Cash & working capital analysis coming soon...</div>';
+}
+
+// 8. ALERTS & WARNINGS
+function calculateAlertsWarnings(period) {
+  console.log('Calculating Alerts & Warnings for period:', period);
+  
+  const content = document.getElementById('alertsContent');
+  if (!content) return;
+  
+  if (!hasUploadedData) {
+    content.innerHTML = '<div class="loading">Upload data to see alerts</div>';
+    return;
+  }
+  
+  // Collect alerts based on calculations
+  const alerts = {
+    high: [],
+    medium: [],
+    positive: []
+  };
+  
+  // For now, show a placeholder
+  let html = '<div style="padding: 15px;">';
+  html += '<div style="padding: 15px; background: #d4edda; border-radius: 6px; color: #155724; border-left: 4px solid #28a745;">';
+  html += '🟢 <strong>POSITIVE SIGNALS</strong><br><br>';
+  html += '• Financial data uploaded and ready for analysis<br>';
+  html += '• All core metrics are being tracked';
+  html += '</div>';
+  html += '</div>';
+  
+  content.innerHTML = html;
+}
+
+// Keep old functions for backwards compatibility
 function calculateLargestChanges() {
   const changes = [];
   
@@ -8942,3 +9415,22 @@ function exportSensitivityCSV() {
   
   console.log('Sensitivity results exported to CSV');
 }
+
+/**
+ * Initialize insights period selector on page load
+ */
+(function initializeInsightsPeriod() {
+  // Restore saved period from session storage
+  const savedPeriod = sessionStorage.getItem('insightsPeriod');
+  if (savedPeriod && ['monthly', 'quarterly', 'yearly'].includes(savedPeriod)) {
+    currentInsightsPeriod = savedPeriod;
+    
+    // Update button states
+    document.querySelectorAll('.period-btn').forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.dataset.period === savedPeriod) {
+        btn.classList.add('active');
+      }
+    });
+  }
+})();
