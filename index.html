@@ -1715,6 +1715,176 @@
             color: #333;
         }
         
+        /* Sensitivity Analysis Styles */
+        .sensitivity-container {
+            padding: 20px;
+        }
+        
+        .sensitivity-config {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .sensitivity-config h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .sensitivity-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        .form-row {
+            margin-bottom: 20px;
+        }
+        
+        .form-row label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .sensitivity-input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .form-actions {
+            margin-top: 25px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: #e9ecef;
+            border-color: #3498db;
+        }
+        
+        .sensitivity-results {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+        }
+        
+        .sensitivity-results h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .sensitivity-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .sensitivity-table-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .sensitivity-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .sensitivity-table th {
+            background: #3498db;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .sensitivity-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .sensitivity-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .baseline-row {
+            background: #fff3cd !important;
+            font-weight: 600;
+        }
+        
+        .baseline-row td {
+            border-top: 2px solid #ffc107;
+            border-bottom: 2px solid #ffc107;
+        }
+        
+        .positive {
+            color: #27ae60;
+        }
+        
+        .negative {
+            color: #e74c3c;
+        }
+        
+        .sensitivity-insights {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .sensitivity-insights h4 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .sensitivity-insights ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .sensitivity-insights li {
+            padding: 8px 0;
+            color: #333;
+        }
+        
         /* Template Cards */
         .template-options {
             display: grid;
@@ -2196,6 +2366,7 @@
                         <button class="tab" data-tab="quarterly">Quarterly Forecast</button>
                         <button class="tab" data-tab="yearly">Yearly Forecast</button>
                         <button class="tab" data-tab="scenarios">Scenarios</button>
+                        <button class="tab" data-tab="sensitivity">Sensitivity</button>
                     </div>
                     
                 
@@ -2479,6 +2650,94 @@
                     <div class="scenario-details-links">
                         <h4>View Full Forecast:</h4>
                         <div id="scenario-forecast-links"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sensitivity Analysis Tab -->
+            <div id="sensitivity" class="tab-content">
+                <div class="forecast-info">
+                    <strong>Sensitivity Analysis</strong> - Test how changes in assumptions affect your forecast
+                </div>
+                
+                <div class="sensitivity-container">
+                    <!-- Configuration Section -->
+                    <div class="sensitivity-config">
+                        <h3>📊 Configure Analysis</h3>
+                        <p style="color: #666; margin-bottom: 20px;">See how changes to a single variable impact your forecasted results.</p>
+                        
+                        <div class="sensitivity-form">
+                            <div class="form-row">
+                                <label for="sensitivityVariable">Test Variable:</label>
+                                <select id="sensitivityVariable" class="sensitivity-input">
+                                    <option value="">-- Select a line item to test --</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-row">
+                                <label>Test Range:</label>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span>From:</span>
+                                    <input type="number" id="sensitivityMin" class="sensitivity-input" value="-10" step="5" style="width: 80px;">
+                                    <span>%</span>
+                                    <span style="margin-left: 10px;">To:</span>
+                                    <input type="number" id="sensitivityMax" class="sensitivity-input" value="30" step="5" style="width: 80px;">
+                                    <span>%</span>
+                                    <span style="margin-left: 10px;">Step:</span>
+                                    <input type="number" id="sensitivityStep" class="sensitivity-input" value="5" min="1" max="20" step="1" style="width: 70px;">
+                                    <span>%</span>
+                                </div>
+                                <small style="color: #666; margin-top: 5px; display: block;">Current base case growth will be highlighted in results</small>
+                            </div>
+                            
+                            <div class="form-row">
+                                <label for="sensitivityOutputMetric">Output Metric:</label>
+                                <select id="sensitivityOutputMetric" class="sensitivity-input">
+                                    <option value="">-- Select metric to measure --</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-row">
+                                <label for="sensitivityPeriod">Time Period:</label>
+                                <select id="sensitivityPeriod" class="sensitivity-input">
+                                    <option value="">-- Select period to analyze --</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button onclick="runSensitivityAnalysis()" class="btn-primary" style="padding: 12px 24px; font-size: 1rem;">
+                                    ▶️ Run Sensitivity Analysis
+                                </button>
+                                <button onclick="resetSensitivityForm()" class="btn-secondary" style="padding: 12px 24px; font-size: 1rem;">
+                                    🔄 Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Results Section (initially hidden) -->
+                    <div id="sensitivityResults" class="sensitivity-results" style="display: none;">
+                        <h3>📈 Analysis Results</h3>
+                        <div id="sensitivityResultsInfo" class="sensitivity-info"></div>
+                        
+                        <div class="sensitivity-table-container">
+                            <table id="sensitivityTable" class="sensitivity-table">
+                                <!-- Results will be populated here -->
+                            </table>
+                        </div>
+                        
+                        <div id="sensitivityInsights" class="sensitivity-insights">
+                            <!-- Insights will be populated here -->
+                        </div>
+                        
+                        <div class="form-actions" style="margin-top: 20px;">
+                            <button onclick="exportSensitivityCSV()" class="btn-secondary">
+                                📥 Export to CSV
+                            </button>
+                            <button onclick="showSensitivityConfig()" class="btn-secondary">
+                                ← Back to Configuration
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

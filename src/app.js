@@ -1549,6 +1549,9 @@ function applyActualsFromObject(data) {
     populateCustomRatesDropdown();
     renderCustomRatesList();
   }
+  
+  // Initialize sensitivity analysis dropdowns
+  initializeSensitivityAnalysis();
 }
 
 function rebuildAllTables() {
@@ -7429,6 +7432,9 @@ document.addEventListener('DOMContentLoaded', function () {
   rebuildAllTables();
   updateForecast();
   
+  // Initialize sensitivity analysis
+  initializeSensitivityAnalysis();
+  
   // Enhance horizontal scrolling with mouse wheel
   document.addEventListener('wheel', function(e) {
     const container = e.target && (e.target.closest && e.target.closest('.table-container'));
@@ -8177,4 +8183,498 @@ function populateDateRangeDropdowns(periodType) {
     endOption.textContent = label;
     endSelect.appendChild(endOption);
   });
+}
+
+/**
+ * ========================================================================
+ * SENSITIVITY ANALYSIS FUNCTIONS
+ * ========================================================================
+ */
+
+// Global state for sensitivity analysis
+let sensitivityState = {
+  config: null,
+  results: null,
+  baselineSettings: null
+};
+
+/**
+ * Initialize sensitivity analysis dropdowns when data is loaded
+ */
+function initializeSensitivityAnalysis() {
+  console.log('Initializing sensitivity analysis...');
+  
+  // Populate test variable dropdown with P&L line items
+  const variableSelect = document.getElementById('sensitivityVariable');
+  if (!variableSelect) return;
+  
+  variableSelect.innerHTML = '<option value="">-- Select a line item to test --</option>';
+  
+  // Add P&L items
+  if (sampleData.pnl && sampleData.pnl.length > 0) {
+    const pnlGroup = document.createElement('optgroup');
+    pnlGroup.label = 'P&L Items';
+    
+    sampleData.pnl.forEach(item => {
+      if (!item.isSubheader) {
+        const option = document.createElement('option');
+        option.value = `pnl::${item.name}`;
+        option.textContent = item.name;
+        pnlGroup.appendChild(option);
+      }
+    });
+    
+    variableSelect.appendChild(pnlGroup);
+  }
+  
+  // Populate output metric dropdown with same P&L items
+  const outputSelect = document.getElementById('sensitivityOutputMetric');
+  if (!outputSelect) return;
+  
+  outputSelect.innerHTML = '<option value="">-- Select metric to measure --</option>';
+  
+  if (sampleData.pnl && sampleData.pnl.length > 0) {
+    const pnlGroup = document.createElement('optgroup');
+    pnlGroup.label = 'P&L Metrics';
+    
+    sampleData.pnl.forEach(item => {
+      if (!item.isSubheader) {
+        const option = document.createElement('option');
+        option.value = `pnl::${item.name}`;
+        option.textContent = item.name;
+        pnlGroup.appendChild(option);
+      }
+    });
+    
+    outputSelect.appendChild(pnlGroup);
+  }
+  
+  // Populate period dropdown with forecast dates
+  const periodSelect = document.getElementById('sensitivityPeriod');
+  if (!periodSelect) return;
+  
+  periodSelect.innerHTML = '<option value="">-- Select period to analyze --</option>';
+  
+  // We'll use the last forecast period as default
+  const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+  
+  // Calculate forecast dates
+  let baseDate = new Date();
+  if (dateColumns && dateColumns.length > 0) {
+    const lastActual = dateColumns[dateColumns.length - 1];
+    const parsedDate = parseHeaderToYearMonth(lastActual);
+    if (parsedDate) {
+      baseDate = new Date(parsedDate.year, parsedDate.month + 1, 1);
+    }
+  }
+  
+  for (let i = 0; i < forecastPeriods; i++) {
+    const date = new Date(baseDate.getTime());
+    date.setMonth(date.getMonth() + i);
+    const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const label = `${monthName} ${lastDay}, ${year}`;
+    
+    const option = document.createElement('option');
+    option.value = i;
+    option.textContent = label;
+    periodSelect.appendChild(option);
+  }
+  
+  // Select last period by default
+  if (periodSelect.options.length > 1) {
+    periodSelect.selectedIndex = periodSelect.options.length - 1;
+  }
+  
+  console.log('Sensitivity analysis initialized');
+}
+
+/**
+ * Generate test scenarios based on user configuration
+ */
+function generateSensitivityScenarios(config) {
+  const scenarios = [];
+  const { min, max, step } = config.testRange;
+  const baseCase = config.testVariable.currentValue || 0;
+  
+  for (let value = min; value <= max; value += step) {
+    scenarios.push({
+      testValue: value,
+      label: `${value >= 0 ? '+' : ''}${value}%`,
+      isBaseline: Math.abs(value - baseCase) < 0.01, // Account for floating point
+      outputs: {}
+    });
+  }
+  
+  console.log(`Generated ${scenarios.length} scenarios from ${min}% to ${max}% (baseline: ${baseCase}%)`);
+  return scenarios;
+}
+
+/**
+ * Clone current forecast settings
+ */
+function cloneForecastSettings() {
+  return {
+    forecastMonths: forecastSettings.forecastMonths,
+    method: forecastSettings.method,
+    growthRates: JSON.parse(JSON.stringify(forecastSettings.growthRates || {}))
+  };
+}
+
+/**
+ * Apply scenario value to forecast settings
+ */
+function applyScenarioToSettings(testVariable, testValue) {
+  const { statementType, lineItemName } = testVariable;
+  
+  // Ensure growthRates structure exists
+  if (!forecastSettings.growthRates) {
+    forecastSettings.growthRates = {};
+  }
+  if (!forecastSettings.growthRates[statementType]) {
+    forecastSettings.growthRates[statementType] = {};
+  }
+  
+  // Set the growth rate for this line item
+  forecastSettings.growthRates[statementType][lineItemName] = testValue;
+  
+  console.log(`Applied ${testValue}% growth to ${lineItemName}`);
+}
+
+/**
+ * Extract output metric value from forecast results
+ */
+function extractOutputMetric(outputConfig, periodIndex) {
+  const { statementType, lineItemName } = outputConfig;
+  
+  // Get from forecast cache
+  const statement = forecastCache[statementType];
+  if (!statement) {
+    console.error(`Statement type "${statementType}" not found in cache`);
+    return null;
+  }
+  
+  const lineItem = statement.find(item => item.name === lineItemName);
+  if (!lineItem) {
+    console.error(`Line item "${lineItemName}" not found in ${statementType}`);
+    return null;
+  }
+  
+  const value = lineItem.forecastValues ? lineItem.forecastValues[periodIndex] : null;
+  
+  return {
+    primaryMetric: value,
+    lineItemName: lineItemName,
+    period: periodIndex
+  };
+}
+
+/**
+ * Main function to run sensitivity analysis
+ */
+function runSensitivityAnalysis() {
+  console.log('Starting sensitivity analysis...');
+  
+  // 1. Get configuration from form
+  const variableValue = document.getElementById('sensitivityVariable').value;
+  const outputValue = document.getElementById('sensitivityOutputMetric').value;
+  const periodIndex = parseInt(document.getElementById('sensitivityPeriod').value);
+  const min = parseFloat(document.getElementById('sensitivityMin').value);
+  const max = parseFloat(document.getElementById('sensitivityMax').value);
+  const step = parseFloat(document.getElementById('sensitivityStep').value);
+  
+  // Validate inputs
+  if (!variableValue) {
+    alert('Please select a test variable');
+    return;
+  }
+  if (!outputValue) {
+    alert('Please select an output metric');
+    return;
+  }
+  if (isNaN(periodIndex)) {
+    alert('Please select a time period');
+    return;
+  }
+  if (min >= max) {
+    alert('Minimum value must be less than maximum value');
+    return;
+  }
+  if (step <= 0) {
+    alert('Step size must be greater than 0');
+    return;
+  }
+  
+  // Parse variable and output
+  const [varStatement, varName] = variableValue.split('::');
+  const [outStatement, outName] = outputValue.split('::');
+  
+  // Get current growth rate for baseline
+  const currentGrowth = getCustomGrowthRate(varStatement, varName) || 0;
+  
+  // Build configuration
+  const config = {
+    testVariable: {
+      statementType: varStatement,
+      lineItemName: varName,
+      currentValue: currentGrowth
+    },
+    testRange: { min, max, step },
+    outputMetric: {
+      statementType: outStatement,
+      lineItemName: outName,
+      periodIndex: periodIndex
+    }
+  };
+  
+  console.log('Configuration:', config);
+  
+  // 2. Save current settings
+  sensitivityState.baselineSettings = cloneForecastSettings();
+  
+  // 3. Generate scenarios
+  const scenarios = generateSensitivityScenarios(config);
+  
+  // 4. Run forecast for each scenario
+  scenarios.forEach((scenario, index) => {
+    console.log(`Running scenario ${index + 1}/${scenarios.length}: ${scenario.label}`);
+    
+    // Apply scenario
+    applyScenarioToSettings(config.testVariable, scenario.testValue);
+    
+    // Run forecast (reusing existing logic)
+    // We'll call the internal forecast calculation
+    calculateAllForecasts();
+    
+    // Extract output
+    const output = extractOutputMetric(config.outputMetric, config.outputMetric.periodIndex);
+    if (output) {
+      scenario.outputs = output;
+    }
+  });
+  
+  // 5. Restore original settings
+  forecastSettings.forecastMonths = sensitivityState.baselineSettings.forecastMonths;
+  forecastSettings.method = sensitivityState.baselineSettings.method;
+  forecastSettings.growthRates = sensitivityState.baselineSettings.growthRates;
+  
+  // Recalculate with original settings
+  calculateAllForecasts();
+  
+  // 6. Store results
+  sensitivityState.config = config;
+  sensitivityState.results = scenarios;
+  
+  // 7. Display results
+  displaySensitivityResults(scenarios, config);
+  
+  console.log('Sensitivity analysis complete!');
+}
+
+/**
+ * Calculate forecasts (internal helper)
+ */
+function calculateAllForecasts() {
+  // This reuses the existing forecast calculation logic
+  // For P&L forecasting
+  if (sampleData.pnl && sampleData.pnl.length > 0) {
+    const forecastPeriods = parseInt(document.getElementById('forecastPeriods')?.value) || 12;
+    
+    forecastCache.pnl = sampleData.pnl.map(item => {
+      if (item.isSubheader) {
+        return {
+          ...item,
+          forecastValues: new Array(forecastPeriods).fill(0)
+        };
+      }
+      
+      const growthRate = forecastSettings.growthRates?.pnl?.[item.name] ?? 0;
+      const baseValue = item.actual || 0;
+      const forecastValues = [];
+      
+      for (let i = 0; i < forecastPeriods; i++) {
+        const monthlyGrowth = growthRate / 100 / 12;
+        const value = baseValue * Math.pow(1 + monthlyGrowth, i + 1);
+        forecastValues.push(value);
+      }
+      
+      return {
+        ...item,
+        forecastValues: forecastValues
+      };
+    });
+  }
+}
+
+/**
+ * Display sensitivity analysis results
+ */
+function displaySensitivityResults(scenarios, config) {
+  // Hide config, show results
+  document.querySelector('.sensitivity-config').style.display = 'none';
+  document.getElementById('sensitivityResults').style.display = 'block';
+  
+  // Update info section
+  const periodLabel = document.getElementById('sensitivityPeriod').selectedOptions[0].text;
+  const infoDiv = document.getElementById('sensitivityResultsInfo');
+  infoDiv.innerHTML = `
+    <p><strong>Test Variable:</strong> ${config.testVariable.lineItemName}</p>
+    <p><strong>Output Metric:</strong> ${config.outputMetric.lineItemName}</p>
+    <p><strong>Time Period:</strong> ${periodLabel}</p>
+    <p><strong>Scenarios Tested:</strong> ${scenarios.length}</p>
+  `;
+  
+  // Build table
+  const table = document.getElementById('sensitivityTable');
+  const baselineScenario = scenarios.find(s => s.isBaseline);
+  const baselineValue = baselineScenario ? baselineScenario.outputs.primaryMetric : 0;
+  
+  let html = `
+    <thead>
+      <tr>
+        <th>${config.testVariable.lineItemName} Growth</th>
+        <th>${config.outputMetric.lineItemName}</th>
+        <th>Change vs Base</th>
+        <th>% Change</th>
+      </tr>
+    </thead>
+    <tbody>
+  `;
+  
+  scenarios.forEach(scenario => {
+    const value = scenario.outputs.primaryMetric || 0;
+    const delta = value - baselineValue;
+    const percentChange = baselineValue !== 0 ? (delta / baselineValue * 100) : 0;
+    const rowClass = scenario.isBaseline ? 'baseline-row' : '';
+    const marker = scenario.isBaseline ? '⭐ ' : '';
+    
+    html += `
+      <tr class="${rowClass}">
+        <td>${marker}${scenario.label}</td>
+        <td>${formatCurrency(value)}</td>
+        <td class="${delta >= 0 ? 'positive' : 'negative'}">
+          ${delta >= 0 ? '+' : ''}${formatCurrency(delta)}
+        </td>
+        <td class="${percentChange >= 0 ? 'positive' : 'negative'}">
+          ${delta >= 0 ? '+' : ''}${percentChange.toFixed(1)}%
+        </td>
+      </tr>
+    `;
+  });
+  
+  html += '</tbody>';
+  table.innerHTML = html;
+  
+  // Generate insights
+  generateSensitivityInsights(scenarios, config, baselineValue);
+}
+
+/**
+ * Generate insights from sensitivity results
+ */
+function generateSensitivityInsights(scenarios, config, baselineValue) {
+  const insightsDiv = document.getElementById('sensitivityInsights');
+  
+  // Calculate deltas between consecutive scenarios
+  const deltas = [];
+  for (let i = 1; i < scenarios.length; i++) {
+    const delta = scenarios[i].outputs.primaryMetric - scenarios[i - 1].outputs.primaryMetric;
+    deltas.push(delta);
+  }
+  
+  const avgDelta = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+  const stepSize = config.testRange.step;
+  
+  // Calculate range
+  const minValue = Math.min(...scenarios.map(s => s.outputs.primaryMetric || 0));
+  const maxValue = Math.max(...scenarios.map(s => s.outputs.primaryMetric || 0));
+  const range = maxValue - minValue;
+  
+  const html = `
+    <h4>💡 Key Insights</h4>
+    <ul>
+      <li>Each ${stepSize}% change in <strong>${config.testVariable.lineItemName}</strong> 
+          results in approximately <strong>${formatCurrency(Math.abs(avgDelta))}</strong> 
+          change in <strong>${config.outputMetric.lineItemName}</strong></li>
+      <li>Total range: ${formatCurrency(minValue)} to ${formatCurrency(maxValue)} 
+          (spread of ${formatCurrency(range)})</li>
+      <li>Baseline value: ${formatCurrency(baselineValue)} 
+          at ${config.testVariable.currentValue}% growth</li>
+      <li>Impact: ${((range / baselineValue) * 100).toFixed(1)}% total variation 
+          across tested scenarios</li>
+    </ul>
+  `;
+  
+  insightsDiv.innerHTML = html;
+}
+
+/**
+ * Show configuration form (hide results)
+ */
+function showSensitivityConfig() {
+  document.querySelector('.sensitivity-config').style.display = 'block';
+  document.getElementById('sensitivityResults').style.display = 'none';
+}
+
+/**
+ * Reset sensitivity form to defaults
+ */
+function resetSensitivityForm() {
+  document.getElementById('sensitivityVariable').selectedIndex = 0;
+  document.getElementById('sensitivityOutputMetric').selectedIndex = 0;
+  document.getElementById('sensitivityMin').value = -10;
+  document.getElementById('sensitivityMax').value = 30;
+  document.getElementById('sensitivityStep').value = 5;
+  
+  // Reset to last period
+  const periodSelect = document.getElementById('sensitivityPeriod');
+  if (periodSelect.options.length > 1) {
+    periodSelect.selectedIndex = periodSelect.options.length - 1;
+  }
+}
+
+/**
+ * Export sensitivity results to CSV
+ */
+function exportSensitivityCSV() {
+  if (!sensitivityState.results || !sensitivityState.config) {
+    alert('No results to export');
+    return;
+  }
+  
+  const config = sensitivityState.config;
+  const scenarios = sensitivityState.results;
+  const baselineScenario = scenarios.find(s => s.isBaseline);
+  const baselineValue = baselineScenario ? baselineScenario.outputs.primaryMetric : 0;
+  
+  // Build CSV
+  let csv = 'Sensitivity Analysis Results\n\n';
+  csv += `Test Variable,${config.testVariable.lineItemName}\n`;
+  csv += `Output Metric,${config.outputMetric.lineItemName}\n`;
+  csv += `Period,${document.getElementById('sensitivityPeriod').selectedOptions[0].text}\n\n`;
+  
+  csv += 'Growth Rate,%,Value,Change vs Base,% Change\n';
+  
+  scenarios.forEach(scenario => {
+    const value = scenario.outputs.primaryMetric || 0;
+    const delta = value - baselineValue;
+    const percentChange = baselineValue !== 0 ? (delta / baselineValue * 100) : 0;
+    
+    csv += `${scenario.label},${scenario.testValue},${value.toFixed(2)},${delta.toFixed(2)},${percentChange.toFixed(2)}\n`;
+  });
+  
+  // Download
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `sensitivity_analysis_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+  
+  console.log('Sensitivity results exported to CSV');
 }
