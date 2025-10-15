@@ -1816,10 +1816,10 @@
         }
         
         .sensitivity-table-container {
-            overflow-x: auto;
             background: white;
             border-radius: 8px;
             padding: 15px;
+            overflow: visible;
         }
         
         .sensitivity-table {
@@ -1831,38 +1831,37 @@
         .sensitivity-table th {
             background: #3498db;
             color: white;
-            padding: 10px 8px;
-            text-align: left;
+            padding: 8px 6px;
+            text-align: center;
             font-weight: 600;
-            font-size: 0.9rem;
-            white-space: nowrap;
+            font-size: 0.85rem;
         }
         
         .sensitivity-table td {
-            padding: 8px;
+            padding: 6px 4px;
             border-bottom: 1px solid #e9ecef;
-            font-size: 0.9rem;
-            white-space: nowrap;
+            font-size: 0.85rem;
+            text-align: center;
         }
         
+        /* Equal width columns - 25% each */
+        .sensitivity-table th,
+        .sensitivity-table td {
+            width: 25%;
+        }
+        
+        /* First column - left align for growth rates */
         .sensitivity-table th:first-child,
         .sensitivity-table td:first-child {
-            width: 15%;
+            text-align: left;
+            padding-left: 8px;
         }
         
-        .sensitivity-table th:nth-child(2),
-        .sensitivity-table td:nth-child(2) {
-            width: 35%;
-        }
-        
-        .sensitivity-table th:nth-child(3),
-        .sensitivity-table td:nth-child(3) {
-            width: 25%;
-        }
-        
-        .sensitivity-table th:nth-child(4),
-        .sensitivity-table td:nth-child(4) {
-            width: 25%;
+        /* Last column - right align for percentages */
+        .sensitivity-table th:last-child,
+        .sensitivity-table td:last-child {
+            text-align: right;
+            padding-right: 8px;
         }
         
         .sensitivity-table tr:hover {
