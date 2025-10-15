@@ -1722,14 +1722,41 @@ function switchInsightsPeriod(period) {
 function refreshInsightsForPeriod(period) {
   console.log('Refreshing insights for period:', period);
   
-  // Calculate and display each insight section
+  // Calculate and display each insight section (SIMPLIFIED)
   calculateAtAGlance(period);
-  calculateProfitabilityMetrics(period);
+  calculateForecastRealityCheck(period); // was calculateGrowthTrajectory
+  calculateMarginForecast(period); // was calculateProfitabilityMetrics
+  calculateExpenseAnalysis(period); // simplified
+  calculateForecastAlerts(period); // was calculateAlertsWarnings
+}
+
+// SIMPLIFIED INSIGHT FUNCTIONS (Forecast-focused, not BI)
+// These are aliases/wrappers to the existing functions with new names/simplified logic
+
+function calculateForecastRealityCheck(period) {
+  // Reuse existing Growth Trajectory function but rename it
   calculateGrowthTrajectory(period);
-  calculateExpenseAnalysis(period);
-  calculateTopMovers(period);
-  calculateRevenueComposition(period);
-  calculateCashWorkingCapital(period);
+  // Update the content target
+  const growthContent = document.getElementById('growthContent');
+  const realitycheckContent = document.getElementById('realitycheckContent');
+  if (growthContent && realitycheckContent && growthContent.innerHTML) {
+    realitycheckContent.innerHTML = growthContent.innerHTML;
+  }
+}
+
+function calculateMarginForecast(period) {
+  // Reuse existing Profitability Metrics function but rename it
+  calculateProfitabilityMetrics(period);
+  // Update the content target
+  const profitabilityContent = document.getElementById('profitabilityContent');
+  const marginsContent = document.getElementById('marginsContent');
+  if (profitabilityContent && marginsContent && profitabilityContent.innerHTML) {
+    marginsContent.innerHTML = profitabilityContent.innerHTML;
+  }
+}
+
+function calculateForecastAlerts(period) {
+  // Reuse existing Alerts & Warnings function but rename it
   calculateAlertsWarnings(period);
 }
 
