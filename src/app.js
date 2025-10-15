@@ -8728,7 +8728,7 @@ function renderSensitivityChart(scenarios, config, baselineValue) {
   // Chart dimensions
   const width = 800;
   const height = 300;
-  const margin = { top: 20, right: 40, bottom: 50, left: 80 };
+  const margin = { top: 20, right: 40, bottom: 50, left: 100 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
   
@@ -8758,11 +8758,13 @@ function renderSensitivityChart(scenarios, config, baselineValue) {
     const y = margin.top + (plotHeight / numGridLines) * i;
     const value = maxY - ((maxY - minY) / numGridLines) * i;
     
-    svg += `<line class="chart-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"/>`;
+    // Only draw grid line for non-axis positions
+    if (i > 0) {
+      svg += `<line class="chart-grid-line" x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"/>`;
+    }
     
-    // Add white background behind text for better readability
-    svg += `<text class="chart-label-text chart-label-bg" x="${margin.left - 15}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
-    svg += `<text class="chart-label-text" x="${margin.left - 15}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
+    // Position labels well clear of the axis line
+    svg += `<text class="chart-label-text" x="${margin.left - 10}" y="${y + 4}" text-anchor="end">${formatCurrency(value)}</text>`;
   }
   
   // Axes
