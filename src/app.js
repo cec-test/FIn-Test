@@ -8327,14 +8327,11 @@ function generateSensitivityScenarios(config) {
 }
 
 /**
- * Clone current forecast settings
+ * Save current custom growth rate for the test variable (if any)
  */
-function cloneForecastSettings() {
-  return {
-    forecastMonths: forecastSettings.forecastMonths,
-    method: forecastSettings.method,
-    growthRates: JSON.parse(JSON.stringify(forecastSettings.growthRates || {}))
-  };
+function saveCurrentGrowthRate(statementType, lineItemName) {
+  const currentRate = getCustomGrowthRate(statementType, lineItemName);
+  return currentRate;
 }
 
 /**
@@ -8351,9 +8348,81 @@ function applyScenarioToSettings(testVariable, testValue) {
 }
 
 /**
+ * Detect if the output metric is likely a total/aggregate
+ */
+function isLikelyTotal(lineItemName) {
+  const totalPatterns = /total|gross|net(?!\s+income)|sum|aggregate/i;
+  return totalPatterns.test(lineItemName);
+}
+
+/**
+ * Detect if test variable is a component (not a total)
+ */
+function isLikelyComponent(lineItemName) {
+  return !isLikelyTotal(lineItemName);
+}
+
+/**
+ * Calculate output with cascade effect (Option A implementation)
+ * This handles cases where the output metric includes the test variable
+ */
+function calculateOutputWithCascade(testVariable, outputMetric, testValue, periodIndex, baselineTestValue) {
+  const { statementType } = outputMetric;
+  
+  // Check if we need cascade logic
+  const outputIsTotal = isLikelyTotal(outputMetric.lineItemName);
+  const testIsComponent = isLikelyComponent(testVariable.lineItemName);
+  
+  console.log(`Cascade check - Output is total: ${outputIsTotal}, Test is component: ${testIsComponent}`);
+  
+  if (outputIsTotal && testIsComponent) {
+    console.log('Using CASCADE calculation (test variable affects output total)');
+    
+    // Get all line items
+    const lineItems = uploadedLineItems[statementType] || [];
+    
+    // Find the output and test items
+    const outputItem = lineItems.find(item => item.name === outputMetric.lineItemName);
+    const testItem = lineItems.find(item => item.name === testVariable.lineItemName);
+    
+    if (!outputItem || !testItem) {
+      console.warn('Could not find items for cascade calculation, using independent calculation');
+      return calculateForecastForItem(outputItem || testItem, periodIndex, statementType);
+    }
+    
+    // Calculate baseline output value (without any changes)
+    const baselineOutputValue = calculateForecastForItem(outputItem, periodIndex, statementType);
+    
+    // Calculate the new test value with the scenario growth rate
+    const newTestValue = calculateForecastForItem(testItem, periodIndex, statementType);
+    
+    // Calculate the delta
+    const delta = newTestValue - baselineTestValue;
+    
+    console.log(`Cascade calculation: baseline output=${baselineOutputValue}, test delta=${delta}, result=${baselineOutputValue + delta}`);
+    
+    // Add the delta to the baseline output
+    return baselineOutputValue + delta;
+  } else {
+    console.log('Using INDEPENDENT calculation (test variable does not affect output)');
+    
+    // Independent calculation - output metric is calculated on its own
+    const lineItems = uploadedLineItems[statementType] || [];
+    const outputItem = lineItems.find(item => item.name === outputMetric.lineItemName);
+    
+    if (!outputItem) {
+      console.error(`Output item "${outputMetric.lineItemName}" not found`);
+      return 0;
+    }
+    
+    return calculateForecastForItem(outputItem, periodIndex, statementType);
+  }
+}
+
+/**
  * Extract output metric value from forecast results
  */
-function extractOutputMetric(outputConfig, periodIndex) {
+function extractOutputMetric(outputConfig, periodIndex, testVariable = null, testValue = null, baselineTestValue = null) {
   const { statementType, lineItemName } = outputConfig;
   
   console.log(`Extracting metric: ${lineItemName} from ${statementType} at period ${periodIndex}`);
@@ -8371,8 +8440,14 @@ function extractOutputMetric(outputConfig, periodIndex) {
   
   console.log('Found line item:', lineItem.name);
   
-  // Calculate the forecast value for this item at this period
-  const value = calculateForecastForItem(lineItem, periodIndex, statementType);
+  // Use cascade calculation if we have test variable info
+  let value;
+  if (testVariable && testValue !== null && baselineTestValue !== null) {
+    value = calculateOutputWithCascade(testVariable, outputConfig, testValue, periodIndex, baselineTestValue);
+  } else {
+    // Fallback to simple calculation
+    value = calculateForecastForItem(lineItem, periodIndex, statementType);
+  }
   
   console.log(`Calculated value: ${value}`);
   
@@ -8446,21 +8521,44 @@ function runSensitivityAnalysis() {
   
   console.log('Configuration:', config);
   
-  // 2. Save current settings
-  sensitivityState.baselineSettings = cloneForecastSettings();
+  // 2. Save current custom growth rate (if any)
+  sensitivityState.originalGrowthRate = saveCurrentGrowthRate(
+    config.testVariable.statementType, 
+    config.testVariable.lineItemName
+  );
   
-  // 3. Generate scenarios
+  console.log('Saved original growth rate:', sensitivityState.originalGrowthRate);
+  
+  // 3. Calculate baseline test variable value (for cascade calculation)
+  const lineItems = uploadedLineItems[config.testVariable.statementType] || [];
+  const testItem = lineItems.find(item => item.name === config.testVariable.lineItemName);
+  
+  if (!testItem) {
+    alert(`Test variable "${config.testVariable.lineItemName}" not found`);
+    return;
+  }
+  
+  const baselineTestValue = calculateForecastForItem(testItem, config.outputMetric.periodIndex, config.testVariable.statementType);
+  console.log('Baseline test value:', baselineTestValue);
+  
+  // 4. Generate scenarios
   const scenarios = generateSensitivityScenarios(config);
   
-  // 4. Run forecast for each scenario
+  // 5. Run forecast for each scenario
   scenarios.forEach((scenario, index) => {
     console.log(`Running scenario ${index + 1}/${scenarios.length}: ${scenario.label}`);
     
     // Apply scenario (temporarily set custom growth rate)
     applyScenarioToSettings(config.testVariable, scenario.testValue);
     
-    // Extract output metric with the modified settings
-    const output = extractOutputMetric(config.outputMetric, config.outputMetric.periodIndex);
+    // Extract output metric with cascade logic
+    const output = extractOutputMetric(
+      config.outputMetric, 
+      config.outputMetric.periodIndex,
+      config.testVariable,
+      scenario.testValue,
+      baselineTestValue
+    );
     console.log(`Scenario ${scenario.label} output:`, output);
     
     if (output) {
@@ -8472,14 +8570,21 @@ function runSensitivityAnalysis() {
   });
   
   // 5. Restore original settings
-  forecastSettings.forecastMonths = sensitivityState.baselineSettings.forecastMonths;
-  forecastSettings.method = sensitivityState.baselineSettings.method;
-  forecastSettings.growthRates = sensitivityState.baselineSettings.growthRates;
+  if (sensitivityState.originalGrowthRate !== null) {
+    // Restore the original custom growth rate
+    setCustomGrowthRate(
+      config.testVariable.statementType, 
+      config.testVariable.lineItemName, 
+      sensitivityState.originalGrowthRate
+    );
+  } else {
+    // Clear the custom growth rate that was set during analysis
+    deleteCustomGrowthRate(config.testVariable.statementType, config.testVariable.lineItemName);
+  }
   
-  // Clear the custom growth rate that was set during analysis
-  deleteCustomGrowthRate(config.testVariable.statementType, config.testVariable.lineItemName);
+  console.log('Restored original growth rate');
   
-  // 6. Store results
+  // 7. Store results
   sensitivityState.config = config;
   sensitivityState.results = scenarios;
   
