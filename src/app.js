@@ -9152,9 +9152,9 @@ function expandChart(periodType) {
   const item1 = document.getElementById(`${periodType}LineItem1`).value;
   const item2 = document.getElementById(`${periodType}LineItem2`).value;
   const item3 = document.getElementById(`${periodType}LineItem3`).value;
-  const color1 = document.getElementById(`${periodType}LineColor1`)?.value || '#3498db';
-  const color2 = document.getElementById(`${periodType}LineColor2`)?.value || '#e74c3c';
-  const color3 = document.getElementById(`${periodType}LineColor3`)?.value || '#27ae60';
+  const color1 = document.getElementById(`${periodType}LineColor1`)?.dataset.color || '#3498db';
+  const color2 = document.getElementById(`${periodType}LineColor2`)?.dataset.color || '#e74c3c';
+  const color3 = document.getElementById(`${periodType}LineColor3`)?.dataset.color || '#27ae60';
   const startPeriod = document.getElementById(`${periodType}ChartStartPeriod`).value;
   const endPeriod = document.getElementById(`${periodType}ChartEndPeriod`).value;
   
@@ -9179,9 +9179,18 @@ function expandChart(periodType) {
   const expandedColor1 = document.getElementById('expandedLineColor1');
   const expandedColor2 = document.getElementById('expandedLineColor2');
   const expandedColor3 = document.getElementById('expandedLineColor3');
-  if (expandedColor1) expandedColor1.value = color1;
-  if (expandedColor2) expandedColor2.value = color2;
-  if (expandedColor3) expandedColor3.value = color3;
+  if (expandedColor1) {
+    expandedColor1.dataset.color = color1;
+    expandedColor1.style.backgroundColor = color1;
+  }
+  if (expandedColor2) {
+    expandedColor2.dataset.color = color2;
+    expandedColor2.style.backgroundColor = color2;
+  }
+  if (expandedColor3) {
+    expandedColor3.dataset.color = color3;
+    expandedColor3.style.backgroundColor = color3;
+  }
   
   // Copy date range options to expanded dropdowns
   const expandedStart = document.getElementById('expandedChartStartPeriod');
@@ -9202,25 +9211,7 @@ function expandChart(periodType) {
   expandedItem2.onchange = updateExpandedChart;
   expandedItem3.onchange = updateExpandedChart;
   
-  // Add change listeners to color pickers
-  if (expandedColor1) {
-    expandedColor1.onchange = function() {
-      this.style.backgroundColor = this.value;
-      updateExpandedChart();
-    };
-  }
-  if (expandedColor2) {
-    expandedColor2.onchange = function() {
-      this.style.backgroundColor = this.value;
-      updateExpandedChart();
-    };
-  }
-  if (expandedColor3) {
-    expandedColor3.onchange = function() {
-      this.style.backgroundColor = this.value;
-      updateExpandedChart();
-    };
-  }
+  // Color picker change listeners are now handled by initializeColorPickers()
   
   // Update the expanded chart
   updateExpandedChart();
@@ -9270,7 +9261,7 @@ function updateExpandedChart() {
           name: itemName,
           statement: statementType,
           actualValues: lineItem.actualValues || [],
-          color: colorSelect ? colorSelect.value : '#3498db' // Use selected color or default
+          color: colorSelect ? colorSelect.dataset.color : '#3498db' // Use selected color or default
         });
       }
     }
@@ -9323,7 +9314,7 @@ function updateLineChartWithRange(periodType) {
           name: itemName,
           statement: statementType,
           actualValues: lineItem.actualValues || [],
-          color: colorSelect ? colorSelect.value : '#3498db' // Use selected color or default
+          color: colorSelect ? colorSelect.dataset.color : '#3498db' // Use selected color or default
         });
       }
     }
@@ -10406,4 +10397,60 @@ function exportSensitivityCSV() {
       }
     });
   }
+  
+  // Initialize custom color pickers
+  initializeColorPickers();
 })();
+
+/**
+ * Initialize custom color picker dropdowns
+ */
+function initializeColorPickers() {
+  document.querySelectorAll('.color-picker-wrapper').forEach(wrapper => {
+    const button = wrapper.querySelector('.color-picker-button');
+    const dropdown = wrapper.querySelector('.color-picker-dropdown');
+    const options = dropdown.querySelectorAll('.color-option');
+    
+    // Toggle dropdown on button click
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Close all other dropdowns
+      document.querySelectorAll('.color-picker-dropdown').forEach(d => {
+        if (d !== dropdown) d.classList.remove('open');
+      });
+      dropdown.classList.toggle('open');
+    });
+    
+    // Handle color selection
+    options.forEach(option => {
+      option.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const color = option.dataset.color;
+        
+        // Update button
+        button.dataset.color = color;
+        button.style.backgroundColor = color;
+        
+        // Update selected state
+        options.forEach(opt => opt.classList.remove('selected'));
+        option.classList.add('selected');
+        
+        // Close dropdown
+        dropdown.classList.remove('open');
+        
+        // Trigger chart update
+        const periodType = button.id.replace('LineColor1', '').replace('LineColor2', '').replace('LineColor3', '').replace('expanded', '');
+        if (periodType && periodType !== 'expanded') {
+          updateLineChart(periodType);
+        } else if (button.id.startsWith('expanded')) {
+          updateExpandedChart();
+        }
+      });
+    });
+  });
+  
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.color-picker-dropdown').forEach(d => d.classList.remove('open'));
+  });
+}
