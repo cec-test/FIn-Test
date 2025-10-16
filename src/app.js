@@ -1616,18 +1616,55 @@ async function handleActualsUpload(file) {
 
 function exportPeriodData(period) {
   const tables = [`${period}pnltable`, `${period}balancetable`, `${period}cashflowtable`];
-  exportMultipleTables(tables, `${period}_3_statement_forecast`);
+  exportMultipleTables(tables, period);
 }
 
-function exportMultipleTables(tableIds, filename) {
+function exportMultipleTables(tableIds, period) {
+  // Gather forecast settings
+  const timestamp = new Date().toLocaleString();
+  const forecastPeriods = document.getElementById('forecastPeriods')?.value || 12;
+  const forecastMethod = document.getElementById('forecastMethod')?.value || 'exponential';
+  const growthRate = document.getElementById('customGrowthRate')?.value || '5';
+  const seasonalPattern = document.getElementById('seasonalPattern')?.value || 'none';
+  const applyLeverage = document.getElementById('applyOperatingLeverage')?.checked ? 'Yes' : 'No';
+  
+  // Build CSV with professional header
   let csvContent = '';
   
+  // Header section
+  csvContent += '"TELESCOPE FINANCIAL FORECAST"\n';
+  csvContent += `"Generated: ${timestamp}"\n`;
+  csvContent += `"Forecast Period: ${period.charAt(0).toUpperCase() + period.slice(1)}"\n`;
+  csvContent += `"Time Horizon: ${forecastPeriods} months"\n`;
+  csvContent += '"\n';
+  
+  // Assumptions section
+  csvContent += '"FORECAST ASSUMPTIONS"\n';
+  csvContent += `"Method: ${forecastMethod.charAt(0).toUpperCase() + forecastMethod.slice(1)}"\n`;
+  csvContent += `"Growth Rate: ${growthRate}%"\n`;
+  csvContent += `"Seasonality: ${seasonalPattern === 'none' ? 'None' : seasonalPattern.charAt(0).toUpperCase() + seasonalPattern.slice(1)}"\n`;
+  csvContent += `"Operating Leverage: ${applyLeverage}"\n`;
+  
+  // Add custom growth rates if any exist
+  const customRates = getCustomGrowthRates();
+  if (customRates && customRates.length > 0) {
+    csvContent += '"\n';
+    csvContent += '"CUSTOM LINE ITEM GROWTH RATES"\n';
+    customRates.forEach(rate => {
+      csvContent += `"${rate.lineItem}: ${rate.growthRate}%"\n`;
+    });
+  }
+  
+  csvContent += '"\n';
+  csvContent += '"\n';
+  
+  // Export each table
   tableIds.forEach((tableId, index) => {
     const table = document.getElementById(tableId);
     if (table) {
       if (index > 0) csvContent += '\n\n';
       const label = labelFromTableId(tableId);
-      csvContent += `${label}\n`;
+      csvContent += `"${label.toUpperCase()}"\n`;
       
       const rows = Array.from(table.rows);
       csvContent += rows.map(row => {
@@ -1637,16 +1674,40 @@ function exportMultipleTables(tableIds, filename) {
       }).join('\n');
     }
   });
+  
+  // Footer
+  csvContent += '\n\n';
+  csvContent += '"---"\n';
+  csvContent += '"Powered by Telescope - Forecast Smarter. See Further."\n';
+  csvContent += '"https://telescope-forecast.com"\n';
 
+  // Download with improved filename
   const blob = new Blob([csvContent], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${filename}.csv`;
+  const dateStr = new Date().toISOString().split('T')[0];
+  a.download = `Telescope_${period}_forecast_${dateStr}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// Helper function to get custom growth rates
+function getCustomGrowthRates() {
+  const customRates = [];
+  const customRateElements = document.querySelectorAll('[id^="customRate-"]');
+  
+  customRateElements.forEach(elem => {
+    const lineItem = elem.id.replace('customRate-', '').replace(/-/g, ' ');
+    const rate = elem.value;
+    if (rate && rate !== '') {
+      customRates.push({ lineItem, growthRate: rate });
+    }
+  });
+  
+  return customRates;
 }
 
 function labelFromTableId(tableId) {
@@ -9124,8 +9185,72 @@ function generateScenariosComparison() {
  * Export all scenarios to Excel
  */
 function exportAllScenarios() {
-  alert('Excel export coming soon! This will download an Excel file with all scenarios.');
-  // TODO: Implement with SheetJS
+  if (!window.scenarios || scenarios.length === 0) {
+    alert('No scenarios to export. Please create at least one scenario first.');
+    return;
+  }
+  
+  const timestamp = new Date().toLocaleString();
+  let csv = '"TELESCOPE SCENARIO COMPARISON"\n';
+  csv += `"Generated: ${timestamp}"\n`;
+  csv += `"Number of Scenarios: ${scenarios.length}"\n`;
+  csv += '"\n';
+  csv += '"\n';
+  
+  // Export each scenario
+  scenarios.forEach((scenario, index) => {
+    if (index > 0) csv += '\n\n';
+    
+    csv += `"SCENARIO ${index + 1}: ${scenario.name.toUpperCase()}"\n`;
+    csv += `"Description: ${scenario.description || 'No description'}"\n`;
+    csv += '"\n';
+    
+    csv += '"ASSUMPTIONS"\n';
+    csv += `"Growth Rate: ${scenario.settings.growthRate}%"\n`;
+    csv += `"Method: ${scenario.settings.forecastMethod}"\n`;
+    csv += `"Forecast Periods: ${scenario.settings.forecastPeriods} months"\n`;
+    csv += `"Operating Leverage: ${scenario.settings.applyOperatingLeverage ? 'Yes' : 'No'}"\n`;
+    
+    if (scenario.settings.customRates && Object.keys(scenario.settings.customRates).length > 0) {
+      csv += '"\n';
+      csv += '"Custom Growth Rates:"\n';
+      Object.entries(scenario.settings.customRates).forEach(([item, rate]) => {
+        csv += `"${item}: ${rate}%"\n`;
+      });
+    }
+  });
+  
+  // Add comparison summary if multiple scenarios
+  if (scenarios.length > 1) {
+    csv += '\n\n';
+    csv += '"SCENARIO COMPARISON SUMMARY"\n';
+    csv += '"Scenario","Growth Rate","Method","Forecast Periods"\n';
+    
+    scenarios.forEach(scenario => {
+      csv += `"${scenario.name}",`;
+      csv += `"${scenario.settings.growthRate}%",`;
+      csv += `"${scenario.settings.forecastMethod}",`;
+      csv += `"${scenario.settings.forecastPeriods} months"\n`;
+    });
+  }
+  
+  // Footer
+  csv += '\n\n';
+  csv += '"---"\n';
+  csv += '"Powered by Telescope - Forecast Smarter. See Further."\n';
+  csv += '"https://telescope-forecast.com"\n';
+  
+  // Download
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const dateStr = new Date().toISOString().split('T')[0];
+  a.download = `Telescope_All_Scenarios_${dateStr}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
 }
 
 /**
@@ -10349,29 +10474,80 @@ function exportSensitivityCSV() {
   const scenarios = sensitivityState.results;
   const baselineScenario = scenarios.find(s => s.isBaseline);
   const baselineValue = baselineScenario ? baselineScenario.outputs.primaryMetric : 0;
+  const timestamp = new Date().toLocaleString();
   
-  // Build CSV
-  let csv = 'Sensitivity Analysis Results\n\n';
-  csv += `Test Variable,${config.testVariable.lineItemName}\n`;
-  csv += `Output Metric,${config.outputMetric.lineItemName}\n`;
-  csv += `Period,${document.getElementById('sensitivityPeriod').selectedOptions[0].text}\n\n`;
+  // Build CSV with professional header
+  let csv = '"TELESCOPE SENSITIVITY ANALYSIS"\n';
+  csv += `"Generated: ${timestamp}"\n`;
+  csv += '"\n';
   
-  csv += 'Growth Rate,%,Value,Change vs Base,% Change\n';
+  csv += '"ANALYSIS PARAMETERS"\n';
+  csv += `"Test Variable: ${config.testVariable.lineItemName}"\n`;
+  csv += `"Output Metric: ${config.outputMetric.lineItemName}"\n`;
+  csv += `"Period: ${document.getElementById('sensitivityPeriod').selectedOptions[0].text}"\n`;
+  csv += `"Baseline Value: ${formatCurrency(baselineValue)}"\n`;
+  csv += '"\n';
+  csv += '"\n';
+  
+  csv += '"SENSITIVITY RESULTS"\n';
+  csv += '"Scenario","Growth Rate (%)","Output Value","Change vs Baseline","% Change"\n';
   
   scenarios.forEach(scenario => {
     const value = scenario.outputs.primaryMetric || 0;
     const delta = value - baselineValue;
     const percentChange = baselineValue !== 0 ? (delta / baselineValue * 100) : 0;
+    const marker = scenario.isBaseline ? ' (Baseline)' : '';
     
-    csv += `${scenario.label},${scenario.testValue},${value.toFixed(2)},${delta.toFixed(2)},${percentChange.toFixed(2)}\n`;
+    csv += `"${scenario.label}${marker}",`;
+    csv += `"${scenario.testValue}%",`;
+    csv += `"${formatCurrency(value)}",`;
+    csv += `"${formatCurrency(delta)}",`;
+    csv += `"${percentChange.toFixed(1)}%"\n`;
   });
   
-  // Download
+  // Key insights section
+  csv += '"\n';
+  csv += '"\n';
+  csv += '"KEY INSIGHTS"\n';
+  
+  const maxScenario = scenarios.reduce((max, s) => 
+    (s.outputs.primaryMetric > max.outputs.primaryMetric) ? s : max
+  );
+  const minScenario = scenarios.reduce((min, s) => 
+    (s.outputs.primaryMetric < min.outputs.primaryMetric) ? s : min
+  );
+  const range = maxScenario.outputs.primaryMetric - minScenario.outputs.primaryMetric;
+  const rangePercent = baselineValue !== 0 ? (range / baselineValue * 100) : 0;
+  
+  csv += `"Best Case: ${maxScenario.label} at ${formatCurrency(maxScenario.outputs.primaryMetric)}"\n`;
+  csv += `"Worst Case: ${minScenario.label} at ${formatCurrency(minScenario.outputs.primaryMetric)}"\n`;
+  csv += `"Range: ${formatCurrency(range)} (${rangePercent.toFixed(1)}% of baseline)"\n`;
+  
+  // Calculate sensitivity factor
+  const avgDeltaPer1Pct = scenarios.reduce((sum, s, i, arr) => {
+    if (i === 0) return 0;
+    const pctChange = s.testValue - arr[i-1].testValue;
+    const valueDelta = s.outputs.primaryMetric - arr[i-1].outputs.primaryMetric;
+    return sum + (valueDelta / pctChange);
+  }, 0) / (scenarios.length - 1);
+  
+  csv += `"Sensitivity Factor: ${formatCurrency(avgDeltaPer1Pct)} per 1% change in ${config.testVariable.lineItemName}"\n`;
+  
+  // Footer
+  csv += '"\n';
+  csv += '"\n';
+  csv += '"---"\n';
+  csv += '"Powered by Telescope - Forecast Smarter. See Further."\n';
+  csv += '"https://telescope-forecast.com"\n';
+  
+  // Download with better filename
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `sensitivity_analysis_${new Date().toISOString().split('T')[0]}.csv`;
+  const dateStr = new Date().toISOString().split('T')[0];
+  const varName = config.testVariable.lineItemName.replace(/\s+/g, '_');
+  a.download = `Telescope_Sensitivity_${varName}_${dateStr}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
