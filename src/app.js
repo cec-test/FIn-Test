@@ -9199,9 +9199,6 @@ function expandChart(periodType) {
   expandedItem3.onchange = updateExpandedChart;
   
   // Add change listeners to color pickers
-  const expandedColor1 = document.getElementById('expandedLineColor1');
-  const expandedColor2 = document.getElementById('expandedLineColor2');
-  const expandedColor3 = document.getElementById('expandedLineColor3');
   if (expandedColor1) expandedColor1.onchange = updateExpandedChart;
   if (expandedColor2) expandedColor2.onchange = updateExpandedChart;
   if (expandedColor3) expandedColor3.onchange = updateExpandedChart;
