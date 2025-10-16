@@ -1814,14 +1814,8 @@ function calculateForecastRealityCheck(period) {
 }
 
 function calculateMarginForecast(period) {
-  // Reuse existing Profitability Metrics function but rename it
-  calculateProfitabilityMetrics(period);
-  // Update the content target
-  const profitabilityContent = document.getElementById('profitabilityContent');
-  const marginsContent = document.getElementById('marginsContent');
-  if (profitabilityContent && marginsContent && profitabilityContent.innerHTML) {
-    marginsContent.innerHTML = profitabilityContent.innerHTML;
-  }
+  // Direct calculation - write to the correct ID
+  calculateProfitabilityMetrics(period, 'marginsContent');
 }
 
 function calculateForecastAlerts(period) {
@@ -2031,11 +2025,14 @@ function getDataForPeriod(period, actualValues = null, lineItem = null) {
 }
 
 // 2. PROFITABILITY METRICS
-function calculateProfitabilityMetrics(period) {
+function calculateProfitabilityMetrics(period, targetId = 'profitabilityContent') {
   console.log('Calculating Profitability Metrics for period:', period);
   
-  const content = document.getElementById('profitabilityContent');
-  if (!content) return;
+  const content = document.getElementById(targetId);
+  if (!content) {
+    console.warn(`Target element ${targetId} not found`);
+    return;
+  }
   
   if (!hasUploadedData) {
     content.innerHTML = '<div class="loading">Upload data to see profitability metrics</div>';
@@ -2167,11 +2164,14 @@ function calculateProfitabilityMetrics(period) {
 }
 
 // 3. GROWTH & TRAJECTORY
-function calculateGrowthTrajectory(period) {
+function calculateGrowthTrajectory(period, targetId = 'growthContent') {
   console.log('Calculating Growth & Trajectory for period:', period);
   
-  const content = document.getElementById('growthContent');
-  if (!content) return;
+  const content = document.getElementById(targetId);
+  if (!content) {
+    console.warn(`Target element ${targetId} not found`);
+    return;
+  }
   
   if (!hasUploadedData) {
     content.innerHTML = '<div class="loading">Upload data to see growth metrics</div>';
