@@ -1667,10 +1667,18 @@ function exportMultipleTables(tableIds, period) {
       csvContent += `"${label.toUpperCase()}"\n`;
       
       const rows = Array.from(table.rows);
-      csvContent += rows.map(row => {
-        return Array.from(row.cells)
-          .map(cell => '"' + cell.textContent.replace(/"/g, '""') + '"')
-          .join(',');
+      csvContent += rows.map((row, rowIndex) => {
+        return Array.from(row.cells).map((cell, cellIndex) => {
+          let text = cell.textContent;
+          
+          // For first column (line item names), clean up the text
+          if (cellIndex === 0 && rowIndex > 0) {
+            // Remove checkbox label and custom rate icons
+            text = text.replace(/\s*Subheader\s*$/, '').replace(/⚙️/g, '').trim();
+          }
+          
+          return '"' + text.replace(/"/g, '""') + '"';
+        }).join(',');
       }).join('\n');
     }
   });
