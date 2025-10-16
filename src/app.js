@@ -3493,18 +3493,13 @@ function createSVGChart(container, data, periodType) {
     let availableWidth = containerRect.width;
     let availableHeight = containerRect.height;
     
-    // Account for any container padding
-    const containerPadding = 0; // Container has no padding, chart fills it
-    availableWidth = availableWidth - containerPadding;
-    availableHeight = availableHeight - containerPadding;
+    // Use 95% of available space to ensure it fits without overflow
+    availableWidth = Math.floor(availableWidth * 0.95);
+    availableHeight = Math.floor(availableHeight * 0.95);
     
-    // Use full available space
-    width = Math.floor(availableWidth);
-    height = Math.floor(availableHeight);
-    
-    // Ensure reasonable minimums
-    width = Math.max(width, 600);
-    height = Math.max(height, 400);
+    // Use full available space with higher minimums for better visibility
+    width = Math.max(availableWidth, 1000);
+    height = Math.max(availableHeight, 600);
     
     padding = 80; // More padding for Y-axis labels
   } else {
@@ -3541,6 +3536,9 @@ function createSVGChart(container, data, periodType) {
   svgWrapper.style.position = 'relative';
   svgWrapper.style.width = '100%';
   svgWrapper.style.height = '100%';
+  svgWrapper.style.display = 'flex';
+  svgWrapper.style.alignItems = 'center';
+  svgWrapper.style.justifyContent = 'center';
   
   // Create SVG
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -3549,11 +3547,10 @@ function createSVGChart(container, data, periodType) {
   svg.style.display = 'block'; // Prevents extra space below SVG
   
   if (isExpanded) {
-    // For expanded view: let SVG fill the container responsively
+    // For expanded view: let SVG fill the container as much as possible
     svg.style.width = '100%';
     svg.style.height = '100%';
-    svg.style.maxWidth = width + 'px';
-    svg.style.maxHeight = height + 'px';
+    // Remove max-width and max-height constraints to allow chart to fill space
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   } else {
     // For inline view: use fixed dimensions
