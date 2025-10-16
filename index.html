@@ -1585,13 +1585,21 @@
         }
         
         .color-picker-select {
-            padding: 4px 8px;
-            border: 1px solid #dee2e6;
+            width: 30px;
+            height: 24px;
+            padding: 2px;
+            border: 2px solid #dee2e6;
             border-radius: 4px;
-            font-size: 0.85rem;
             background: white;
             cursor: pointer;
-            min-width: 80px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+        }
+        
+        .color-picker-select option {
+            padding: 8px;
+            min-height: 30px;
         }
         
         .chart-controls select {
@@ -2816,54 +2824,54 @@
                                     </div>
                                     <div class="chart-controls">
                                         <div class="chart-control-item">
-                                            <select id="monthlyLineColor1" class="color-picker-select">
-                                                <option value="#3498db" selected>Blue</option>
-                                                <option value="#e74c3c">Red</option>
-                                                <option value="#27ae60">Green</option>
-                                                <option value="#000000">Black</option>
-                                                <option value="#9b59b6">Purple</option>
-                                                <option value="#e91e63">Pink</option>
-                                                <option value="#f39c12">Orange</option>
-                                                <option value="#f1c40f">Yellow</option>
-                                                <option value="#34495e">Dark Gray</option>
-                                                <option value="#95a5a6">Light Gray</option>
-                                                <option value="#1abc9c">Teal</option>
+                                            <select id="monthlyLineColor1" class="color-picker-select" style="background-color: #3498db;">
+                                                <option value="#3498db" style="background-color: #3498db;" selected>⬤</option>
+                                                <option value="#e74c3c" style="background-color: #e74c3c;">⬤</option>
+                                                <option value="#27ae60" style="background-color: #27ae60;">⬤</option>
+                                                <option value="#000000" style="background-color: #000000; color: white;">⬤</option>
+                                                <option value="#9b59b6" style="background-color: #9b59b6;">⬤</option>
+                                                <option value="#e91e63" style="background-color: #e91e63;">⬤</option>
+                                                <option value="#f39c12" style="background-color: #f39c12;">⬤</option>
+                                                <option value="#f1c40f" style="background-color: #f1c40f;">⬤</option>
+                                                <option value="#34495e" style="background-color: #34495e; color: white;">⬤</option>
+                                                <option value="#95a5a6" style="background-color: #95a5a6;">⬤</option>
+                                                <option value="#1abc9c" style="background-color: #1abc9c;">⬤</option>
                                             </select>
                                             <select id="monthlyLineItem1">
                                                 <option value="">Select line item 1</option>
                                             </select>
                                         </div>
                                         <div class="chart-control-item">
-                                            <select id="monthlyLineColor2" class="color-picker-select">
-                                                <option value="#3498db">Blue</option>
-                                                <option value="#e74c3c" selected>Red</option>
-                                                <option value="#27ae60">Green</option>
-                                                <option value="#000000">Black</option>
-                                                <option value="#9b59b6">Purple</option>
-                                                <option value="#e91e63">Pink</option>
-                                                <option value="#f39c12">Orange</option>
-                                                <option value="#f1c40f">Yellow</option>
-                                                <option value="#34495e">Dark Gray</option>
-                                                <option value="#95a5a6">Light Gray</option>
-                                                <option value="#1abc9c">Teal</option>
+                                            <select id="monthlyLineColor2" class="color-picker-select" style="background-color: #e74c3c;">
+                                                <option value="#3498db" style="background-color: #3498db;">⬤</option>
+                                                <option value="#e74c3c" style="background-color: #e74c3c;" selected>⬤</option>
+                                                <option value="#27ae60" style="background-color: #27ae60;">⬤</option>
+                                                <option value="#000000" style="background-color: #000000; color: white;">⬤</option>
+                                                <option value="#9b59b6" style="background-color: #9b59b6;">⬤</option>
+                                                <option value="#e91e63" style="background-color: #e91e63;">⬤</option>
+                                                <option value="#f39c12" style="background-color: #f39c12;">⬤</option>
+                                                <option value="#f1c40f" style="background-color: #f1c40f;">⬤</option>
+                                                <option value="#34495e" style="background-color: #34495e; color: white;">⬤</option>
+                                                <option value="#95a5a6" style="background-color: #95a5a6;">⬤</option>
+                                                <option value="#1abc9c" style="background-color: #1abc9c;">⬤</option>
                                             </select>
                                             <select id="monthlyLineItem2">
                                                 <option value="">Select line item 2</option>
                                             </select>
                                         </div>
                                         <div class="chart-control-item">
-                                            <select id="monthlyLineColor3" class="color-picker-select">
-                                                <option value="#3498db">Blue</option>
-                                                <option value="#e74c3c">Red</option>
-                                                <option value="#27ae60" selected>Green</option>
-                                                <option value="#000000">Black</option>
-                                                <option value="#9b59b6">Purple</option>
-                                                <option value="#e91e63">Pink</option>
-                                                <option value="#f39c12">Orange</option>
-                                                <option value="#f1c40f">Yellow</option>
-                                                <option value="#34495e">Dark Gray</option>
-                                                <option value="#95a5a6">Light Gray</option>
-                                                <option value="#1abc9c">Teal</option>
+                                            <select id="monthlyLineColor3" class="color-picker-select" style="background-color: #27ae60;">
+                                                <option value="#3498db" style="background-color: #3498db;">⬤</option>
+                                                <option value="#e74c3c" style="background-color: #e74c3c;">⬤</option>
+                                                <option value="#27ae60" style="background-color: #27ae60;" selected>⬤</option>
+                                                <option value="#000000" style="background-color: #000000; color: white;">⬤</option>
+                                                <option value="#9b59b6" style="background-color: #9b59b6;">⬤</option>
+                                                <option value="#e91e63" style="background-color: #e91e63;">⬤</option>
+                                                <option value="#f39c12" style="background-color: #f39c12;">⬤</option>
+                                                <option value="#f1c40f" style="background-color: #f1c40f;">⬤</option>
+                                                <option value="#34495e" style="background-color: #34495e; color: white;">⬤</option>
+                                                <option value="#95a5a6" style="background-color: #95a5a6;">⬤</option>
+                                                <option value="#1abc9c" style="background-color: #1abc9c;">⬤</option>
                                             </select>
                                             <select id="monthlyLineItem3">
                                                 <option value="">Select line item 3</option>
@@ -2899,54 +2907,54 @@
                                     </div>
                                     <div class="chart-controls">
                                         <div class="chart-control-item">
-                                            <select id="quarterlyLineColor1" class="color-picker-select">
-                                                <option value="#3498db" selected>Blue</option>
-                                                <option value="#e74c3c">Red</option>
-                                                <option value="#27ae60">Green</option>
-                                                <option value="#000000">Black</option>
-                                                <option value="#9b59b6">Purple</option>
-                                                <option value="#e91e63">Pink</option>
-                                                <option value="#f39c12">Orange</option>
-                                                <option value="#f1c40f">Yellow</option>
-                                                <option value="#34495e">Dark Gray</option>
-                                                <option value="#95a5a6">Light Gray</option>
-                                                <option value="#1abc9c">Teal</option>
+                                            <select id="quarterlyLineColor1" class="color-picker-select" style="background-color: #3498db;">
+                                                <option value="#3498db" style="background-color: #3498db;" selected>⬤</option>
+                                                <option value="#e74c3c" style="background-color: #e74c3c;">⬤</option>
+                                                <option value="#27ae60" style="background-color: #27ae60;">⬤</option>
+                                                <option value="#000000" style="background-color: #000000; color: white;">⬤</option>
+                                                <option value="#9b59b6" style="background-color: #9b59b6;">⬤</option>
+                                                <option value="#e91e63" style="background-color: #e91e63;">⬤</option>
+                                                <option value="#f39c12" style="background-color: #f39c12;">⬤</option>
+                                                <option value="#f1c40f" style="background-color: #f1c40f;">⬤</option>
+                                                <option value="#34495e" style="background-color: #34495e; color: white;">⬤</option>
+                                                <option value="#95a5a6" style="background-color: #95a5a6;">⬤</option>
+                                                <option value="#1abc9c" style="background-color: #1abc9c;">⬤</option>
                                             </select>
                                             <select id="quarterlyLineItem1">
                                                 <option value="">Select line item 1</option>
                                             </select>
                                         </div>
                                         <div class="chart-control-item">
-                                            <select id="quarterlyLineColor2" class="color-picker-select">
-                                                <option value="#3498db">Blue</option>
-                                                <option value="#e74c3c" selected>Red</option>
-                                                <option value="#27ae60">Green</option>
-                                                <option value="#000000">Black</option>
-                                                <option value="#9b59b6">Purple</option>
-                                                <option value="#e91e63">Pink</option>
-                                                <option value="#f39c12">Orange</option>
-                                                <option value="#f1c40f">Yellow</option>
-                                                <option value="#34495e">Dark Gray</option>
-                                                <option value="#95a5a6">Light Gray</option>
-                                                <option value="#1abc9c">Teal</option>
+                                            <select id="quarterlyLineColor2" class="color-picker-select" style="background-color: #e74c3c;">
+                                                <option value="#3498db" style="background-color: #3498db;">⬤</option>
+                                                <option value="#e74c3c" style="background-color: #e74c3c;" selected>⬤</option>
+                                                <option value="#27ae60" style="background-color: #27ae60;">⬤</option>
+                                                <option value="#000000" style="background-color: #000000; color: white;">⬤</option>
+                                                <option value="#9b59b6" style="background-color: #9b59b6;">⬤</option>
+                                                <option value="#e91e63" style="background-color: #e91e63;">⬤</option>
+                                                <option value="#f39c12" style="background-color: #f39c12;">⬤</option>
+                                                <option value="#f1c40f" style="background-color: #f1c40f;">⬤</option>
+                                                <option value="#34495e" style="background-color: #34495e; color: white;">⬤</option>
+                                                <option value="#95a5a6" style="background-color: #95a5a6;">⬤</option>
+                                                <option value="#1abc9c" style="background-color: #1abc9c;">⬤</option>
                                             </select>
                                             <select id="quarterlyLineItem2">
                                                 <option value="">Select line item 2</option>
                                             </select>
                                         </div>
                                         <div class="chart-control-item">
-                                            <select id="quarterlyLineColor3" class="color-picker-select">
-                                                <option value="#3498db">Blue</option>
-                                                <option value="#e74c3c">Red</option>
-                                                <option value="#27ae60" selected>Green</option>
-                                                <option value="#000000">Black</option>
-                                                <option value="#9b59b6">Purple</option>
-                                                <option value="#e91e63">Pink</option>
-                                                <option value="#f39c12">Orange</option>
-                                                <option value="#f1c40f">Yellow</option>
-                                                <option value="#34495e">Dark Gray</option>
-                                                <option value="#95a5a6">Light Gray</option>
-                                                <option value="#1abc9c">Teal</option>
+                                            <select id="quarterlyLineColor3" class="color-picker-select" style="background-color: #27ae60;">
+                                                <option value="#3498db" style="background-color: #3498db;">⬤</option>
+                                                <option value="#e74c3c" style="background-color: #e74c3c;">⬤</option>
+                                                <option value="#27ae60" style="background-color: #27ae60;" selected>⬤</option>
+                                                <option value="#000000" style="background-color: #000000; color: white;">⬤</option>
+                                                <option value="#9b59b6" style="background-color: #9b59b6;">⬤</option>
+                                                <option value="#e91e63" style="background-color: #e91e63;">⬤</option>
+                                                <option value="#f39c12" style="background-color: #f39c12;">⬤</option>
+                                                <option value="#f1c40f" style="background-color: #f1c40f;">⬤</option>
+                                                <option value="#34495e" style="background-color: #34495e; color: white;">⬤</option>
+                                                <option value="#95a5a6" style="background-color: #95a5a6;">⬤</option>
+                                                <option value="#1abc9c" style="background-color: #1abc9c;">⬤</option>
                                             </select>
                                             <select id="quarterlyLineItem3">
                                                 <option value="">Select line item 3</option>
@@ -2982,54 +2990,54 @@
                                     </div>
                                     <div class="chart-controls">
                                         <div class="chart-control-item">
-                                            <select id="yearlyLineColor1" class="color-picker-select">
-                                                <option value="#3498db" selected>Blue</option>
-                                                <option value="#e74c3c">Red</option>
-                                                <option value="#27ae60">Green</option>
-                                                <option value="#000000">Black</option>
-                                                <option value="#9b59b6">Purple</option>
-                                                <option value="#e91e63">Pink</option>
-                                                <option value="#f39c12">Orange</option>
-                                                <option value="#f1c40f">Yellow</option>
-                                                <option value="#34495e">Dark Gray</option>
-                                                <option value="#95a5a6">Light Gray</option>
-                                                <option value="#1abc9c">Teal</option>
+                                            <select id="yearlyLineColor1" class="color-picker-select" style="background-color: #3498db;">
+                                                <option value="#3498db" style="background-color: #3498db;" selected>⬤</option>
+                                                <option value="#e74c3c" style="background-color: #e74c3c;">⬤</option>
+                                                <option value="#27ae60" style="background-color: #27ae60;">⬤</option>
+                                                <option value="#000000" style="background-color: #000000; color: white;">⬤</option>
+                                                <option value="#9b59b6" style="background-color: #9b59b6;">⬤</option>
+                                                <option value="#e91e63" style="background-color: #e91e63;">⬤</option>
+                                                <option value="#f39c12" style="background-color: #f39c12;">⬤</option>
+                                                <option value="#f1c40f" style="background-color: #f1c40f;">⬤</option>
+                                                <option value="#34495e" style="background-color: #34495e; color: white;">⬤</option>
+                                                <option value="#95a5a6" style="background-color: #95a5a6;">⬤</option>
+                                                <option value="#1abc9c" style="background-color: #1abc9c;">⬤</option>
                                             </select>
                                             <select id="yearlyLineItem1">
                                                 <option value="">Select line item 1</option>
                                             </select>
                                         </div>
                                         <div class="chart-control-item">
-                                            <select id="yearlyLineColor2" class="color-picker-select">
-                                                <option value="#3498db">Blue</option>
-                                                <option value="#e74c3c" selected>Red</option>
-                                                <option value="#27ae60">Green</option>
-                                                <option value="#000000">Black</option>
-                                                <option value="#9b59b6">Purple</option>
-                                                <option value="#e91e63">Pink</option>
-                                                <option value="#f39c12">Orange</option>
-                                                <option value="#f1c40f">Yellow</option>
-                                                <option value="#34495e">Dark Gray</option>
-                                                <option value="#95a5a6">Light Gray</option>
-                                                <option value="#1abc9c">Teal</option>
+                                            <select id="yearlyLineColor2" class="color-picker-select" style="background-color: #e74c3c;">
+                                                <option value="#3498db" style="background-color: #3498db;">⬤</option>
+                                                <option value="#e74c3c" style="background-color: #e74c3c;" selected>⬤</option>
+                                                <option value="#27ae60" style="background-color: #27ae60;">⬤</option>
+                                                <option value="#000000" style="background-color: #000000; color: white;">⬤</option>
+                                                <option value="#9b59b6" style="background-color: #9b59b6;">⬤</option>
+                                                <option value="#e91e63" style="background-color: #e91e63;">⬤</option>
+                                                <option value="#f39c12" style="background-color: #f39c12;">⬤</option>
+                                                <option value="#f1c40f" style="background-color: #f1c40f;">⬤</option>
+                                                <option value="#34495e" style="background-color: #34495e; color: white;">⬤</option>
+                                                <option value="#95a5a6" style="background-color: #95a5a6;">⬤</option>
+                                                <option value="#1abc9c" style="background-color: #1abc9c;">⬤</option>
                                             </select>
                                             <select id="yearlyLineItem2">
                                                 <option value="">Select line item 2</option>
                                             </select>
                                         </div>
                                         <div class="chart-control-item">
-                                            <select id="yearlyLineColor3" class="color-picker-select">
-                                                <option value="#3498db">Blue</option>
-                                                <option value="#e74c3c">Red</option>
-                                                <option value="#27ae60" selected>Green</option>
-                                                <option value="#000000">Black</option>
-                                                <option value="#9b59b6">Purple</option>
-                                                <option value="#e91e63">Pink</option>
-                                                <option value="#f39c12">Orange</option>
-                                                <option value="#f1c40f">Yellow</option>
-                                                <option value="#34495e">Dark Gray</option>
-                                                <option value="#95a5a6">Light Gray</option>
-                                                <option value="#1abc9c">Teal</option>
+                                            <select id="yearlyLineColor3" class="color-picker-select" style="background-color: #27ae60;">
+                                                <option value="#3498db" style="background-color: #3498db;">⬤</option>
+                                                <option value="#e74c3c" style="background-color: #e74c3c;">⬤</option>
+                                                <option value="#27ae60" style="background-color: #27ae60;" selected>⬤</option>
+                                                <option value="#000000" style="background-color: #000000; color: white;">⬤</option>
+                                                <option value="#9b59b6" style="background-color: #9b59b6;">⬤</option>
+                                                <option value="#e91e63" style="background-color: #e91e63;">⬤</option>
+                                                <option value="#f39c12" style="background-color: #f39c12;">⬤</option>
+                                                <option value="#f1c40f" style="background-color: #f1c40f;">⬤</option>
+                                                <option value="#34495e" style="background-color: #34495e; color: white;">⬤</option>
+                                                <option value="#95a5a6" style="background-color: #95a5a6;">⬤</option>
+                                                <option value="#1abc9c" style="background-color: #1abc9c;">⬤</option>
                                             </select>
                                             <select id="yearlyLineItem3">
                                                 <option value="">Select line item 3</option>
@@ -3589,54 +3597,54 @@
                 <!-- Chart controls - compact layout -->
                 <div class="chart-controls" style="margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center;">
                     <div class="chart-control-item" style="gap: 6px;">
-                        <select id="expandedLineColor1" class="color-picker-select" style="font-size: 0.85em; padding: 4px 8px;">
-                            <option value="#3498db" selected>Blue</option>
-                            <option value="#e74c3c">Red</option>
-                            <option value="#27ae60">Green</option>
-                            <option value="#000000">Black</option>
-                            <option value="#9b59b6">Purple</option>
-                            <option value="#e91e63">Pink</option>
-                            <option value="#f39c12">Orange</option>
-                            <option value="#f1c40f">Yellow</option>
-                            <option value="#34495e">Dark Gray</option>
-                            <option value="#95a5a6">Light Gray</option>
-                            <option value="#1abc9c">Teal</option>
+                        <select id="expandedLineColor1" class="color-picker-select" style="font-size: 0.85em; background-color: #3498db;">
+                            <option value="#3498db" style="background-color: #3498db;" selected>⬤</option>
+                            <option value="#e74c3c" style="background-color: #e74c3c;">⬤</option>
+                            <option value="#27ae60" style="background-color: #27ae60;">⬤</option>
+                            <option value="#000000" style="background-color: #000000; color: white;">⬤</option>
+                            <option value="#9b59b6" style="background-color: #9b59b6;">⬤</option>
+                            <option value="#e91e63" style="background-color: #e91e63;">⬤</option>
+                            <option value="#f39c12" style="background-color: #f39c12;">⬤</option>
+                            <option value="#f1c40f" style="background-color: #f1c40f;">⬤</option>
+                            <option value="#34495e" style="background-color: #34495e; color: white;">⬤</option>
+                            <option value="#95a5a6" style="background-color: #95a5a6;">⬤</option>
+                            <option value="#1abc9c" style="background-color: #1abc9c;">⬤</option>
                         </select>
                         <select id="expandedLineItem1" style="font-size: 0.85em; padding: 4px 8px;">
                             <option value="">Select line item 1</option>
                         </select>
                     </div>
                     <div class="chart-control-item" style="gap: 6px;">
-                        <select id="expandedLineColor2" class="color-picker-select" style="font-size: 0.85em; padding: 4px 8px;">
-                            <option value="#3498db">Blue</option>
-                            <option value="#e74c3c" selected>Red</option>
-                            <option value="#27ae60">Green</option>
-                            <option value="#000000">Black</option>
-                            <option value="#9b59b6">Purple</option>
-                            <option value="#e91e63">Pink</option>
-                            <option value="#f39c12">Orange</option>
-                            <option value="#f1c40f">Yellow</option>
-                            <option value="#34495e">Dark Gray</option>
-                            <option value="#95a5a6">Light Gray</option>
-                            <option value="#1abc9c">Teal</option>
+                        <select id="expandedLineColor2" class="color-picker-select" style="font-size: 0.85em; background-color: #e74c3c;">
+                            <option value="#3498db" style="background-color: #3498db;">⬤</option>
+                            <option value="#e74c3c" style="background-color: #e74c3c;" selected>⬤</option>
+                            <option value="#27ae60" style="background-color: #27ae60;">⬤</option>
+                            <option value="#000000" style="background-color: #000000; color: white;">⬤</option>
+                            <option value="#9b59b6" style="background-color: #9b59b6;">⬤</option>
+                            <option value="#e91e63" style="background-color: #e91e63;">⬤</option>
+                            <option value="#f39c12" style="background-color: #f39c12;">⬤</option>
+                            <option value="#f1c40f" style="background-color: #f1c40f;">⬤</option>
+                            <option value="#34495e" style="background-color: #34495e; color: white;">⬤</option>
+                            <option value="#95a5a6" style="background-color: #95a5a6;">⬤</option>
+                            <option value="#1abc9c" style="background-color: #1abc9c;">⬤</option>
                         </select>
                         <select id="expandedLineItem2" style="font-size: 0.85em; padding: 4px 8px;">
                             <option value="">Select line item 2</option>
                         </select>
                     </div>
                     <div class="chart-control-item" style="gap: 6px;">
-                        <select id="expandedLineColor3" class="color-picker-select" style="font-size: 0.85em; padding: 4px 8px;">
-                            <option value="#3498db">Blue</option>
-                            <option value="#e74c3c">Red</option>
-                            <option value="#27ae60" selected>Green</option>
-                            <option value="#000000">Black</option>
-                            <option value="#9b59b6">Purple</option>
-                            <option value="#e91e63">Pink</option>
-                            <option value="#f39c12">Orange</option>
-                            <option value="#f1c40f">Yellow</option>
-                            <option value="#34495e">Dark Gray</option>
-                            <option value="#95a5a6">Light Gray</option>
-                            <option value="#1abc9c">Teal</option>
+                        <select id="expandedLineColor3" class="color-picker-select" style="font-size: 0.85em; background-color: #27ae60;">
+                            <option value="#3498db" style="background-color: #3498db;">⬤</option>
+                            <option value="#e74c3c" style="background-color: #e74c3c;">⬤</option>
+                            <option value="#27ae60" style="background-color: #27ae60;" selected>⬤</option>
+                            <option value="#000000" style="background-color: #000000; color: white;">⬤</option>
+                            <option value="#9b59b6" style="background-color: #9b59b6;">⬤</option>
+                            <option value="#e91e63" style="background-color: #e91e63;">⬤</option>
+                            <option value="#f39c12" style="background-color: #f39c12;">⬤</option>
+                            <option value="#f1c40f" style="background-color: #f1c40f;">⬤</option>
+                            <option value="#34495e" style="background-color: #34495e; color: white;">⬤</option>
+                            <option value="#95a5a6" style="background-color: #95a5a6;">⬤</option>
+                            <option value="#1abc9c" style="background-color: #1abc9c;">⬤</option>
                         </select>
                         <select id="expandedLineItem3" style="font-size: 0.85em; padding: 4px 8px;">
                             <option value="">Select line item 3</option>

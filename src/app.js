@@ -3428,7 +3428,10 @@ function populateLineItemDropdowns() {
       // Add change listener to color picker
       const colorSelect = document.getElementById(`${periodType}LineColor${i}`);
       if (colorSelect) {
-        colorSelect.addEventListener('change', () => updateLineChart(periodType));
+        colorSelect.addEventListener('change', function() {
+          this.style.backgroundColor = this.value;
+          updateLineChart(periodType);
+        });
       }
     }
     
@@ -3512,9 +3515,10 @@ function createSVGChart(container, data, periodType) {
     
     padding = 80; // More padding for Y-axis labels
   } else {
-    // For inline view: use current hardcoded dimensions
-    width = 400;
-    height = 180;
+    // For inline view: calculate based on container size
+    const containerRect = container.getBoundingClientRect();
+    width = Math.max(containerRect.width - 20, 400); // Use container width, minimum 400
+    height = Math.max(containerRect.height - 20, 200); // Use container height, minimum 200
     padding = 50; // Increased padding for Y-axis labels
   }
   
@@ -9199,9 +9203,24 @@ function expandChart(periodType) {
   expandedItem3.onchange = updateExpandedChart;
   
   // Add change listeners to color pickers
-  if (expandedColor1) expandedColor1.onchange = updateExpandedChart;
-  if (expandedColor2) expandedColor2.onchange = updateExpandedChart;
-  if (expandedColor3) expandedColor3.onchange = updateExpandedChart;
+  if (expandedColor1) {
+    expandedColor1.onchange = function() {
+      this.style.backgroundColor = this.value;
+      updateExpandedChart();
+    };
+  }
+  if (expandedColor2) {
+    expandedColor2.onchange = function() {
+      this.style.backgroundColor = this.value;
+      updateExpandedChart();
+    };
+  }
+  if (expandedColor3) {
+    expandedColor3.onchange = function() {
+      this.style.backgroundColor = this.value;
+      updateExpandedChart();
+    };
+  }
   
   // Update the expanded chart
   updateExpandedChart();
