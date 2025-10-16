@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { getOrCreateProcessIdentifier, attachProcessIdentifier } = require('./identifier-utils');
 
 // OpenAI API configuration
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -239,11 +240,15 @@ function enrichClassificationResults(aiResponse, originalLineItems) {
  * Main API endpoint
  */
 module.exports = async (req, res) => {
+  // Generate or extract process identifier for tracking
+  const processId = getOrCreateProcessIdentifier(req);
+  attachProcessIdentifier(res, processId);
+  
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, X-Process-Id');
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
@@ -255,20 +260,22 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ 
       success: false, 
-      error: 'Method not allowed' 
+      error: 'Method not allowed',
+      processId: processId
     });
   }
 
   try {
-    console.log('Balance sheet classification request received');
-    console.log('Request body:', req.body);
+    console.log(`[Process: ${processId}] Balance sheet classification request received`);
+    console.log(`[Process: ${processId}] Request body:`, req.body);
 
     // Check if API key is available
     if (!OPENAI_API_KEY) {
-      console.error('OpenAI API key not found in environment variables');
+      console.error(`[Process: ${processId}] OpenAI API key not found in environment variables`);
       return res.status(500).json({
         success: false,
-        error: 'OpenAI API key not configured'
+        error: 'OpenAI API key not configured',
+        processId: processId
       });
     }
 
@@ -277,18 +284,19 @@ module.exports = async (req, res) => {
     if (!lineItems || !Array.isArray(lineItems) || lineItems.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'lineItems array is required and must not be empty'
+        error: 'lineItems array is required and must not be empty',
+        processId: processId
       });
     }
 
-    console.log('Classifying line items:', lineItems);
+    console.log(`[Process: ${processId}] Classifying line items:`, lineItems);
 
     // Create the classification prompt
     const prompt = createClassificationPrompt(lineItems);
-    console.log('Generated prompt length:', prompt.length);
+    console.log(`[Process: ${processId}] Generated prompt length:`, prompt.length);
 
     // Call OpenAI API
-    console.log('Making OpenAI API call for classification...');
+    console.log(`[Process: ${processId}] Making OpenAI API call for classification...`);
     
     const openaiResponse = await axios.post(OPENAI_API_URL, {
       model: 'gpt-4', // Use GPT-4 for better accuracy
@@ -311,19 +319,20 @@ module.exports = async (req, res) => {
       }
     });
 
-    console.log('OpenAI API response received');
+    console.log(`[Process: ${processId}] OpenAI API response received`);
     const aiClassification = openaiResponse.data.choices[0].message.content;
-    console.log('Raw AI response:', aiClassification);
+    console.log(`[Process: ${processId}] Raw AI response:`, aiClassification);
 
     // Process and enrich the classification results
     const enrichedResults = enrichClassificationResults(aiClassification, lineItems);
     
-    console.log('Classification completed successfully');
-    console.log('Results:', enrichedResults);
+    console.log(`[Process: ${processId}] Classification completed successfully`);
+    console.log(`[Process: ${processId}] Results:`, enrichedResults);
 
     res.status(200).json({
       success: true,
       classifications: enrichedResults,
+      processId: processId,
       metadata: {
         totalItems: lineItems.length,
         highConfidence: enrichedResults.filter(r => r.confidence >= 0.8).length,
@@ -333,8 +342,8 @@ module.exports = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Balance sheet classification error:', error.response?.data || error.message);
-    console.error('Full error:', error);
+    console.error(`[Process: ${processId}] Balance sheet classification error:`, error.response?.data || error.message);
+    console.error(`[Process: ${processId}] Full error:`, error);
     
     // Check for API key authentication errors
     if (error.response?.status === 401) {
@@ -342,7 +351,8 @@ module.exports = async (req, res) => {
         success: false,
         error: 'Invalid or expired OpenAI API key',
         details: error.response.data,
-        hint: 'Please check your OPENAI_API_KEY in Vercel environment variables'
+        hint: 'Please check your OPENAI_API_KEY in Vercel environment variables',
+        processId: processId
       });
     }
     
@@ -352,14 +362,16 @@ module.exports = async (req, res) => {
         success: false,
         error: 'OpenAI API rate limit exceeded',
         details: error.response.data,
-        hint: 'Please wait a moment and try again'
+        hint: 'Please wait a moment and try again',
+        processId: processId
       });
     }
     
     res.status(500).json({
       success: false,
       error: 'Failed to classify balance sheet items',
-      details: error.response?.data || error.message
+      details: error.response?.data || error.message,
+      processId: processId
     });
   }
 };

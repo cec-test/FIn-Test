@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 require('dotenv').config();
+const { processIdentifierMiddleware } = require('./api/identifier-utils');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -10,6 +11,9 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
+
+// Add process identifier middleware for billing and communication tracking
+app.use(processIdentifierMiddleware);
 
 // OpenAI API configuration
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -27,18 +31,25 @@ if (!OPENAI_API_KEY) {
 // Chat endpoint
 app.post('/api/chat', async (req, res) => {
   try {
+    const processId = req.processId; // From middleware
+    console.log(`[Process: ${processId}] Chat request received`);
+    
     const { message, financialData } = req.body;
 
     if (!message) {
-      return res.status(400).json({ error: 'Message is required' });
+      return res.status(400).json({ 
+        error: 'Message is required',
+        processId: processId
+      });
     }
 
     // Check if API key is available
     if (!OPENAI_API_KEY) {
-      console.error('API key missing when trying to make chat request');
+      console.error(`[Process: ${processId}] API key missing when trying to make chat request`);
       return res.status(500).json({ 
         error: 'OpenAI API key not configured',
-        details: 'Please set OPENAI_API_KEY in environment variables'
+        details: 'Please set OPENAI_API_KEY in environment variables',
+        processId: processId
       });
     }
 
@@ -75,13 +86,16 @@ app.post('/api/chat', async (req, res) => {
 
     const aiResponse = response.data.choices[0].message.content;
 
+    console.log(`[Process: ${processId}] Chat request successful`);
     res.json({
       success: true,
-      response: aiResponse
+      response: aiResponse,
+      processId: processId
     });
 
   } catch (error) {
-    console.error('Error calling OpenAI API:', error);
+    const processId = req.processId;
+    console.error(`[Process: ${processId}] Error calling OpenAI API:`, error);
     
     if (error.response) {
       console.error('OpenAI API Error Response:', error.response.data);
@@ -92,18 +106,21 @@ app.post('/api/chat', async (req, res) => {
         return res.status(500).json({ 
           error: 'Invalid or expired OpenAI API key', 
           details: error.response.data,
-          hint: 'Please check your OPENAI_API_KEY in Vercel environment variables or .env file'
+          hint: 'Please check your OPENAI_API_KEY in Vercel environment variables or .env file',
+          processId: processId
         });
       }
       
       res.status(500).json({ 
         error: 'OpenAI API error', 
-        details: error.response.data 
+        details: error.response.data,
+        processId: processId
       });
     } else {
       res.status(500).json({ 
         error: 'Internal server error', 
-        details: error.message 
+        details: error.message,
+        processId: processId
       });
     }
   }
@@ -114,7 +131,13 @@ app.post('/api/classify-balance-sheet', require('./api/classify-balance-sheet'))
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Financial Analysis Backend is running' });
+  const processId = req.processId;
+  console.log(`[Process: ${processId}] Health check`);
+  res.json({ 
+    status: 'OK', 
+    message: 'Financial Analysis Backend is running',
+    processId: processId
+  });
 });
 
 // Start server
