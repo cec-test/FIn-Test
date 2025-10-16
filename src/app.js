@@ -1885,11 +1885,12 @@ function calculateAtAGlance(period) {
   
   if (!hasUploadedData) return;
   
+  if (!uploadedLineItems.pnl || uploadedLineItems.pnl.length === 0) {
+    console.warn('No P&L data available for insights');
+    return;
+  }
+  
   try {
-    // Get data for the selected period
-    const data = getDataForPeriod(period);
-    if (!data || !data.values || data.values.length === 0) return;
-    
     // Find revenue and net income
     const revenueItem = uploadedLineItems.pnl.find(item => 
       item.name.toLowerCase().includes('total revenue') || 
