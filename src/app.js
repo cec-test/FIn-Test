@@ -3424,6 +3424,12 @@ function populateLineItemDropdowns() {
         // Add change listener
         select.addEventListener('change', () => updateLineChart(periodType));
       }
+      
+      // Add change listener to color picker
+      const colorSelect = document.getElementById(`${periodType}LineColor${i}`);
+      if (colorSelect) {
+        colorSelect.addEventListener('change', () => updateLineChart(periodType));
+      }
     }
     
     // Populate date range dropdowns for this period type
@@ -3456,8 +3462,6 @@ function generateChartData(periodType, selectedItems) {
   }
   
   // Generate datasets for each selected item
-  const colors = ['#3498db', '#e74c3c', '#27ae60'];
-  
   selectedItems.forEach((item, index) => {
     let values = [];
     
@@ -3472,7 +3476,7 @@ function generateChartData(periodType, selectedItems) {
     data.datasets.push({
       label: `${item.statement.toUpperCase()}: ${item.name}`,
       values: values,
-      color: colors[index % colors.length]
+      color: item.color || '#3498db' // Use the color from selectedItems or default to blue
     });
   });
   
@@ -9144,6 +9148,9 @@ function expandChart(periodType) {
   const item1 = document.getElementById(`${periodType}LineItem1`).value;
   const item2 = document.getElementById(`${periodType}LineItem2`).value;
   const item3 = document.getElementById(`${periodType}LineItem3`).value;
+  const color1 = document.getElementById(`${periodType}LineColor1`)?.value || '#3498db';
+  const color2 = document.getElementById(`${periodType}LineColor2`)?.value || '#e74c3c';
+  const color3 = document.getElementById(`${periodType}LineColor3`)?.value || '#27ae60';
   const startPeriod = document.getElementById(`${periodType}ChartStartPeriod`).value;
   const endPeriod = document.getElementById(`${periodType}ChartEndPeriod`).value;
   
@@ -9164,6 +9171,14 @@ function expandChart(periodType) {
   expandedItem2.value = item2;
   expandedItem3.value = item3;
   
+  // Copy color selections to expanded modal
+  const expandedColor1 = document.getElementById('expandedLineColor1');
+  const expandedColor2 = document.getElementById('expandedLineColor2');
+  const expandedColor3 = document.getElementById('expandedLineColor3');
+  if (expandedColor1) expandedColor1.value = color1;
+  if (expandedColor2) expandedColor2.value = color2;
+  if (expandedColor3) expandedColor3.value = color3;
+  
   // Copy date range options to expanded dropdowns
   const expandedStart = document.getElementById('expandedChartStartPeriod');
   const expandedEnd = document.getElementById('expandedChartEndPeriod');
@@ -9182,6 +9197,14 @@ function expandChart(periodType) {
   expandedItem1.onchange = updateExpandedChart;
   expandedItem2.onchange = updateExpandedChart;
   expandedItem3.onchange = updateExpandedChart;
+  
+  // Add change listeners to color pickers
+  const expandedColor1 = document.getElementById('expandedLineColor1');
+  const expandedColor2 = document.getElementById('expandedLineColor2');
+  const expandedColor3 = document.getElementById('expandedLineColor3');
+  if (expandedColor1) expandedColor1.onchange = updateExpandedChart;
+  if (expandedColor2) expandedColor2.onchange = updateExpandedChart;
+  if (expandedColor3) expandedColor3.onchange = updateExpandedChart;
   
   // Update the expanded chart
   updateExpandedChart();
@@ -9219,10 +9242,10 @@ function updateExpandedChart() {
   
   // Get selected line items
   const selectedItems = [];
-  const colors = ['#3498db', '#e74c3c', '#27ae60'];
   
   for (let i = 1; i <= 3; i++) {
     const select = document.getElementById(`expandedLineItem${i}`);
+    const colorSelect = document.getElementById(`expandedLineColor${i}`);
     if (select && select.value) {
       const [statementType, itemName] = select.value.split('::');
       const lineItem = uploadedLineItems[statementType]?.find(item => item.name === itemName);
@@ -9231,7 +9254,7 @@ function updateExpandedChart() {
           name: itemName,
           statement: statementType,
           actualValues: lineItem.actualValues || [],
-          color: colors[i - 1]
+          color: colorSelect ? colorSelect.value : '#3498db' // Use selected color or default
         });
       }
     }
@@ -9272,10 +9295,10 @@ function updateLineChartWithRange(periodType) {
   
   // Get selected line items
   const selectedItems = [];
-  const colors = ['#3498db', '#e74c3c', '#27ae60'];
   
   for (let i = 1; i <= 3; i++) {
     const select = document.getElementById(`${periodType}LineItem${i}`);
+    const colorSelect = document.getElementById(`${periodType}LineColor${i}`);
     if (select && select.value) {
       const [statementType, itemName] = select.value.split('::');
       const lineItem = uploadedLineItems[statementType]?.find(item => item.name === itemName);
@@ -9284,7 +9307,7 @@ function updateLineChartWithRange(periodType) {
           name: itemName,
           statement: statementType,
           actualValues: lineItem.actualValues || [],
-          color: colors[i - 1]
+          color: colorSelect ? colorSelect.value : '#3498db' // Use selected color or default
         });
       }
     }
