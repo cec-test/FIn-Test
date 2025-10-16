@@ -3549,11 +3549,9 @@ function createSVGChart(container, data, periodType) {
   svg.style.display = 'block'; // Prevents extra space below SVG
   
   if (isExpanded) {
-    // For expanded view: let SVG fill the container responsively
+    // For expanded view: let SVG fill the container responsively without max constraints
     svg.style.width = '100%';
     svg.style.height = '100%';
-    svg.style.maxWidth = width + 'px';
-    svg.style.maxHeight = height + 'px';
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   } else {
     // For inline view: use fixed dimensions
