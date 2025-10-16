@@ -10132,6 +10132,9 @@ function renderSensitivityChart(scenarios, config, baselineValue) {
     return;
   }
   
+  // Clear existing content
+  chartDiv.innerHTML = '';
+  
   // Chart dimensions
   const width = 800;
   const height = 300;
@@ -10220,9 +10223,8 @@ function renderSensitivityChart(scenarios, config, baselineValue) {
         r="${isBaseline ? 6 : 4}"
         data-label="${scenario.label}"
         data-value="${formatCurrency(scenario.outputs.primaryMetric || 0)}"
-      >
-        <title>${scenario.label}: ${formatCurrency(scenario.outputs.primaryMetric || 0)}</title>
-      </circle>
+        style="cursor: pointer;"
+      />
     `;
     
     // Add baseline marker
@@ -10237,6 +10239,45 @@ function renderSensitivityChart(scenarios, config, baselineValue) {
   `;
   
   chartDiv.innerHTML = svg;
+  
+  // Create tooltip
+  const tooltip = document.createElement('div');
+  tooltip.style.position = 'absolute';
+  tooltip.style.display = 'none';
+  tooltip.style.background = 'rgba(0, 0, 0, 0.85)';
+  tooltip.style.color = 'white';
+  tooltip.style.padding = '8px 12px';
+  tooltip.style.borderRadius = '6px';
+  tooltip.style.fontSize = '13px';
+  tooltip.style.fontWeight = '500';
+  tooltip.style.pointerEvents = 'none';
+  tooltip.style.zIndex = '10000';
+  tooltip.style.whiteSpace = 'nowrap';
+  tooltip.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+  chartDiv.style.position = 'relative';
+  chartDiv.appendChild(tooltip);
+  
+  // Add hover events to all points
+  const points = chartDiv.querySelectorAll('.chart-point');
+  points.forEach(point => {
+    point.addEventListener('mouseenter', function(e) {
+      const label = this.getAttribute('data-label');
+      const value = this.getAttribute('data-value');
+      tooltip.innerHTML = `${label}<br/>${value}`;
+      tooltip.style.display = 'block';
+    });
+    
+    point.addEventListener('mousemove', function(e) {
+      const rect = chartDiv.getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
+      tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+    });
+    
+    point.addEventListener('mouseleave', function() {
+      tooltip.style.display = 'none';
+    });
+  });
+  
   console.log('Line chart rendered');
 }
 
