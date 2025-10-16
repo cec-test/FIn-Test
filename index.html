@@ -1575,22 +1575,54 @@
             flex-shrink: 0;
         }
         
-        .color-picker-select {
+        .color-picker-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .color-picker-button {
             width: 24px;
             height: 24px;
-            padding: 0;
             border: 2px solid #dee2e6;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 0;
-            color: transparent;
-            text-indent: -9999px;
+            background-color: #3498db;
         }
         
-        .color-picker-select option {
-            font-size: 18px;
+        .color-picker-dropdown {
+            position: absolute;
+            top: 28px;
+            left: 0;
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 4px;
             padding: 6px;
-            text-align: center;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .color-picker-dropdown.open {
+            display: block;
+        }
+        
+        .color-option {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            margin: 4px;
+            cursor: pointer;
+            display: inline-block;
+            border: 2px solid transparent;
+        }
+        
+        .color-option:hover {
+            border-color: #495057;
+        }
+        
+        .color-option.selected {
+            border-color: #000;
+            box-shadow: 0 0 0 1px #fff, 0 0 0 3px #000;
         }
         
         .chart-controls select {
@@ -2815,19 +2847,22 @@
                                     </div>
                                     <div class="chart-controls">
                                         <div class="chart-control-item">
-                                            <select id="monthlyLineColor1" class="color-picker-select" style="background-color: #3498db;">
-                                                <option value="#3498db" style="color: #3498db;" selected>●</option>
-                                                <option value="#e74c3c" style="color: #e74c3c;">●</option>
-                                                <option value="#27ae60" style="color: #27ae60;">●</option>
-                                                <option value="#000000" style="color: #000000;">●</option>
-                                                <option value="#9b59b6" style="color: #9b59b6;">●</option>
-                                                <option value="#e91e63" style="color: #e91e63;">●</option>
-                                                <option value="#f39c12" style="color: #f39c12;">●</option>
-                                                <option value="#f1c40f" style="color: #f1c40f;">●</option>
-                                                <option value="#34495e" style="color: #34495e;">●</option>
-                                                <option value="#95a5a6" style="color: #95a5a6;">●</option>
-                                                <option value="#1abc9c" style="color: #1abc9c;">●</option>
-                                            </select>
+                                            <div class="color-picker-wrapper">
+                                                <div class="color-picker-button" id="monthlyLineColor1" data-color="#3498db" style="background-color: #3498db;"></div>
+                                                <div class="color-picker-dropdown">
+                                                    <div class="color-option selected" data-color="#3498db" style="background-color: #3498db;"></div>
+                                                    <div class="color-option" data-color="#e74c3c" style="background-color: #e74c3c;"></div>
+                                                    <div class="color-option" data-color="#27ae60" style="background-color: #27ae60;"></div>
+                                                    <div class="color-option" data-color="#000000" style="background-color: #000000;"></div>
+                                                    <div class="color-option" data-color="#9b59b6" style="background-color: #9b59b6;"></div>
+                                                    <div class="color-option" data-color="#e91e63" style="background-color: #e91e63;"></div>
+                                                    <div class="color-option" data-color="#f39c12" style="background-color: #f39c12;"></div>
+                                                    <div class="color-option" data-color="#f1c40f" style="background-color: #f1c40f;"></div>
+                                                    <div class="color-option" data-color="#34495e" style="background-color: #34495e;"></div>
+                                                    <div class="color-option" data-color="#95a5a6" style="background-color: #95a5a6;"></div>
+                                                    <div class="color-option" data-color="#1abc9c" style="background-color: #1abc9c;"></div>
+                                                </div>
+                                            </div>
                                             <select id="monthlyLineItem1">
                                                 <option value="">Select line item 1</option>
                                             </select>
