@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telescope - Financial Forecasting</title>
     
+    <!-- Auth Check - Must be logged in to access dashboard -->
+    <script>
+        (function() {
+            const user = localStorage.getItem('telescopeUser');
+            if (!user) {
+                window.location.href = 'landing.html';
+            }
+        })();
+    </script>
+    
     <style>
         * {
             margin: 0;
@@ -34,6 +44,7 @@
             color: white;
             padding: 30px;
             text-align: center;
+            position: relative;
         }
         
         .header h1 {
@@ -47,6 +58,155 @@
             height: auto;
             max-width: 90%;
             object-fit: contain;
+        }
+        
+        /* User Menu */
+        .user-menu {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+        }
+        
+        .user-config-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .user-config-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .user-dropdown {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            min-width: 180px;
+            z-index: 1000;
+        }
+        
+        .user-dropdown button {
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            background: white;
+            color: #333;
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: background 0.2s ease;
+        }
+        
+        .user-dropdown button:hover {
+            background: #f5f5f5;
+        }
+        
+        .user-dropdown button:first-child {
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .user-dropdown button:last-child {
+            border-radius: 0 0 8px 8px;
+        }
+        
+        /* Feature Lock System */
+        .feature-lock {
+            position: relative;
+        }
+        
+        .feature-lock[data-beta-locked="true"] .lock-overlay {
+            display: flex !important;
+        }
+        
+        .feature-lock[data-beta-locked="false"] .lock-overlay {
+            display: none !important;
+        }
+        
+        .lock-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.97);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            font-size: 1.2rem;
+            gap: 20px;
+            backdrop-filter: blur(2px);
+        }
+        
+        .lock-overlay-content {
+            text-align: center;
+            max-width: 400px;
+            padding: 20px;
+        }
+        
+        .lock-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        
+        .lock-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .lock-description {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .btn-waitlist {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-waitlist:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .coming-soon-badge {
+            background: #FFB84D;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 8px;
+            font-weight: 600;
+        }
+        
+        /* Chat Disabled State */
+        .chat-input-container.disabled input,
+        .chat-input-container.disabled button {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
         
         .tabs {
@@ -2392,6 +2552,16 @@
     <div class="container">
         <div class="header">
             <img src="telescope-logo.png" alt="Telescope - Forecast Smarter. See Further." class="logo">
+            
+            <!-- User Menu -->
+            <div class="user-menu">
+                <button class="user-config-btn" id="userConfigBtn" onclick="toggleUserMenu()">
+                    ⚙️ <span id="userName">Account</span>
+                </button>
+                <div class="user-dropdown" id="userDropdown" style="display: none;">
+                    <button onclick="signOut()">🚪 Sign Out</button>
+                </div>
+            </div>
         </div>
         
         
@@ -2585,7 +2755,18 @@
                             </div>
                             
                             <!-- Balance Sheet Configuration Panel -->
-                            <div class="config-panel" id="balance-config">
+                            <div class="config-panel feature-lock" id="balance-config" data-feature="balance_sheet" data-beta-locked="true">
+                                <div class="lock-overlay">
+                                    <div class="lock-overlay-content">
+                                        <div class="lock-icon">🔒</div>
+                                        <div class="lock-title">Coming Soon!</div>
+                                        <div class="lock-description">
+                                            Balance Sheet forecasting with advanced assumptions and calculations.
+                                            <br>Be among the first to access this feature.
+                                        </div>
+                                        <button class="btn-waitlist" onclick="joinWaitlist('Balance Sheet')">Join Waitlist</button>
+                                    </div>
+                                </div>
                         
                         <div class="bs-controls-section">
                             <h4>Working Capital</h4>
@@ -3476,7 +3657,7 @@
                     </div>
                 </div>
             </div>
-            <div class="chat-input-container">
+            <div class="chat-input-container" id="chatInputContainer" data-feature="chat" data-beta-locked="true">
                 <input type="text" id="chatInput" placeholder="Ask me anything about your financials..." />
                 <button id="sendChatBtn">Send</button>
             </div>

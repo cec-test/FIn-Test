@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telescope - Financial Forecasting</title>
+    <link rel="stylesheet" href="landing.css">
+</head>
+<body>
+    <div class="landing-container">
+        <div class="landing-content">
+            <!-- Logo (triple-click reveals secret code input) -->
+            <div class="logo-container" id="logoContainer">
+                <img src="telescope-logo.png" alt="Telescope" class="logo">
+            </div>
+            
+            <!-- Auth Forms Container -->
+            <div class="auth-container">
+                <!-- Sign In Form (default) -->
+                <div class="auth-form" id="signInForm">
+                    <h2>Welcome Back</h2>
+                    <p class="subtitle">Sign in to continue forecasting</p>
+                    
+                    <div class="form-group">
+                        <label for="signInEmail">Email</label>
+                        <input type="email" id="signInEmail" placeholder="your@email.com" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="signInPassword">Password</label>
+                        <input type="password" id="signInPassword" placeholder="Enter your password" required>
+                    </div>
+                    
+                    <button class="btn-primary" onclick="handleSignIn()">Sign In</button>
+                    
+                    <p class="toggle-form">
+                        Don't have an account? 
+                        <a href="#" onclick="showSignUp(); return false;">Create Account</a>
+                    </p>
+                </div>
+                
+                <!-- Sign Up Form (hidden by default) -->
+                <div class="auth-form" id="signUpForm" style="display: none;">
+                    <h2>Create Account</h2>
+                    <p class="subtitle">Start forecasting in seconds</p>
+                    
+                    <div class="form-group">
+                        <label for="signUpName">Name</label>
+                        <input type="text" id="signUpName" placeholder="Your name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="signUpEmail">Email</label>
+                        <input type="email" id="signUpEmail" placeholder="your@email.com" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="signUpPassword">Password</label>
+                        <input type="password" id="signUpPassword" placeholder="Choose a password" required>
+                    </div>
+                    
+                    <button class="btn-primary" onclick="handleSignUp()">Create Account</button>
+                    
+                    <p class="toggle-form">
+                        Already have an account? 
+                        <a href="#" onclick="showSignIn(); return false;">Sign In</a>
+                    </p>
+                </div>
+                
+                <!-- Secret Admin Code Form (hidden by default) -->
+                <div class="auth-form" id="adminCodeForm" style="display: none;">
+                    <h2>🔭 Admin Access</h2>
+                    <p class="subtitle">Enter the secret code</p>
+                    
+                    <div class="form-group">
+                        <label for="adminCode">Access Code</label>
+                        <input type="password" id="adminCode" placeholder="Enter code" autofocus>
+                    </div>
+                    
+                    <button class="btn-primary" onclick="handleAdminCode()">Unlock Full Access</button>
+                    
+                    <p class="toggle-form">
+                        <a href="#" onclick="showSignIn(); return false;">← Back to Sign In</a>
+                    </p>
+                </div>
+            </div>
+            
+            <p class="footer-text">© 2025 Telescope. All rights reserved.</p>
+        </div>
+    </div>
+    
+    <script src="auth.js"></script>
+    <script>
+        // Triple-click logo to reveal admin code input
+        let clickCount = 0;
+        let clickTimer = null;
+        
+        document.getElementById('logoContainer').addEventListener('click', function() {
+            clickCount++;
+            
+            if (clickCount === 1) {
+                clickTimer = setTimeout(() => {
+                    clickCount = 0;
+                }, 800); // Reset after 800ms
+            }
+            
+            if (clickCount === 3) {
+                clearTimeout(clickTimer);
+                clickCount = 0;
+                
+                // Show admin code form with animation
+                document.getElementById('logoContainer').style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    document.getElementById('logoContainer').style.transform = 'scale(1)';
+                }, 200);
+                
+                showAdminCode();
+            }
+        });
+        
+        function showSignIn() {
+            document.getElementById('signInForm').style.display = 'block';
+            document.getElementById('signUpForm').style.display = 'none';
+            document.getElementById('adminCodeForm').style.display = 'none';
+        }
+        
+        function showSignUp() {
+            document.getElementById('signInForm').style.display = 'none';
+            document.getElementById('signUpForm').style.display = 'block';
+            document.getElementById('adminCodeForm').style.display = 'none';
+        }
+        
+        function showAdminCode() {
+            document.getElementById('signInForm').style.display = 'none';
+            document.getElementById('signUpForm').style.display = 'none';
+            document.getElementById('adminCodeForm').style.display = 'block';
+            document.getElementById('adminCode').focus();
+        }
+        
+        // Handle Enter key for all forms
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (document.getElementById('signInForm').style.display !== 'none') {
+                    handleSignIn();
+                } else if (document.getElementById('signUpForm').style.display !== 'none') {
+                    handleSignUp();
+                } else if (document.getElementById('adminCodeForm').style.display !== 'none') {
+                    handleAdminCode();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

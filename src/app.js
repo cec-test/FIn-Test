@@ -1,5 +1,125 @@
 'use strict';
 
+/******************************************************************************
+ * AUTHENTICATION & FEATURE GATING
+ ******************************************************************************/
+
+// Get current logged-in user
+function getCurrentUser() {
+  try {
+    const userStr = localStorage.getItem('telescopeUser');
+    return userStr ? JSON.parse(userStr) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Check if current user is admin
+function isAdmin() {
+  const user = getCurrentUser();
+  return user && user.role === 'admin';
+}
+
+// Check if current user is beta
+function isBetaUser() {
+  const user = getCurrentUser();
+  return user && user.role === 'beta';
+}
+
+// Sign out function
+function signOut() {
+  if (confirm('Are you sure you want to sign out?')) {
+    localStorage.removeItem('telescopeUser');
+    window.location.href = 'landing.html';
+  }
+}
+
+// Toggle user dropdown menu
+function toggleUserMenu() {
+  const dropdown = document.getElementById('userDropdown');
+  if (dropdown) {
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const userMenu = document.querySelector('.user-menu');
+  const dropdown = document.getElementById('userDropdown');
+  if (userMenu && dropdown && !userMenu.contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
+
+// Join waitlist function
+function joinWaitlist(feature) {
+  const user = getCurrentUser();
+  const email = user ? user.email : 'unknown';
+  
+  // Save to localStorage waitlist
+  try {
+    const waitlist = JSON.parse(localStorage.getItem('telescopeWaitlist') || '[]');
+    waitlist.push({
+      email: email,
+      feature: feature,
+      date: new Date().toISOString()
+    });
+    localStorage.setItem('telescopeWaitlist', JSON.stringify(waitlist));
+  } catch (e) {
+    // Ignore errors
+  }
+  
+  alert('✅ You\'ve been added to the ' + feature + ' waitlist!\n\nWe\'ll notify you when this feature launches.');
+}
+
+// Initialize feature locks on page load
+window.addEventListener('DOMContentLoaded', function() {
+  const admin = isAdmin();
+  const user = getCurrentUser();
+  
+  // Display user name in header
+  if (user && user.name) {
+    const userName = document.getElementById('userName');
+    if (userName) {
+      userName.textContent = user.name;
+    }
+  }
+  
+  // Set all feature locks based on role
+  document.querySelectorAll('[data-beta-locked]').forEach(el => {
+    el.setAttribute('data-beta-locked', admin ? 'false' : 'true');
+  });
+  
+  // Disable chat for beta users
+  if (!admin) {
+    const chatInputContainer = document.getElementById('chatInputContainer');
+    const chatInput = document.getElementById('chatInput');
+    const chatBtn = document.getElementById('sendChatBtn');
+    
+    if (chatInputContainer) {
+      chatInputContainer.classList.add('disabled');
+    }
+    if (chatInput) {
+      chatInput.disabled = true;
+      chatInput.placeholder = '🔒 Coming soon - AI chat assistant';
+    }
+    if (chatBtn) {
+      chatBtn.disabled = true;
+    }
+    
+    // Show coming soon message when trying to use chat
+    if (chatInput) {
+      chatInput.addEventListener('click', function() {
+        if (!admin) {
+          alert('🔒 AI Chat Assistant - Coming Soon!\n\nJoin the waitlist to get early access.');
+        }
+      });
+    }
+  }
+  
+  console.log('Feature gating initialized. Admin mode:', admin);
+});
+
 /**
  * App state: base actuals used for forecasts.
  * Replace via CSV upload to drive forecasts from your own numbers.
