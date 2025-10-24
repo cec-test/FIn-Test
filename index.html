@@ -132,6 +132,15 @@
             display: none !important;
         }
         
+        /* Hide statement tables for beta users */
+        .statement-hide-beta[data-beta-locked="true"] {
+            display: none !important;
+        }
+        
+        .statement-hide-beta[data-beta-locked="false"] {
+            display: block !important;
+        }
+        
         .lock-overlay {
             position: absolute;
             top: 0;
@@ -2868,7 +2877,18 @@
                             </div>
                             
                             <!-- Cash Flow Configuration Panel (Placeholder) -->
-                            <div class="config-panel" id="cashflow-config">
+                            <div class="config-panel feature-lock" id="cashflow-config" data-feature="cashflow_config" data-beta-locked="true">
+                                <div class="lock-overlay">
+                                    <div class="lock-overlay-content">
+                                        <div class="lock-icon">🔒</div>
+                                        <div class="lock-title">Coming Soon!</div>
+                                        <div class="lock-description">
+                                            Cash Flow forecasting configuration and assumptions.
+                                            <br>Be among the first to access this feature.
+                                        </div>
+                                        <button class="btn-waitlist" onclick="joinWaitlist('Cash Flow Config')">Join Waitlist</button>
+                                    </div>
+                                </div>
                                 <div class="config-placeholder">
                                     <div class="placeholder-icon">💰</div>
                                     <h4>Cash Flow Statement Configuration</h4>
@@ -2884,7 +2904,18 @@
                             </div>
                             
                             <!-- Scenarios Configuration Panel -->
-                            <div class="config-panel" id="scenarios-config">
+                            <div class="config-panel feature-lock" id="scenarios-config" data-feature="scenarios_config" data-beta-locked="true">
+                                <div class="lock-overlay">
+                                    <div class="lock-overlay-content">
+                                        <div class="lock-icon">🔒</div>
+                                        <div class="lock-title">Coming Soon!</div>
+                                        <div class="lock-description">
+                                            Create and manage multiple forecast scenarios.
+                                            <br>Be among the first to access this feature.
+                                        </div>
+                                        <button class="btn-waitlist" onclick="joinWaitlist('Scenarios')">Join Waitlist</button>
+                                    </div>
+                                </div>
                                 <div class="scenarios-config-container">
                                     <h4 style="margin-bottom: 15px; color: #333;">📊 Your Scenarios</h4>
                                     <p style="font-size: 0.9em; color: #666; margin-bottom: 20px;">
@@ -2931,6 +2962,20 @@
 
                     <!-- Main Insights Content (Period-Specific) -->
                     <div class="insights-content">
+                        
+                        <!-- Lock non-chart insights for beta -->
+                        <div class="feature-lock" data-feature="insights_analysis" data-beta-locked="true">
+                            <div class="lock-overlay">
+                                <div class="lock-overlay-content">
+                                    <div class="lock-icon">🔒</div>
+                                    <div class="lock-title">Coming Soon!</div>
+                                    <div class="lock-description">
+                                        Advanced insights including at-a-glance metrics, reality checks, margin forecasts, and more.
+                                        <br>Be among the first to access these powerful analytics.
+                                    </div>
+                                    <button class="btn-waitlist" onclick="joinWaitlist('Advanced Insights')">Join Waitlist</button>
+                                </div>
+                            </div>
                         
                         <!-- At a Glance Section (Always Visible) -->
                         <div class="at-a-glance-section">
@@ -3013,6 +3058,7 @@
                                 <div class="loading">Checking forecast assumptions...</div>
                             </div>
                         </div>
+                        </div><!-- End feature-lock for insights analysis -->
 
                         <!-- Interactive Charts Section (All 3 Periods - Always Visible) -->
                         <div class="insight-section-permanent">
@@ -3306,8 +3352,8 @@
                 <button class="export-btn" onclick="exportPeriodData('monthly')">Export Monthly Forecast</button>
                 <div class="statements-container">
                 <div id="monthlyPnlContainer" class="independent-table-container"></div>
-                <div id="monthlyBalanceContainer" class="independent-table-container"></div>
-                <div id="monthlyCashflowContainer" class="independent-table-container"></div>
+                <div id="monthlyBalanceContainer" class="independent-table-container statement-hide-beta" data-feature="balance_statement" data-beta-locked="true"></div>
+                <div id="monthlyCashflowContainer" class="independent-table-container statement-hide-beta" data-feature="cashflow_statement" data-beta-locked="true"></div>
                 </div>
             </div>
             
@@ -3318,8 +3364,8 @@
                 <button class="export-btn" onclick="exportPeriodData('quarterly')">Export Quarterly Forecast</button>
                 <div class="statements-container">
                 <div id="quarterlyPnlContainer" class="independent-table-container"></div>
-                <div id="quarterlyBalanceContainer" class="independent-table-container"></div>
-                <div id="quarterlyCashflowContainer" class="independent-table-container"></div>
+                <div id="quarterlyBalanceContainer" class="independent-table-container statement-hide-beta" data-feature="balance_statement" data-beta-locked="true"></div>
+                <div id="quarterlyCashflowContainer" class="independent-table-container statement-hide-beta" data-feature="cashflow_statement" data-beta-locked="true"></div>
                 </div>
             </div>
             
@@ -3330,13 +3376,26 @@
                 <button class="export-btn" onclick="exportPeriodData('yearly')">Export Yearly Forecast</button>
                 <div class="statements-container">
                 <div id="yearlyPnlContainer" class="independent-table-container"></div>
-                <div id="yearlyBalanceContainer" class="independent-table-container"></div>
-                <div id="yearlyCashflowContainer" class="independent-table-container"></div>
+                <div id="yearlyBalanceContainer" class="independent-table-container statement-hide-beta" data-feature="balance_statement" data-beta-locked="true"></div>
+                <div id="yearlyCashflowContainer" class="independent-table-container statement-hide-beta" data-feature="cashflow_statement" data-beta-locked="true"></div>
                 </div>
             </div>
             
             <!-- Scenarios Comparison Tab -->
             <div id="scenarios" class="tab-content">
+                <div class="feature-lock" data-feature="scenarios_content" data-beta-locked="true">
+                    <div class="lock-overlay">
+                        <div class="lock-overlay-content">
+                            <div class="lock-icon">🔒</div>
+                            <div class="lock-title">Coming Soon!</div>
+                            <div class="lock-description">
+                                Create and compare multiple forecast scenarios to model different business outcomes.
+                                <br>Be among the first to access this powerful feature.
+                            </div>
+                            <button class="btn-waitlist" onclick="joinWaitlist('Scenarios Analysis')">Join Waitlist</button>
+                        </div>
+                    </div>
+                
                 <div class="forecast-info">
                     <strong>Scenarios Comparison</strong> - Compare multiple forecast scenarios side-by-side
                 </div>
@@ -3363,6 +3422,7 @@
                         <div id="scenario-forecast-links"></div>
                     </div>
                 </div>
+                </div><!-- End feature-lock -->
             </div>
             
             <!-- Sensitivity Analysis Tab -->
